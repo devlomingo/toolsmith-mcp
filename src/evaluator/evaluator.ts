@@ -212,7 +212,9 @@ function authRefs(cfg: IntegrationConfig): string[] {
         ? [a.value]
         : a.type === 'basic'
           ? [a.username, a.password]
-          : [];
+          : a.type === 'oauth2ClientCredentials'
+            ? [a.clientId, a.clientSecret]
+            : [];
   return [...vals, ...Object.values(cfg.headers)].flatMap(envRefNames);
 }
 

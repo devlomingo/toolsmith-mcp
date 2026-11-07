@@ -44,7 +44,14 @@ export class HttpIntegrationClient {
     this.bucket = new TokenBucket(cfg.rateLimit.requestsPerSecond, cfg.rateLimit.burst);
     const baseHost = new URL(baseUrl).hostname.toLowerCase().replace(/^\[|\]$/g, '');
     this.policy = {
-      allowedHosts: [baseHost, ...cfg.allowedHosts],
+      allowedHosts: [
+        baseHost,
+        ...cfg.allowedHosts,
+        // The token endpoint is part of the integration's egress.
+        ...(cfg.auth.type === 'oauth2ClientCredentials'
+          ? [new URL(cfg.auth.tokenUrl).hostname.toLowerCase().replace(/^\[|\]$/g, '')]
+          : []),
+      ],
       allowPrivateNetwork: cfg.allowPrivateNetwork,
     };
     assertHostAllowed(new URL(baseUrl), this.policy);
@@ -53,6 +60,15 @@ export class HttpIntegrationClient {
   async call(op: OperationDef, args: JsonObject, signal?: AbortSignal): Promise<HttpOutcome> {
     const { url, headers, body } = this.buildRequest(op, args);
     assertHostAllowed(url, this.policy);
+    const oauth = this.cfg.auth.type === 'oauth2ClientCredentials';
+    let refreshed = false;
+    if (oauth) {
+      try {
+        headers.authorization = `Bearer ${await this.oauthToken(signal)}`;
+      } catch (err) {
+        return { ...this.networkError(err), requests: 1, retries: 0 };
+      }
+    }
     const idempotent = ['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'].includes(op.method);
     // Only retry methods that cannot double-apply. DELETE/PUT are idempotent by
     // HTTP semantics but APIs often violate that, so only safe reads retry.
@@ -89,6 +105,19 @@ export class HttpIntegrationClient {
           continue;
         }
         return { ...out, requests, retries };
+      }
+      if (res.status === 401 && oauth && !refreshed) {
+        // The cached token may have been revoked or expired early: fetch a new
+        // one once. Safe for any method, since the API rejected the request.
+        refreshed = true;
+        this.token = undefined;
+        try {
+          headers.authorization = `Bearer ${await this.oauthToken(signal)}`;
+        } catch (err) {
+          return { ...this.networkError(err), requests, retries };
+        }
+        retries++;
+        continue;
       }
       if (res.status >= 200 && res.status < 300) {
         // An API that echoes the credential (debug endpoints, reflected
@@ -179,9 +208,51 @@ export class HttpIntegrationClient {
     return resolved;
   }
 
+  private token?: { value: string; expiresAt: number };
+
+  /** OAuth 2.0 client-credentials token, cached until shortly before expiry. */
+  private async oauthToken(signal?: AbortSignal): Promise<string> {
+    const auth = this.cfg.auth;
+    if (auth.type !== 'oauth2ClientCredentials') throw new Error('not an OAuth integration');
+    if (this.token && this.token.expiresAt > Date.now() + 60_000) return this.token.value;
+    const form = new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: this.secret(auth.clientId),
+      client_secret: this.secret(auth.clientSecret),
+    });
+    if (auth.scope) form.set('scope', auth.scope);
+    if (auth.audience) form.set('audience', auth.audience);
+    const url = new URL(auth.tokenUrl);
+    assertHostAllowed(url, this.policy);
+    const res = await this.send(
+      'POST',
+      url,
+      { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+      form.toString(),
+      signal,
+    );
+    let parsed: { access_token?: unknown; expires_in?: unknown } = {};
+    try {
+      parsed = JSON.parse(res.body) as typeof parsed;
+    } catch {
+      /* handled below */
+    }
+    if (res.status < 200 || res.status >= 300 || typeof parsed.access_token !== 'string') {
+      throw new ToolsmithError(
+        `The OAuth token endpoint refused the client credentials (${res.status}). Check ${[...envRefNames(auth.clientId), ...envRefNames(auth.clientSecret)].join(', ') || 'clientId / clientSecret'}.`,
+        'auth',
+      );
+    }
+    this.redactor.registerSecret(parsed.access_token);
+    const ttl = typeof parsed.expires_in === 'number' ? parsed.expires_in * 1000 : 3_600_000;
+    this.token = { value: parsed.access_token, expiresAt: Date.now() + ttl };
+    return this.token.value;
+  }
+
   private applyAuth(auth: AuthConfig, headers: Record<string, string>, url: URL): void {
     switch (auth.type) {
       case 'none':
+      case 'oauth2ClientCredentials': // applied per call in call(), it needs a token fetch
         return;
       case 'bearer':
         headers.authorization = `Bearer ${this.secret(auth.token)}`;
@@ -344,6 +415,8 @@ function credentialEnvNames(auth: AuthConfig): string[] {
       return envRefNames(auth.value);
     case 'basic':
       return [...envRefNames(auth.username), ...envRefNames(auth.password)];
+    case 'oauth2ClientCredentials':
+      return [...envRefNames(auth.clientId), ...envRefNames(auth.clientSecret)];
     default:
       return [];
   }

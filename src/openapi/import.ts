@@ -5,6 +5,7 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { ToolsmithError } from '../core/errors.js';
 import { isPrivateAddress } from '../security/ssrf.js';
+import { isPostmanCollection, postmanToOpenApi } from './postman.js';
 import { camelCase } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
 import { toJsonSchema, wrapAsObjectSchema } from './schema-utils.js';
@@ -138,8 +139,18 @@ export async function importOpenApi(
   source: string | Doc,
   opts: ImportOptions,
 ): Promise<OpenApiIntegrationDef> {
-  const raw = await loadSpecDocument(source, { allowPrivateNetwork: opts.allowPrivateNetwork });
+  let raw = await loadSpecDocument(source, { allowPrivateNetwork: opts.allowPrivateNetwork });
+  const fromPostman = isPostmanCollection(raw);
+  if (fromPostman) raw = postmanToOpenApi(raw, opts.baseUrl);
   const findings: SpecFinding[] = [];
+  if (fromPostman) {
+    findings.push({
+      severity: 'info',
+      code: 'from_postman',
+      message:
+        'Imported from a Postman collection: parameter types are strings and body/response schemas are inferred from saved examples. Review them.',
+    });
+  }
   const specVersion = String(raw.openapi ?? raw.swagger ?? '');
   if (!specVersion) {
     throw new ToolsmithError(

@@ -1,0 +1,53 @@
+{
+  "info": {
+    "_postman_id": "1f2e3d4c",
+    "name": "Shop (Postman)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "https://api.shop.example.com" }],
+  "item": [
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products?category=books",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [{ "key": "category", "value": "books" }]
+            }
+          },
+          "response": [
+            {
+              "name": "ok",
+              "code": 200,
+              "body": "[{\"id\": 1, \"name\": \"Book\", \"price\": 9.5}]"
+            }
+          ]
+        },
+        {
+          "name": "Get product",
+          "request": { "method": "GET", "url": "{{baseUrl}}/products/:id" },
+          "response": [
+            { "name": "ok", "code": 200, "body": "{\"id\": 1, \"name\": \"Book\", \"price\": 9.5}" }
+          ]
+        },
+        {
+          "name": "Create product",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/products",
+            "body": { "mode": "raw", "raw": "{\"name\": \"Pen\", \"price\": 2}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete product",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/products/:id" }
+    }
+  ]
+}

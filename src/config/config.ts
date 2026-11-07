@@ -17,6 +17,14 @@ export const AuthSchema = z.discriminatedUnion('type', [
     value: z.string(),
   }),
   z.object({ type: z.literal('basic'), username: z.string(), password: z.string() }),
+  z.object({
+    type: z.literal('oauth2ClientCredentials'),
+    tokenUrl: z.string().url(),
+    clientId: z.string(),
+    clientSecret: z.string(),
+    scope: z.string().optional(),
+    audience: z.string().optional(),
+  }),
 ]);
 export type AuthConfig = z.infer<typeof AuthSchema>;
 
