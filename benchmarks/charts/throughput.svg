@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 168" width="760" height="168" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+<title id="t">Gateway throughput by concurrent clients</title><desc id="d">shop__getProduct over Streamable HTTP; demo API adds 5 ms per request</desc>
+<style>
+  .bg{fill:#fcfcfb}.ttl{fill:#1b1b1a;font-size:16px;font-weight:600}.sub,.tick,.leg{fill:#5f5e58;font-size:12px}.lbl{fill:#2f2e2b;font-size:12.5px}.val{fill:#2f2e2b;font-size:11.5px;font-variant-numeric:tabular-nums}
+  .grid{stroke:#e6e5e0;stroke-width:1}.s1{fill:#2a78d6}.s2{fill:#eb6834}.s3{fill:#1baf7a}
+  @media (prefers-color-scheme: dark){.bg{fill:#1a1a19}.ttl{fill:#f0efec}.sub,.tick,.leg{fill:#a9a89f}.lbl,.val{fill:#d9d8d0}.grid{stroke:#33332f}.s1{fill:#3987e5}.s2{fill:#d95926}.s3{fill:#199e70}}
+</style>
+<rect class="bg" width="100%" height="100%" rx="8"/>
+<text class="ttl" x="20" y="28">Gateway throughput by concurrent clients</text>
+<text class="sub" x="20" y="44">shop__getProduct over Streamable HTTP; demo API adds 5 ms per request</text>
+<rect class="s1" x="20" y="52" width="12" height="12" rx="3"/><text class="leg" x="38" y="62">Throughput</text>
+<line class="grid" x1="280" x2="280" y1="72" y2="138"/><text class="tick" x="280" y="154" text-anchor="middle">0</text><line class="grid" x1="382.5" x2="382.5" y1="72" y2="138"/><text class="tick" x="382.5" y="154" text-anchor="middle">250</text><line class="grid" x1="485" x2="485" y1="72" y2="138"/><text class="tick" x="485" y="154" text-anchor="middle">500</text><line class="grid" x1="587.5" x2="587.5" y1="72" y2="138"/><text class="tick" x="587.5" y="154" text-anchor="middle">750</text><line class="grid" x1="690" x2="690" y1="72" y2="138"/><text class="tick" x="690" y="154" text-anchor="middle">1000</text>
+<text class="lbl" x="270" y="89" text-anchor="end">1 client</text>
+<path class="s1" d="M280,78 h39.05000000000001 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-39.05000000000001 z"><title>1 client — Throughput: 105 calls/s</title></path>
+<text class="val" x="329.05" y="89">105</text>
+<text class="lbl" x="270" y="117" text-anchor="end">10 clients</text>
+<path class="s1" d="M280,106 h354.75 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-354.75 z"><title>10 clients — Throughput: 875 calls/s</title></path>
+<text class="val" x="644.75" y="117">875</text>
+<text class="tick" x="20" y="154">calls/s</text>
+</svg>
