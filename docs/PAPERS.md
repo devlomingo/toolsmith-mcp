@@ -92,7 +92,10 @@ model got more expensive.
 **Also adopted (after the first release candidate)**
 
 - **Argument normalization's "constant" case:** an argument with the same
-  fingerprint in every occurrence is baked into the plan as a literal.
+  fingerprint in every occurrence is baked into the plan as a literal, but
+  only when it is a boolean or a value from an API-declared enum. Numbers,
+  ids and free text stay inputs even when they never changed, because they
+  are what the next run is likely to change.
 - **Shared session prefixes:** each pattern records how often it starts a
   run, and composites that usually start a session say so.
 - **AWO's "auto-login" style meta-tools:** these fall out of the same mining

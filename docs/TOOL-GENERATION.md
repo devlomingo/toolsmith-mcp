@@ -75,7 +75,14 @@ It is a declarative plan. Nothing generated is ever run as code:
   changed: numbers (amounts, quantities), ids, names and other free text.
   A name that is also an input of the composite always uses the input.
   Every argument an agent sent is kept in the plan, either as a literal or
-  as an input; none is silently dropped.
+  as an input; none is silently dropped. Empty values (`""`, `null`, `[]`,
+  `{}`) count too: they become inputs, so a write that cleared a field
+  keeps clearing it. Empty values never link one call to another.
+- **Limitation: sensitive-named inputs.** Example inputs for automatic
+  evaluation are read back from recorded traces, and arguments with
+  sensitive names (`password`, `token`, `secret`, …) are redacted there.
+  A read composite that takes such an input has no usable example, so
+  evaluation fails closed; supply inputs with `evaluate --input` instead.
 - **Recorded values stay out of definitions.** A mined composite stores
   references to the recorded calls, not their values. Example inputs for
   the equivalence test are read from the (redacted, retention-limited)

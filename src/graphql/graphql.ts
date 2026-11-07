@@ -1,7 +1,7 @@
 import { ToolsmithError } from '../core/errors.js';
 import { camelCase } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
-import { detectInjection, sanitizeOperation } from '../openapi/import.js';
+import { cleanFindings, detectInjection, sanitizeOperation } from '../openapi/import.js';
 import { cleanText } from '../openapi/schema-utils.js';
 import type { OpenApiIntegrationDef, OperationDef, SpecFinding } from '../openapi/types.js';
 
@@ -232,7 +232,7 @@ export function introspectionToDef(
     specVersion: 'graphql',
     baseUrl: url.origin,
     operations,
-    findings,
+    findings: cleanFindings(findings),
   };
 }
 

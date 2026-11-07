@@ -54,8 +54,24 @@ const ALLOWED_KEYWORDS = new Set([
  * Remove characters that change how text is displayed without being
  * visible: zero-width characters, bidi overrides, other control characters.
  * They can split a phrase so filters miss it, or reorder what a human sees.
+ *
+ * Visible characters are never rewritten: no Unicode normalization here, so
+ * `m²`, ligatures and enum values reach the agent exactly as the API spells
+ * them. ZWNJ and ZWJ are kept because Persian, Indic scripts and emoji need
+ * them; the scanner (scanText) removes them too.
  */
 export function cleanText(text: string): string {
+  return text
+    .replace(/[\u2028\u2029]/g, '\n')
+    .replace(INVISIBLE, (ch) => (ch === '\u200C' || ch === '\u200D' ? ch : ''));
+}
+
+/**
+ * The form used only for scanning, never shown or sent anywhere: every
+ * invisible character removed and compatibility forms folded (NFKC), so
+ * full-width or ligature spellings cannot slip a phrase past the filters.
+ */
+export function scanText(text: string): string {
   return text
     .normalize('NFKC')
     .replace(/[\u2028\u2029]/g, '\n')
@@ -67,12 +83,13 @@ export function cleanText(text: string): string {
  * rather than by list: every format character (Cf: zero-width, bidi
  * controls, Unicode tags, U+061C, U+FFF9\u2026), every control character except
  * newline and tab, private-use and unassigned code points, plus the
- * invisible "filler" letters and joiners that sit in other categories.
- * Ordinary text in any script, Arabic included, is untouched.
+ * invisible "filler" letters and joiners that sit in other categories
+ * (Hangul and Khitan fillers, the musical null notehead, variation
+ * selectors, the blank Braille pattern).
  */
 export const INVISIBLE =
   // eslint-disable-next-line no-misleading-character-class, no-control-regex -- removing these is the point
-  /[\p{Cf}\p{Co}\p{Cn}\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u034F\u115F\u1160\u17B4\u17B5\u180B-\u180F\u2800\u3164\uFE00-\uFE0F\uFFA0\u{E0100}-\u{E01EF}]/gu;
+  /[\p{Cf}\p{Co}\p{Cn}\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u034F\u115F\u1160\u17B4\u17B5\u180B-\u180F\u2800\u3164\uFE00-\uFE0F\uFFA0\u{16FE4}\u{1D159}\u{E0100}-\u{E01EF}]/gu;
 
 /** Clean every string and every key in a schema (any depth). */
 export function sanitizeDeep<T>(value: T, depth = 0): T {

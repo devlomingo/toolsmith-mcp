@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { TraceRecord } from '../observer/trace-store.js';
 import type { JsonValue } from '../core/types.js';
 import { resolvePath } from '../composite/refs.js';
+import { isEmptyFingerprint } from '../security/redact.js';
 
 /**
  * Workflow discovery over recorded traces.
@@ -156,6 +157,7 @@ function startedRun(episode: TraceRecord[]): boolean {
   const root = episode[0]!;
   return episode.slice(1).some((c) =>
     Object.entries(c.argFingerprints).some(([argPath, h]) => {
+      if (isEmptyFingerprint(h)) return false;
       if (root.argFingerprints[argPath] === h) return true; // same input passed on
       return (root.resultFingerprints[h] ?? []).some(
         (p) => nameAffinity(argPath, p, root.tool) >= 3,
@@ -169,6 +171,7 @@ export function bindCalls(episode: TraceRecord[]): EpisodeCall[] {
   for (let j = 0; j < calls.length; j++) {
     const cj = calls[j]!;
     for (const [argPath, hash] of Object.entries(cj.trace.argFingerprints)) {
+      if (isEmptyFingerprint(hash)) continue; // empty values link nothing
       // Bind to the value's origin: the earliest place it appeared (an
       // earlier argument means the caller supplied it; an earlier result
       // means a tool produced it). Later echoes of the same id, such as

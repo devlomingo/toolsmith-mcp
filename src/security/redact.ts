@@ -159,6 +159,14 @@ export function isSensitiveKey(key: string): boolean {
  * values, not the values themselves; that is enough to see that an output of
  * one call fed an argument of the next (equal hashes) without storing data.
  */
+/**
+ * Empty argument values ("", null, [], {}) get fixed markers instead of
+ * hashes: they carry no data, so they must never link one call to another,
+ * but they still have to show up so a mined composite keeps the argument.
+ */
+export const EMPTY_PREFIX = 'empty:';
+export const isEmptyFingerprint = (h: string): boolean => h.startsWith(EMPTY_PREFIX);
+
 export class Fingerprinter {
   constructor(private readonly key: string) {}
 
@@ -179,14 +187,21 @@ export class Fingerprinter {
     const walk = (v: unknown, path: string, depth: number): void => {
       if (out.length >= maxLeaves || depth > MAX_DEPTH) return;
       if (typeof v === 'string') {
-        if (v.length > 0 && (forArgs || v.length <= 256)) out.push([path || '$', this.hash(v)]);
+        if (v.length === 0) {
+          if (forArgs) out.push([path || '$', `${EMPTY_PREFIX}string`]);
+        } else if (forArgs || v.length <= 256) out.push([path || '$', this.hash(v)]);
       } else if (typeof v === 'number' && Number.isFinite(v)) {
         out.push([path || '$', this.hash(v)]);
       } else if (typeof v === 'boolean' && forArgs) {
         out.push([path || '$', this.hash(`b:${v}`)]);
+      } else if (v === null) {
+        if (forArgs) out.push([path || '$', `${EMPTY_PREFIX}null`]);
       } else if (Array.isArray(v)) {
+        if (v.length === 0 && forArgs) out.push([path || '$', `${EMPTY_PREFIX}array`]);
         for (const item of v) walk(item, `${path}[*]`, depth + 1);
       } else if (v && typeof v === 'object') {
+        if (forArgs && Object.keys(v).length === 0)
+          out.push([path || '$', `${EMPTY_PREFIX}object`]);
         for (const [k, child] of Object.entries(v as Record<string, unknown>)) {
           if (isSensitiveKey(k) && !forArgs) continue;
           walk(child, path ? `${path}.${k}` : k, depth + 1);

@@ -273,12 +273,28 @@ export function schemaTexts(schema: unknown, depth = 0, out: string[] = []): str
   return out;
 }
 
-function safeDecode(s: string): string {
-  try {
-    return decodeURIComponent(s);
-  } catch {
-    return s;
+/**
+ * Percent-decode until the text stops changing (double encoding), one
+ * escape at a time so a malformed escape such as `%ZZ` cannot make the
+ * whole path skip decoding.
+ */
+export function safeDecode(s: string): string {
+  let cur = s;
+  for (let i = 0; i < 5; i++) {
+    const next = cur.replace(/(?:%[0-9A-Fa-f]{2})+/g, (run) => {
+      try {
+        return decodeURIComponent(run);
+      } catch {
+        // An invalid UTF-8 run: decode byte by byte as Latin-1 instead.
+        return run.replace(/%([0-9A-Fa-f]{2})/g, (_, h: string) =>
+          String.fromCharCode(parseInt(h, 16)),
+        );
+      }
+    });
+    if (next === cur) break;
+    cur = next;
   }
+  return cur;
 }
 
 function authRefs(cfg: IntegrationConfig): string[] {

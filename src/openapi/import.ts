@@ -8,7 +8,13 @@ import { isPrivateAddress } from '../security/ssrf.js';
 import { isPostmanCollection, postmanToOpenApi } from './postman.js';
 import { camelCase } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
-import { cleanText, sanitizeDeep, toJsonSchema, wrapAsObjectSchema } from './schema-utils.js';
+import {
+  cleanText,
+  sanitizeDeep,
+  scanText,
+  toJsonSchema,
+  wrapAsObjectSchema,
+} from './schema-utils.js';
 import type {
   OpenApiIntegrationDef,
   OperationDef,
@@ -305,8 +311,17 @@ export async function importOpenApi(
     specVersion,
     baseUrl,
     operations,
-    findings,
+    findings: cleanFindings(findings),
   };
+}
+
+/** Findings quote spec text (names, hits); show it without hidden characters. */
+export function cleanFindings(findings: SpecFinding[]): SpecFinding[] {
+  return findings.map((f) => ({
+    ...f,
+    message: cleanText(f.message),
+    ...(f.operation ? { operation: cleanText(f.operation) } : {}),
+  }));
 }
 
 function resolveBaseUrl(doc: Doc, override: string | undefined, source?: string): string {
@@ -597,12 +612,16 @@ export function sanitizeOperation(op: OperationDef): void {
   op.path = cleanText(op.path);
   op.summary = cleanText(op.summary);
   op.description = cleanText(op.description);
+  // Reviewer-facing fields too: the dashboard and CLI show them verbatim.
+  if (op.operationId) op.operationId = cleanText(op.operationId);
+  op.tags = op.tags.map(cleanText);
+  if (op.graphql) op.graphql = { ...op.graphql, document: cleanText(op.graphql.document) };
 }
 
 /** Flag tool-poisoning style text in third-party descriptions. */
 export function detectInjection(text: string): string | undefined {
   // Match on the cleaned text, so zero-width characters cannot split a phrase.
-  const clean = cleanText(text).replace(/\s+/g, ' ');
+  const clean = scanText(text).replace(/\s+/g, ' ');
   for (const re of INJECTION_PATTERNS) {
     const m = clean.match(re);
     if (m) return m[0];

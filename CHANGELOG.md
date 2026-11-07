@@ -112,7 +112,9 @@ Fixed before release, after independent validation (see
   - Agent-visible schemas keep only standard JSON Schema keywords.
   - Invisible characters (every Unicode format character, which includes
     tag characters, plus control, private-use and filler characters) are
-    removed from every string and key an agent can read.
+    removed from every string and key an agent can read. Visible text is
+    never rewritten; the joiners Persian, Indic scripts and emoji need are
+    kept, and only the scanner's private copy is NFKC-folded.
   - The title, paths and all schema strings are scanned (a best-effort
     tripwire). A tool with more than 5,000 schema strings fails evaluation
     as unreviewable.
@@ -122,7 +124,8 @@ Fixed before release, after independent validation (see
   - Only booleans and API-declared enum values are baked in. Numbers, ids
     and free text stay inputs, and a name that is also an input always uses
     the input.
-  - Every argument is kept, so none is silently dropped.
+  - Every argument is kept, empty values (`""`, `null`, `[]`, `{}`)
+    included, so none is silently dropped.
   - Recorded values never go into the definition: example inputs are read
     from traces at evaluation time.
 - OAuth tokens stay scrubbed until they really expire.
