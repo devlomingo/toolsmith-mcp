@@ -558,7 +558,8 @@ export class Toolsmith {
         );
       } else if (artifact.kind === 'composite') {
         const def = v.definition as unknown as CompositeDef;
-        evaluation = await evaluateComposite(def, opts.inputs ?? [], {
+        const inputs = opts.inputs?.length ? opts.inputs : this.examplesFromTraces(def);
+        evaluation = await evaluateComposite(def, inputs, {
           call: (tool, args, ctx) => this.dispatcher.call(tool, args, ctx),
           runComposite: (d, args, ctx) => this.runCompositeDirect(d, args, ctx),
           toolAccess: (tool) => {
@@ -582,6 +583,26 @@ export class Toolsmith {
       actor,
       evaluation.passed ? 'evaluation passed' : 'evaluation failed',
     );
+  }
+
+  /**
+   * Example inputs for a mined composite, read from the recorded (redacted)
+   * calls it references. Calls that are gone (retention) or whose values
+   * were redacted are skipped.
+   */
+  private examplesFromTraces(def: CompositeDef): JsonObject[] {
+    const props = Object.keys((def.inputSchema.properties ?? {}) as object);
+    const required = (def.inputSchema.required as string[] | undefined) ?? [];
+    const out: JsonObject[] = [];
+    for (const id of def.exampleTraceIds ?? []) {
+      const args = this.traces.get(id)?.args;
+      if (!args || typeof args !== 'object' || Array.isArray(args)) continue;
+      const input: JsonObject = {};
+      for (const k of props) if (k in args) input[k] = (args as JsonObject)[k]!;
+      if (required.every((r) => r in input) && !JSON.stringify(input).includes('[REDACTED'))
+        out.push(input);
+    }
+    return out;
   }
 
   /** Run a composite definition that is not (yet) published, for evaluation. */

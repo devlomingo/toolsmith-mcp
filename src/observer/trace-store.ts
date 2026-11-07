@@ -95,6 +95,12 @@ export class TraceStore {
     return rows.map(toTrace);
   }
 
+  get(id: string): TraceRecord | undefined {
+    const r = this.db.prepare('SELECT * FROM traces WHERE id = ?').get(id) as
+      Record<string, unknown> | undefined;
+    return r ? toTrace(r) : undefined;
+  }
+
   children(parentId: string): TraceRecord[] {
     return (
       this.db

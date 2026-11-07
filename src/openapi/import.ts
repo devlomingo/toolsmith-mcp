@@ -8,7 +8,7 @@ import { isPrivateAddress } from '../security/ssrf.js';
 import { isPostmanCollection, postmanToOpenApi } from './postman.js';
 import { camelCase } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
-import { cleanText, toJsonSchema, wrapAsObjectSchema } from './schema-utils.js';
+import { cleanText, sanitizeDeep, toJsonSchema, wrapAsObjectSchema } from './schema-utils.js';
 import type {
   OpenApiIntegrationDef,
   OperationDef,
@@ -291,6 +291,9 @@ export async function importOpenApi(
   }
 
   linkParamSources(operations);
+  // Everything an agent will read goes through one deep sanitizer: every
+  // string and key in the schemas, parameter names and descriptions, paths.
+  for (const op of operations) sanitizeOperation(op);
 
   const info = (doc.info ?? {}) as Doc;
   return {
@@ -584,6 +587,17 @@ const INJECTION_PATTERNS = [
   /\byou (must|should|need to) (always |first )?(call|use|invoke|run) /i,
   /\bbefore (using|calling) (this|any other) tool\b/i,
 ];
+
+/** Clean an operation in place: schemas, parameters, path, text. */
+export function sanitizeOperation(op: OperationDef): void {
+  op.inputSchema = sanitizeDeep(op.inputSchema);
+  if (op.outputSchema) op.outputSchema = sanitizeDeep(op.outputSchema);
+  op.params = op.params.map((p) => sanitizeDeep(p));
+  if (op.body) op.body = sanitizeDeep(op.body);
+  op.path = cleanText(op.path);
+  op.summary = cleanText(op.summary);
+  op.description = cleanText(op.description);
+}
 
 /** Flag tool-poisoning style text in third-party descriptions. */
 export function detectInjection(text: string): string | undefined {

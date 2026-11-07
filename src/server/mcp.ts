@@ -5,10 +5,14 @@ import {
   type McpRequestContext,
 } from '@modelcontextprotocol/server';
 import type { Toolsmith } from '../app.js';
+import { INVISIBLE } from '../openapi/schema-utils.js';
 import { VERSION } from '../app.js';
 import type { JsonObject, JsonValue, ToolCallResult, ToolDefinition } from '../core/types.js';
 
 const MAX_TEXT = 200_000;
+
+// Everything cleanText removes, plus line/paragraph separators, shown as escapes in prompts.
+const INVISIBLE_OR_SEPARATOR = new RegExp(`${INVISIBLE.source.slice(0, -1)}\\u2028\\u2029]`, 'gu');
 
 /**
  * JSON with invisible and layout-changing characters shown as \uXXXX
@@ -17,8 +21,7 @@ const MAX_TEXT = 200_000;
  */
 const visibleJson = (v: unknown): string =>
   JSON.stringify(v, null, 2).replace(
-    // eslint-disable-next-line no-misleading-character-class -- these invisible characters are exactly what is escaped
-    /[\u007f-\u009f\u00ad\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u206f\ufeff\u180e\u3164\ufe00-\ufe0f]|[\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/gu,
+    INVISIBLE_OR_SEPARATOR,
     (ch) => `\\u{${ch.codePointAt(0)!.toString(16)}}`,
   );
 

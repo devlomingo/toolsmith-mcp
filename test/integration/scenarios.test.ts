@@ -504,7 +504,7 @@ describe('capability requests with "latest"', () => {
 });
 
 describe('baked constants', () => {
-  it('an argument with the same value in every run becomes a literal, not an input', async () => {
+  it('numbers and free-text values are never baked; recorded values stay out of definitions', async () => {
     h = await makeHarness();
     await approveShop(h.app);
     for (const s of ['c1', 'c2', 'c3', 'c4']) {
@@ -519,8 +519,10 @@ describe('baked constants', () => {
     const out = await h.app.proposeComposites('system');
     const def = out.find((o) => o.def?.steps.some((st) => st.tool === 'shop__getProducts'))!.def!;
     const step = def.steps.find((st) => st.tool === 'shop__getProducts')!;
-    expect(step.args.limit).toBe(3); // a number that never changed: baked
-    expect(step.args.category).toEqual({ $ref: 'input.category' }); // varies: stays an input
-    expect(Object.keys(def.inputSchema.properties as object)).toEqual(['category']);
+    // Numbers are never baked (an amount or quantity is what a later call
+    // changes); a value that varied stays an input too.
+    expect(step.args.limit).toEqual({ $ref: 'input.limit' });
+    expect(step.args.category).toEqual({ $ref: 'input.category' });
+    expect(JSON.stringify(def)).not.toMatch(/"books"|"games"/); // no recorded values in the definition
   });
 });

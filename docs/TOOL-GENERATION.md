@@ -69,11 +69,17 @@ It is a declarative plan. Nothing generated is ever run as code:
 
 ## Constants and data transforms
 
-- **Constants.** A number, a boolean, or an API-declared enum value that
-  was the same in every observed run (`limit: 50`, `status: "shipped"`) is
-  baked into the plan as a literal, so the agent no longer has to supply
-  it. Ids, names and other free-text strings are never baked, and a name
-  that is also an input of the composite always uses the input.
+- **Constants.** A boolean or an API-declared enum value that was the same
+  in every observed run (`dry_run: true`, `status: "shipped"`) is baked into
+  the plan as a literal. Everything else stays an input, even if it never
+  changed: numbers (amounts, quantities), ids, names and other free text.
+  A name that is also an input of the composite always uses the input.
+  Every argument an agent sent is kept in the plan, either as a literal or
+  as an input; none is silently dropped.
+- **Recorded values stay out of definitions.** A mined composite stores
+  references to the recorded calls, not their values. Example inputs for
+  the equivalence test are read from the (redacted, retention-limited)
+  traces when the evaluator runs.
 - **Transforms.** A `$transform` step reshapes another step's result with a
   fixed vocabulary: `filter` (eq, ne, gt, gte, lt, lte, contains, in,
   exists), `sort`, `pick`, `limit`, `first`, `last` and `count`. Nothing is

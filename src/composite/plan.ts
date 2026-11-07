@@ -52,7 +52,14 @@ export interface CompositeDef {
     confidence?: number;
   };
   /** Example inputs used by the evaluator (from redacted traces or supplied). */
+  /** Example inputs supplied by a person (manual or capability composites). */
   examples: Array<Record<string, JsonValue>>;
+  /**
+   * Mined composites keep only references to recorded calls. Example inputs
+   * are read from those (redacted, retention-limited) traces at evaluation
+   * time, so recorded values never end up in a definition.
+   */
+  exampleTraceIds?: string[];
 }
 
 export function isRef(v: unknown): v is RefExpr {

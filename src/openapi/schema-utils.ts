@@ -56,21 +56,36 @@ const ALLOWED_KEYWORDS = new Set([
  * They can split a phrase so filters miss it, or reorder what a human sees.
  */
 export function cleanText(text: string): string {
-  return (
-    text
-      .normalize('NFKC')
-      .replace(/[\u2028\u2029]/g, '\n')
-      .replace(
-        // eslint-disable-next-line no-misleading-character-class -- these invisible characters are exactly what is removed
-        /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\u00AD\u180E\u115F\u1160\u3164\uFE00-\uFE0F]/g,
-        '',
-      )
-      // Unicode tag characters render as nothing but carry ASCII text.
-      // eslint-disable-next-line no-misleading-character-class -- intentional
-      .replace(/[\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/gu, '')
-      // eslint-disable-next-line no-control-regex -- stripping control characters is the point
-      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
-  );
+  return text
+    .normalize('NFKC')
+    .replace(/[\u2028\u2029]/g, '\n')
+    .replace(INVISIBLE, '');
+}
+
+/**
+ * Characters that change or hide what is displayed. Removed by category
+ * rather than by list: every format character (Cf: zero-width, bidi
+ * controls, Unicode tags, U+061C, U+FFF9\u2026), every control character except
+ * newline and tab, private-use and unassigned code points, plus the
+ * invisible "filler" letters and joiners that sit in other categories.
+ * Ordinary text in any script, Arabic included, is untouched.
+ */
+export const INVISIBLE =
+  // eslint-disable-next-line no-misleading-character-class, no-control-regex -- removing these is the point
+  /[\p{Cf}\p{Co}\p{Cn}\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u034F\u115F\u1160\u17B4\u17B5\u180B-\u180F\u2800\u3164\uFE00-\uFE0F\uFFA0\u{E0100}-\u{E01EF}]/gu;
+
+/** Clean every string and every key in a schema (any depth). */
+export function sanitizeDeep<T>(value: T, depth = 0): T {
+  if (depth > 64) return value;
+  if (typeof value === 'string') return cleanText(value) as T;
+  if (Array.isArray(value)) return value.map((v) => sanitizeDeep(v, depth + 1)) as T;
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>))
+      out[cleanText(k)] = sanitizeDeep(v, depth + 1);
+    return out as T;
+  }
+  return value;
 }
 
 const DROP_KEYS = new Set([

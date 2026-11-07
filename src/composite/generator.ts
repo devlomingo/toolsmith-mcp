@@ -1,5 +1,5 @@
 import { camelCase, toolName } from '../core/naming.js';
-import type { JsonSchema, JsonValue, ToolDefinition } from '../core/types.js';
+import type { JsonSchema, ToolDefinition } from '../core/types.js';
 import type { ArgSource, Pattern } from '../patterns/miner.js';
 import { planStages, type CompositeDef, type PlanStep, type ValueExpr } from './plan.js';
 
@@ -140,14 +140,15 @@ export function patternToComposite(
       case 'item':
         return { $ref: src.path ? `item.${src.path}` : 'item' };
       case 'constant': {
-        // Bake only values from a fixed, API-declared set (enums), booleans
-        // and numbers. Free-text strings (repos, channels, phone numbers)
+        // Bake only values from a fixed, API-declared set (enums) and
+        // booleans. Free-text strings (repos, channels, phone numbers)
         // are what the agent is asking about; they stay inputs.
         const schema = props[arg] ?? {};
         const v = src.value;
+        // Numbers are not baked either: an amount or a numeric phone number
+        // is exactly what a later call needs to change.
         const safe =
           typeof v === 'boolean' ||
-          typeof v === 'number' ||
           (Array.isArray(schema.enum) && (schema.enum as unknown[]).includes(v));
         if (safe) return v;
         break;
@@ -214,13 +215,10 @@ export function patternToComposite(
     : '';
   const description = `${useInsteadOf(steps)} Runs ${flow} in one call.${parallel}${firstWrite ? ' Changes data; steps run in order.' : ''} Discovered from ${pattern.support} observed sessions (confidence ${pattern.confidence}).${pattern.stats.startsRun >= 0.8 ? ' Agents usually start with this.' : ''} Returns each step's result under "results"; "partial" is true if any step failed.`;
 
-  const examples = pattern.exampleArgs
-    .map((a) => {
-      const out: Record<string, JsonValue> = {};
-      for (const [k, v] of Object.entries(a)) if (k in inputProps) out[k] = v as JsonValue;
-      return out;
-    })
-    .filter((e) => [...required].every((r) => r in e));
+  const exampleTraceIds = pattern.examples
+    .slice(0, 3)
+    .map((ids) => ids[0]!)
+    .filter(Boolean);
 
   return {
     kind: 'composite',
@@ -241,7 +239,8 @@ export function patternToComposite(
       support: pattern.support,
       confidence: pattern.confidence,
     },
-    examples,
+    examples: [],
+    exampleTraceIds,
   };
 }
 

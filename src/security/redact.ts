@@ -168,19 +168,27 @@ export class Fingerprinter {
   }
 
   /** path -> hash for every scalar leaf. Array indices become [*]. */
-  leaves(value: unknown, maxLeaves = 2000): Array<[string, string]> {
+  /**
+   * `forArgs`: every argument leaf counts (booleans, long strings, and
+   * sensitive keys too), so no argument can silently drop out of a mined
+   * composite. Results keep the narrower rules: booleans would link
+   * everything to everything, and sensitive result fields are skipped.
+   */
+  leaves(value: unknown, maxLeaves = 2000, forArgs = false): Array<[string, string]> {
     const out: Array<[string, string]> = [];
     const walk = (v: unknown, path: string, depth: number): void => {
       if (out.length >= maxLeaves || depth > MAX_DEPTH) return;
       if (typeof v === 'string') {
-        if (v.length > 0 && v.length <= 256) out.push([path || '$', this.hash(v)]);
+        if (v.length > 0 && (forArgs || v.length <= 256)) out.push([path || '$', this.hash(v)]);
       } else if (typeof v === 'number' && Number.isFinite(v)) {
         out.push([path || '$', this.hash(v)]);
+      } else if (typeof v === 'boolean' && forArgs) {
+        out.push([path || '$', this.hash(`b:${v}`)]);
       } else if (Array.isArray(v)) {
         for (const item of v) walk(item, `${path}[*]`, depth + 1);
       } else if (v && typeof v === 'object') {
         for (const [k, child] of Object.entries(v as Record<string, unknown>)) {
-          if (isSensitiveKey(k)) continue;
+          if (isSensitiveKey(k) && !forArgs) continue;
           walk(child, path ? `${path}.${k}` : k, depth + 1);
         }
       }
@@ -192,7 +200,7 @@ export class Fingerprinter {
   /** Argument fingerprints: path -> hash (first occurrence wins). */
   argFingerprints(args: unknown): Record<string, string> {
     const out: Record<string, string> = {};
-    for (const [p, h] of this.leaves(args, 200)) if (!(p in out)) out[p] = h;
+    for (const [p, h] of this.leaves(args, 200, true)) if (!(p in out)) out[p] = h;
     return out;
   }
 

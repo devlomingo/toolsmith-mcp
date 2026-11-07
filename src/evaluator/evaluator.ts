@@ -91,6 +91,7 @@ export async function evaluateIntegration(
     ...def.operations.flatMap((op) =>
       [
         op.path,
+        safeDecode(op.path),
         op.name,
         ...schemaTexts(op.inputSchema),
         ...schemaTexts(op.outputSchema),
@@ -107,15 +108,21 @@ export async function evaluateIntegration(
       }),
     ),
   ];
-  const textVolume = def.operations.reduce(
-    (n, op) => n + schemaTexts(op.inputSchema).length + schemaTexts(op.outputSchema).length,
-    0,
+  // Reviewability is judged per tool: one tool whose schemas hold more text
+  // than a person can read is refused; large APIs with many tools are fine.
+  const oversized = def.operations.filter(
+    (op) => schemaTexts(op.inputSchema).length + schemaTexts(op.outputSchema).length > 5_000,
   );
-  if (textVolume > 20_000) {
+  if (oversized.length) {
     checks.push({
       name: 'schema text reviewable',
       passed: false,
-      detail: `${textVolume} strings in the tool schemas: more than can be scanned and reviewed. Narrow the import with "include"/"exclude".`,
+      detail: `${oversized
+        .map((o) => o.name)
+        .slice(0, 10)
+        .join(
+          ', ',
+        )}: more than 5,000 strings in one tool's schemas, too much to review. Exclude these operations with "exclude".`,
       severity: 'error',
     });
   }
@@ -249,7 +256,7 @@ export async function evaluateIntegration(
 export function schemaTexts(schema: unknown, depth = 0, out: string[] = []): string[] {
   // Collect every string anywhere in the schema (any key, any depth), so
   // nothing a spec can put there escapes the scan.
-  if (out.length > 20_001) return out; // the caller fails evaluation when the cap is hit
+  if (out.length > 200_000) return out; // hard stop; per-tool limits fail far earlier
   if (typeof schema === 'string') {
     out.push(schema);
     return out;
@@ -264,6 +271,14 @@ export function schemaTexts(schema: unknown, depth = 0, out: string[] = []): str
     schemaTexts(v, depth + 1, out);
   }
   return out;
+}
+
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
 }
 
 function authRefs(cfg: IntegrationConfig): string[] {

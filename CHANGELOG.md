@@ -109,19 +109,25 @@ Fixed before release, after independent validation (see
   against DNS rebinding; these URLs come from the operator. IPv4-translated
   IPv6 is blocked.
 - Tool poisoning:
-  - Agent-visible schemas keep only standard JSON Schema keywords, and
-    invisible characters (including Unicode tags) are stripped.
+  - Agent-visible schemas keep only standard JSON Schema keywords.
+  - Invisible characters (every Unicode format character, which includes
+    tag characters, plus control, private-use and filler characters) are
+    removed from every string and key an agent can read.
   - The title, paths and all schema strings are scanned (a best-effort
-    tripwire), up to 20,000 strings; more than that fails evaluation as
-    unreviewable.
-  - `show`, `show --json` and the dashboard give reviewers the full text
-    and schemas.
-- Mined composites bake in only numbers, booleans and API-declared enum
-  values, never ids or free-text strings. A name that is also an input
-  always uses the input.
+    tripwire). A tool with more than 5,000 schema strings fails evaluation
+    as unreviewable.
+  - `show` lists every description and top-level parameter; `show --json`
+    and the dashboard show full schemas.
+- Mined composites:
+  - Only booleans and API-declared enum values are baked in. Numbers, ids
+    and free text stay inputs, and a name that is also an input always uses
+    the input.
+  - Every argument is kept, so none is silently dropped.
+  - Recorded values never go into the definition: example inputs are read
+    from traces at evaluation time.
 - OAuth tokens stay scrubbed until they really expire.
 - In-client approval prompts expire, can't be accepted after a decline,
-  and show invisible characters as escapes.
+  and show invisible and line-separator characters as `\u{…}` escapes.
 - In-client approval prompts show the complete arguments, and only answers
   to prompts the gateway sent count.
 - Capability answers only offer tools the calling client may use. Postman

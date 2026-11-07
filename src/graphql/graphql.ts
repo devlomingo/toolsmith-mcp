@@ -1,7 +1,7 @@
 import { ToolsmithError } from '../core/errors.js';
 import { camelCase } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
-import { detectInjection } from '../openapi/import.js';
+import { detectInjection, sanitizeOperation } from '../openapi/import.js';
 import { cleanText } from '../openapi/schema-utils.js';
 import type { OpenApiIntegrationDef, OperationDef, SpecFinding } from '../openapi/types.js';
 
@@ -220,6 +220,7 @@ export function introspectionToDef(
       });
     }
   }
+  for (const op of operations) sanitizeOperation(op);
   if (operations.length === 0)
     throw new ToolsmithError('The GraphQL schema has no query or mutation fields', 'validation');
   return {
