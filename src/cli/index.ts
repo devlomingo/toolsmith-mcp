@@ -224,7 +224,7 @@ async function main(argv: string[]): Promise<number> {
       case 'discover':
         return await discover(app);
       case 'ask':
-        return ask(app, need(rest.join(' ') || undefined, 'ask "<what you need>"'));
+        return await ask(app, need(rest.join(' ') || undefined, 'ask "<what you need>"'));
       case 'traces':
         return traces(app, values.tool, values.limit ? Number(values.limit) : 30);
       case 'doctor':
@@ -740,8 +740,8 @@ async function discover(app: Toolsmith): Promise<number> {
   return 0;
 }
 
-function ask(app: Toolsmith, request: string): number {
-  const a: CapabilityAnalysis = app.discovery.analyze(request, 'cli');
+async function ask(app: Toolsmith, request: string): Promise<number> {
+  const a: CapabilityAnalysis = await app.analyzeCapability(request, 'cli');
   const color =
     a.verdict === 'available' ? c.green : a.verdict === 'unsupported' ? c.red : c.yellow;
   say(`${color(a.verdict)}: ${a.explanation}`);

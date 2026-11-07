@@ -188,7 +188,7 @@ export async function handleAdminApi(
         const b = await body(req);
         if (typeof b.request !== 'string' || b.request.length < 3)
           throw new ToolsmithError('"request" is required', 'validation');
-        return json(res, 200, app.discovery.analyze(b.request, 'dashboard'));
+        return json(res, 200, await app.analyzeCapability(b.request, 'dashboard'));
       }
     }
     if (parts[0] === 'call-approvals') {

@@ -42,6 +42,7 @@
     "benchmark:check": "node benchmarks/scripts/check-regression.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
     "@apidevtools/swagger-parser": "^13.0.0",
     "@modelcontextprotocol/client": "^2.4.0",
     "@modelcontextprotocol/node": "^2.1.2",

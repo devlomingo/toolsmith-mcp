@@ -19,6 +19,7 @@ import { resolveEnvRefs } from './security/secrets.js';
 import { TraceStore } from './observer/trace-store.js';
 import { endpointsToOpenApi, parseEndpointText } from './openapi/endpoints.js';
 import { importOpenApi } from './openapi/import.js';
+import { LlmStage, extractedToOpenApi } from './llm/llm.js';
 import { HttpIntegrationClient } from './openapi/http-executor.js';
 import { INTROSPECTION_QUERY, introspectionToDef, isIntrospection } from './graphql/graphql.js';
 import type { OpenApiIntegrationDef } from './openapi/types.js';
@@ -49,6 +50,21 @@ export interface ToolsmithOptions {
  * Composition root. Owns every component and exposes the operations the CLI,
  * the MCP server and the admin API share, so all three behave identically.
  */
+/** Crude HTML to text for documentation pages: drop scripts/styles/tags, keep the words. */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<(script|style|nav|footer)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<br\s*\/?>|<\/(p|div|li|h\d|tr|pre)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n+/g, '\n\n')
+    .trim();
+}
+
 export class Toolsmith {
   readonly db: Db;
   readonly redactor = new Redactor();
@@ -303,7 +319,11 @@ export class Toolsmith {
           additionalProperties: false,
         },
         handler: async (args, ctx) => {
-          const analysis = this.discovery.analyze(String(args.request), ctx.sessionId);
+          const analysis = await this.analyzeCapability(
+            String(args.request),
+            ctx.sessionId,
+            ctx.principal,
+          );
           if (analysis.proposal)
             await this.evaluateLatest(analysis.proposal.artifact, [], 'discovery').catch(
               () => undefined,
@@ -353,13 +373,15 @@ export class Toolsmith {
     const def =
       cfg.type === 'graphql'
         ? await this.importGraphql(cfg)
-        : await importOpenApi(source, {
-            name,
-            baseUrl: cfg.baseUrl,
-            include: cfg.include,
-            exclude: cfg.exclude,
-            allowPrivateNetwork: cfg.allowPrivateNetwork,
-          });
+        : cfg.type === 'docs'
+          ? await this.importFromDocs(cfg, source as string)
+          : await importOpenApi(source, {
+              name,
+              baseUrl: cfg.baseUrl,
+              include: cfg.include,
+              exclude: cfg.exclude,
+              allowPrivateNetwork: cfg.allowPrivateNetwork,
+            });
     def.specSource = cfg.spec;
     const artifact = this.registry.ensureArtifact('openapi', name);
     const { version, created } = this.registry.addVersion(
@@ -376,6 +398,85 @@ export class Toolsmith {
     });
     if (!created) return version;
     return this.runEvaluation(artifact.id, version.version, actor, { live: opts.live ?? true });
+  }
+
+  /** Free-text documentation → endpoints via the optional LLM stage, then the normal import. */
+  private async importFromDocs(
+    cfg: IntegrationConfig,
+    source: string,
+  ): Promise<OpenApiIntegrationDef> {
+    const llm = this.llmStage();
+    if (!llm) {
+      throw new ToolsmithError(
+        'Importing from free-text documentation needs the optional LLM stage, which is off',
+        'validation',
+        'Set "llm": { "enabled": true } in toolsmith.config.json (it sends the documentation to Anthropic), or provide an OpenAPI spec or an endpoint list instead.',
+      );
+    }
+    const raw = /^https?:\/\//.test(source)
+      ? await (await fetch(source, { signal: AbortSignal.timeout(20_000) })).text()
+      : readFileSync(source, 'utf8');
+    const text = /<html|<body|<div/i.test(raw) ? htmlToText(raw) : raw;
+    const extracted = await llm.extractEndpoints(text, { name: cfg.name, baseUrl: cfg.baseUrl });
+    const def = await importOpenApi(extractedToOpenApi(extracted, cfg.baseUrl), {
+      name: cfg.name,
+      baseUrl: cfg.baseUrl,
+      include: cfg.include,
+      exclude: cfg.exclude,
+    });
+    def.findings.unshift({
+      severity: 'warning',
+      code: 'from_llm',
+      message: `Endpoints were extracted from free-text documentation by ${this.config.llm.model}. Review every tool: extraction can be wrong even when it looks plausible, which is why each read operation is verified with a live call.`,
+    });
+    return def;
+  }
+
+  private llmCache?: LlmStage;
+  llmStage(): LlmStage | undefined {
+    if (!this.config.llm.enabled) return undefined;
+    return (this.llmCache ??= new LlmStage({
+      model: this.config.llm.model,
+      effort: this.config.llm.effort,
+    }));
+  }
+
+  /** For tests: inject a stage with a fake client. */
+  setLlmStage(stage: LlmStage): void {
+    this.llmCache = stage;
+  }
+
+  /**
+   * Capability analysis, with the LLM fallback when keyword matching finds
+   * nothing and the fallback is enabled. Suggested names are checked against
+   * the tools this client may call; invented names are dropped.
+   */
+  async analyzeCapability(request: string, sessionId?: string, principal?: string) {
+    const analysis = this.discovery.analyze(request, sessionId);
+    const llm = this.llmStage();
+    if (analysis.verdict !== 'unsupported' || !llm || !this.config.llm.capabilityFallback)
+      return analysis;
+    const allowed = this.catalog
+      .list()
+      .filter((t) => t.source !== 'builtin' && this.allowed(principal ?? sessionId, t.name));
+    try {
+      const s = await llm.suggestTools(
+        request,
+        allowed.map((t) => ({ name: t.name, description: t.description })),
+      );
+      const names = new Set(allowed.map((t) => t.name));
+      const valid = s.tools.filter((t) => names.has(t.name));
+      if (valid.length === 0 || !s.possible)
+        return { ...analysis, llm: { explanation: s.explanation, tools: [] } };
+      return {
+        ...analysis,
+        verdict: 'available' as const,
+        explanation: `Keyword matching found nothing, but ${this.config.llm.model} suggests: ${valid.map((t) => `${t.name} (${t.why})`).join('; ')}. Check that these fit before relying on them.`,
+        llm: { explanation: s.explanation, tools: valid },
+      };
+    } catch (err) {
+      return { ...analysis, llm: { error: (err as Error).message } };
+    }
   }
 
   /** Introspect a GraphQL endpoint (through the guarded client) or read a saved introspection file. */

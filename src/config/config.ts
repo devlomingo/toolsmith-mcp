@@ -31,7 +31,7 @@ export type AuthConfig = z.infer<typeof AuthSchema>;
 export const IntegrationSchema = z.object({
   name: namespace,
   /** "graphql": `spec` is the GraphQL endpoint URL (introspected) or a saved introspection JSON file. */
-  type: z.enum(['openapi', 'graphql']).default('openapi'),
+  type: z.enum(['openapi', 'graphql', 'docs']).default('openapi'),
   /** Path or http(s) URL of an OpenAPI 3.x / Swagger 2.0 document (JSON or YAML). */
   spec: z.string(),
   /** Overrides the spec's servers[0].url. Required when the spec has none. */
@@ -158,6 +158,24 @@ export const ConfigSchema = z.object({
     .default({ maxSteps: 20, maxFanOut: 50, concurrency: 8, timeoutMs: 60_000 }),
   /** Expose toolsmith's own meta tools (capability requests) to agents. */
   metaTools: z.boolean().default(true),
+  /**
+   * Optional LLM stage (off by default). "docs" integrations and the
+   * capability fallback send text to Anthropic; see docs/adr/0007.
+   */
+  llm: z
+    .object({
+      enabled: z.boolean().default(false),
+      model: z.string().default('claude-opus-5-5'),
+      effort: z.enum(['low', 'medium', 'high']).default('medium'),
+      /** Ask the model which tools fit when keyword matching finds none. */
+      capabilityFallback: z.boolean().default(true),
+    })
+    .default({
+      enabled: false,
+      model: 'claude-opus-5-5',
+      effort: 'medium',
+      capabilityFallback: true,
+    }),
   approvals: z
     .object({
       /**
