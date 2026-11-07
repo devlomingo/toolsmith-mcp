@@ -1,0 +1,7 @@
+dist
+node_modules
+benchmarks/results
+benchmarks/charts
+site/dist
+package-lock.json
+*.md

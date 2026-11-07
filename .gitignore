@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.toolsmith/
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example
+site/dist/
+.DS_Store

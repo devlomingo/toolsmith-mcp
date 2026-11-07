@@ -1,0 +1,62 @@
+{
+  "name": "toolsmith-mcp",
+  "version": "0.1.0",
+  "description": "Give any AI agent the tools it needs: an MCP gateway that turns OpenAPI specs into tools, mines repeated workflows, and proposes optimized composite tools behind human approval.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "toolsmith-mcp": "dist/cli/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "dashboard",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/postbuild.mjs",
+    "dev": "node --experimental-strip-types src/cli/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run test/integration",
+    "test:e2e": "vitest run test/e2e",
+    "test:security": "vitest run test/security",
+    "benchmark": "npm run build && node benchmarks/scripts/run-all.mjs",
+    "benchmark:patterns": "npm run build && node benchmarks/scripts/patterns.mjs",
+    "benchmark:performance": "npm run build && node benchmarks/scripts/performance.mjs",
+    "benchmark:scalability": "npm run build && node benchmarks/scripts/scalability.mjs",
+    "benchmark:report": "node benchmarks/scripts/report.mjs",
+    "site:build": "node site/build.mjs",
+    "site:check": "node site/check-links.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^13.0.0",
+    "@modelcontextprotocol/client": "^2.4.0",
+    "@modelcontextprotocol/node": "^2.1.2",
+    "@modelcontextprotocol/server": "^2.4.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "js-yaml": "^5.5.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.1.0"
+  }
+}
