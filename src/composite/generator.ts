@@ -139,8 +139,19 @@ export function patternToComposite(
     switch (src.type) {
       case 'item':
         return { $ref: src.path ? `item.${src.path}` : 'item' };
-      case 'constant':
-        return src.value;
+      case 'constant': {
+        // Bake only values from a fixed, API-declared set (enums), booleans
+        // and numbers. Free-text strings (repos, channels, phone numbers)
+        // are what the agent is asking about; they stay inputs.
+        const schema = props[arg] ?? {};
+        const v = src.value;
+        const safe =
+          typeof v === 'boolean' ||
+          typeof v === 'number' ||
+          (Array.isArray(schema.enum) && (schema.enum as unknown[]).includes(v));
+        if (safe) return v;
+        break;
+      }
       case 'output': {
         const stepId = stepIds[src.element]![0]!;
         return { $ref: `steps.${stepId}.result${src.path.startsWith('[') ? '' : '.'}${src.path}` };
@@ -162,13 +173,24 @@ export function patternToComposite(
     return { $ref: `input.${name}` };
   }
 
+  // A literal must never disagree with an input of the same name: when the
+  // composite takes `repo` as input, every step uses that input.
+  for (const st of steps) {
+    for (const [arg, v] of Object.entries(st.args)) {
+      if (!(v && typeof v === 'object' && '$ref' in (v as object)) && arg in inputProps)
+        st.args[arg] = { $ref: `input.${arg}` };
+    }
+  }
+
   // Wire forEach sources now that every step id is known.
   let s = 0;
   pattern.elements.forEach((el, k) => {
     const count = el.kind === 'call' ? 1 : el.tools.length;
     for (let i = 0; i < count; i++, s++) {
       if (el.kind !== 'loop') continue;
-      const srcStep = stepIds[el.sourceElement]![0]!;
+      const srcStep = stepIds[el.sourceElement]?.[0];
+      if (!srcStep)
+        throw new Error('Pattern has a loop whose source call is not part of the pattern');
       const path = el.arrayPath.startsWith('[') ? el.arrayPath : `.${el.arrayPath}`;
       steps[s]!.forEach = `steps.${srcStep}.result${path}`;
     }

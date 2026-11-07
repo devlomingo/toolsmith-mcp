@@ -17,8 +17,9 @@ const MAX_TEXT = 200_000;
  */
 const visibleJson = (v: unknown): string =>
   JSON.stringify(v, null, 2).replace(
-    /[\u007f-\u009f\u00ad\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u206f\ufeff]/g,
-    (ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, '0')}`,
+    // eslint-disable-next-line no-misleading-character-class -- these invisible characters are exactly what is escaped
+    /[\u007f-\u009f\u00ad\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u206f\ufeff\u180e\u3164\ufe00-\ufe0f]|[\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/gu,
+    (ch) => `\\u{${ch.codePointAt(0)!.toString(16)}}`,
   );
 
 const askKey = (principal: string, tool: string, args: JsonObject): string =>

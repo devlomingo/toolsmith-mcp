@@ -69,9 +69,11 @@ It is a declarative plan. Nothing generated is ever run as code:
 
 ## Constants and data transforms
 
-- **Constants.** An argument that had the same value in every observed run
-  (`category: "books"`) is baked into the plan as a literal. The agent no
-  longer has to supply it. Values that were redacted are never baked.
+- **Constants.** A number, a boolean, or an API-declared enum value that
+  was the same in every observed run (`limit: 50`, `status: "shipped"`) is
+  baked into the plan as a literal, so the agent no longer has to supply
+  it. Ids, names and other free-text strings are never baked, and a name
+  that is also an input of the composite always uses the input.
 - **Transforms.** A `$transform` step reshapes another step's result with a
   fixed vocabulary: `filter` (eq, ne, gt, gte, lt, lte, contains, in,
   exists), `sort`, `pick`, `limit`, `first`, `last` and `count`. Nothing is

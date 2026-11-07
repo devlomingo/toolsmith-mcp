@@ -651,7 +651,7 @@ function show(app: Toolsmith, ref: string, asJson: boolean): number {
         `  ${c.bold(`${artifact.name}__${o.name}`)}: ${o.summary || o.description || c.dim('(no description)')}`,
       );
       if (o.description && o.description !== o.summary)
-        say(c.dim(`    ${o.description.replace(/\s+/g, ' ').slice(0, 600)}`));
+        say(c.dim(`    ${o.description.replace(/\s+/g, ' ')}`));
       const props = (o.inputSchema.properties ?? {}) as Record<
         string,
         { description?: string; type?: unknown }

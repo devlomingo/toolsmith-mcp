@@ -510,7 +510,7 @@ describe('baked constants', () => {
     for (const s of ['c1', 'c2', 'c3', 'c4']) {
       const list = await h.app.call(
         'shop__getProducts',
-        { category: 'books', limit: 2 + Number(s[1]) },
+        { category: ['books', 'games', 'garden', 'kitchen'][Number(s[1]) - 1]!, limit: 3 },
         { sessionId: s },
       );
       for (const p of list.data as Array<{ id: number }>)
@@ -519,8 +519,8 @@ describe('baked constants', () => {
     const out = await h.app.proposeComposites('system');
     const def = out.find((o) => o.def?.steps.some((st) => st.tool === 'shop__getProducts'))!.def!;
     const step = def.steps.find((st) => st.tool === 'shop__getProducts')!;
-    expect(step.args.category).toBe('books'); // constant
-    expect(step.args.limit).toEqual({ $ref: 'input.limit' }); // varies: stays an input
-    expect(Object.keys(def.inputSchema.properties as object)).toEqual(['limit']);
+    expect(step.args.limit).toBe(3); // a number that never changed: baked
+    expect(step.args.category).toEqual({ $ref: 'input.category' }); // varies: stays an input
+    expect(Object.keys(def.inputSchema.properties as object)).toEqual(['category']);
   });
 });

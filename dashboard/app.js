@@ -590,7 +590,21 @@ const views = {
             h('code', {}, o.path),
             pill(o.access, o.access === 'read' ? 'ok' : o.access === 'write' ? 'warn' : 'bad'),
             // The reviewer sees everything the agent will read, schemas included.
-            h('div', {}, o.summary || o.description, h('details', {}, h('summary', {}, t('schemas')), code({ description: o.description, input: o.inputSchema, output: o.outputSchema ?? null }))),
+            h(
+              'div',
+              {},
+              o.summary || o.description,
+              h(
+                'details',
+                {},
+                h('summary', {}, t('schemas')),
+                code({
+                  description: o.description,
+                  input: o.inputSchema,
+                  output: o.outputSchema ?? null,
+                }),
+              ),
+            ),
           ]),
         ),
       );

@@ -35,6 +35,19 @@ const ALLOWED_KEYWORDS = new Set([
   'oneOf',
   'allOf',
   'not',
+  'patternProperties',
+  'prefixItems',
+  'contains',
+  'minContains',
+  'maxContains',
+  'propertyNames',
+  'dependentRequired',
+  'dependentSchemas',
+  'if',
+  'then',
+  'else',
+  'unevaluatedProperties',
+  'unevaluatedItems',
 ]);
 
 /**
@@ -47,7 +60,14 @@ export function cleanText(text: string): string {
     text
       .normalize('NFKC')
       .replace(/[\u2028\u2029]/g, '\n')
-      .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\u00AD]/g, '')
+      .replace(
+        // eslint-disable-next-line no-misleading-character-class -- these invisible characters are exactly what is removed
+        /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\u00AD\u180E\u115F\u1160\u3164\uFE00-\uFE0F]/g,
+        '',
+      )
+      // Unicode tag characters render as nothing but carry ASCII text.
+      // eslint-disable-next-line no-misleading-character-class -- intentional
+      .replace(/[\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/gu, '')
       // eslint-disable-next-line no-control-regex -- stripping control characters is the point
       .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
   );
@@ -94,7 +114,33 @@ export function toJsonSchema(schema: unknown, depth = 0, seen = new WeakSet<obje
       typeof v === 'object'
     ) {
       out[k] = toJsonSchema(v, depth + 1, seen);
-    } else if ((k === 'allOf' || k === 'anyOf' || k === 'oneOf') && Array.isArray(v)) {
+    } else if (
+      (k === 'patternProperties' || k === 'dependentSchemas') &&
+      v &&
+      typeof v === 'object'
+    ) {
+      const map: Record<string, unknown> = {};
+      for (const [pk, pv] of Object.entries(v as Record<string, unknown>))
+        map[pk] = toJsonSchema(pv, depth + 1, seen);
+      out[k] = map;
+    } else if (
+      [
+        'contains',
+        'propertyNames',
+        'if',
+        'then',
+        'else',
+        'unevaluatedProperties',
+        'unevaluatedItems',
+      ].includes(k) &&
+      v &&
+      typeof v === 'object'
+    ) {
+      out[k] = toJsonSchema(v, depth + 1, seen);
+    } else if (
+      (k === 'allOf' || k === 'anyOf' || k === 'oneOf' || k === 'prefixItems') &&
+      Array.isArray(v)
+    ) {
       out[k] = v.map((s) => toJsonSchema(s, depth + 1, seen));
     } else if (k === 'format' && typeof v === 'string' && !KNOWN_FORMATS.has(v)) {
       continue; // unknown formats (int32, binary, …) would fail strict validators

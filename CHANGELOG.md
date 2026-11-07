@@ -109,12 +109,16 @@ Fixed before release, after independent validation (see
   against DNS rebinding; these URLs come from the operator. IPv4-translated
   IPv6 is blocked.
 - Tool poisoning:
-  - Schemas shown to agents keep only standard JSON Schema keywords, and
-    invisible characters are stripped.
-  - Every string an agent reads is scanned for instruction-like text. This
-    is a best-effort tripwire; a hit fails evaluation.
-  - Reviewers see full descriptions and schemas in `show` and the
-    dashboard.
+  - Agent-visible schemas keep only standard JSON Schema keywords, and
+    invisible characters (including Unicode tags) are stripped.
+  - The title, paths and all schema strings are scanned (a best-effort
+    tripwire), up to 20,000 strings; more than that fails evaluation as
+    unreviewable.
+  - `show`, `show --json` and the dashboard give reviewers the full text
+    and schemas.
+- Mined composites bake in only numbers, booleans and API-declared enum
+  values, never ids or free-text strings. A name that is also an input
+  always uses the input.
 - OAuth tokens stay scrubbed until they really expire.
 - In-client approval prompts expire, can't be accepted after a decline,
   and show invisible characters as escapes.
@@ -122,7 +126,7 @@ Fixed before release, after independent validation (see
   to prompts the gateway sent count.
 - Capability answers only offer tools the calling client may use. Postman
   path variables stay parameters instead of baking values into tools.
-  Entity ids are never baked into composites. OAuth tokens are fetched once
+  OAuth tokens are fetched once
   for parallel calls and rotated out of the redactor.
 - Install from the release tarball: a global install from git cannot build
   the package.

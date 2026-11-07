@@ -82,8 +82,16 @@ export async function evaluateIntegration(
   // schemas reach the agent verbatim through the tool's schemas.
   const injection = [
     ...def.findings.filter((f) => f.code === 'suspicious_description'),
+    ...[def.title, def.description, def.name].flatMap((text) => {
+      const hit = detectInjection(text ?? '');
+      return hit
+        ? [{ message: `the API title or description contains instruction-like text ("${hit}")` }]
+        : [];
+    }),
     ...def.operations.flatMap((op) =>
       [
+        op.path,
+        op.name,
         ...schemaTexts(op.inputSchema),
         ...schemaTexts(op.outputSchema),
         ...op.params.map((p) => p.description ?? ''),
@@ -99,6 +107,18 @@ export async function evaluateIntegration(
       }),
     ),
   ];
+  const textVolume = def.operations.reduce(
+    (n, op) => n + schemaTexts(op.inputSchema).length + schemaTexts(op.outputSchema).length,
+    0,
+  );
+  if (textVolume > 20_000) {
+    checks.push({
+      name: 'schema text reviewable',
+      passed: false,
+      detail: `${textVolume} strings in the tool schemas: more than can be scanned and reviewed. Narrow the import with "include"/"exclude".`,
+      severity: 'error',
+    });
+  }
   checks.push({
     name: 'no instruction-like text in descriptions',
     passed: injection.length === 0,
@@ -229,7 +249,7 @@ export async function evaluateIntegration(
 export function schemaTexts(schema: unknown, depth = 0, out: string[] = []): string[] {
   // Collect every string anywhere in the schema (any key, any depth), so
   // nothing a spec can put there escapes the scan.
-  if (out.length > 20_000) return out;
+  if (out.length > 20_001) return out; // the caller fails evaluation when the cap is hit
   if (typeof schema === 'string') {
     out.push(schema);
     return out;

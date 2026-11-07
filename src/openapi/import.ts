@@ -296,8 +296,8 @@ export async function importOpenApi(
   return {
     kind: 'openapi',
     name: opts.name,
-    title: String(info.title ?? opts.name),
-    description: String(info.description ?? '').slice(0, 2000),
+    title: cleanText(String(info.title ?? opts.name)).slice(0, 200),
+    description: cleanText(String(info.description ?? '')).slice(0, 2000),
     specSource: typeof source === 'string' ? source : '(inline)',
     specVersion,
     baseUrl,

@@ -451,6 +451,10 @@ function containsContiguous(longer: string, shorter: string): boolean {
 }
 
 function isConnected(ep: EpisodeModel, start: number, n: number): boolean {
+  // A loop iterates over an earlier call's result; that call must be part of
+  // the pattern, also when the loop is the pattern's first element.
+  const first = ep.elements[start]!;
+  if (first.element.kind === 'loop') return false;
   for (let k = 1; k < n; k++) {
     const el = ep.elements[start + k]!;
     if (
