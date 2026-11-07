@@ -1,4 +1,9 @@
-import { Server, type McpRequestContext } from '@modelcontextprotocol/server';
+import {
+  Server,
+  acceptedContent,
+  inputRequired,
+  type McpRequestContext,
+} from '@modelcontextprotocol/server';
 import type { Toolsmith } from '../app.js';
 import { VERSION } from '../app.js';
 import type { JsonObject, JsonValue, ToolCallResult, ToolDefinition } from '../core/types.js';
@@ -119,6 +124,39 @@ export function createServerFactory(app: Toolsmith, opts: ServerFactoryOptions =
         envelope?.clientInfo?.name ?? server.getClientVersion()?.name,
       );
       const entry = app.catalog.get(params.name);
+      if (entry?.perCallApproval && app.config.approvals.inClient) {
+        const envelope = ctx.mcpReq.envelope as
+          { clientCapabilities?: { elicitation?: unknown } } | undefined;
+        const canElicit = Boolean(
+          envelope?.clientCapabilities?.elicitation ?? server.getClientCapabilities()?.elicitation,
+        );
+        if (canElicit && app.allowed(principal, params.name)) {
+          const answer = acceptedContent(ctx.mcpReq.inputResponses, 'approve') as
+            { approve?: unknown } | undefined;
+          if (answer?.approve === true) {
+            // The person confirmed in the client: record it like a dashboard approval.
+            const req = app.approvals.request(params.name, params.arguments ?? {}, principal);
+            app.approvals.decide(req.id, true, 'human:client-elicitation');
+            app.audit.write('human:client-elicitation', 'approve-call', req.id, {
+              tool: params.name,
+            });
+          } else if (!ctx.mcpReq.inputResponses || !('approve' in ctx.mcpReq.inputResponses)) {
+            // Not asked yet. (Declined or cancelled answers fall through to the dashboard flow below.)
+            return inputRequired({
+              inputRequests: {
+                approve: inputRequired.elicit({
+                  message: `Allow ONE call to ${params.name} with ${JSON.stringify(params.arguments ?? {}).slice(0, 400)}? It is marked destructive.`,
+                  requestedSchema: {
+                    type: 'object',
+                    properties: { approve: { type: 'boolean', title: 'Approve this call' } },
+                    required: ['approve'],
+                  },
+                }),
+              },
+            }) as never;
+          }
+        }
+      }
       if (!app.allowed(principal, params.name)) {
         return toMcpResult(
           undefined,

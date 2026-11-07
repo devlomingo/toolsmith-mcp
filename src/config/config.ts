@@ -158,6 +158,17 @@ export const ConfigSchema = z.object({
     .default({ maxSteps: 20, maxFanOut: 50, concurrency: 8, timeoutMs: 60_000 }),
   /** Expose toolsmith's own meta tools (capability requests) to agents. */
   metaTools: z.boolean().default(true),
+  approvals: z
+    .object({
+      /**
+       * Ask for per-call approval inside the MCP client (elicitation) when
+       * the client supports it. Off by default: the client app, not the
+       * dashboard, then shows the prompt, so you trust that app to put it
+       * in front of a person rather than answer it automatically.
+       */
+      inClient: z.boolean().default(false),
+    })
+    .default({ inClient: false }),
   /** OpenTelemetry export of tool-call spans (OTLP/HTTP JSON). Off unless an endpoint is set. */
   telemetry: z
     .object({
