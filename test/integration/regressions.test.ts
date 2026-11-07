@@ -234,6 +234,7 @@ describe('M3: write composites', () => {
           medianUpstreamRequests: 2,
           medianToolTimeMs: 1,
           medianSpanMs: 1,
+          startsRun: 1,
         },
         examples: [],
         exampleArgs: [],

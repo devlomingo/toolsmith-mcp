@@ -93,6 +93,8 @@ export interface Pattern {
     medianToolTimeMs: number;
     /** First call start to last call end, including agent time between calls. */
     medianSpanMs: number;
+    /** Share of occurrences that begin their run (AWO: shared session prefixes). */
+    startsRun: number;
   };
   /** A few occurrences: the trace ids of member calls. */
   examples: string[][];
@@ -672,6 +674,7 @@ function buildPattern(
       medianUpstreamRequests: median(upstreamPer),
       medianToolTimeMs: round(median(toolTime)),
       medianSpanMs: round(median(spans)),
+      startsRun: round(occs.filter((o) => o.start === 0).length / occs.length),
     },
     examples,
     exampleArgs,

@@ -190,7 +190,7 @@ export function patternToComposite(
   const parallel = stages.some((st) => st.length > 1)
     ? ` Independent steps run in parallel (${stages.length} stages for ${steps.length} steps).`
     : '';
-  const description = `${useInsteadOf(steps)} Runs ${flow} in one call.${parallel}${firstWrite ? ' Changes data; steps run in order.' : ''} Discovered from ${pattern.support} observed sessions (confidence ${pattern.confidence}). Returns each step's result under "results"; "partial" is true if any step failed.`;
+  const description = `${useInsteadOf(steps)} Runs ${flow} in one call.${parallel}${firstWrite ? ' Changes data; steps run in order.' : ''} Discovered from ${pattern.support} observed sessions (confidence ${pattern.confidence}).${pattern.stats.startsRun >= 0.8 ? ' Agents usually start with this.' : ''} Returns each step's result under "results"; "partial" is true if any step failed.`;
 
   const examples = pattern.exampleArgs
     .map((a) => {
