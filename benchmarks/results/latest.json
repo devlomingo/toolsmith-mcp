@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-07T20:25:37.350Z",
+  "generatedAt": "2026-11-07T21:04:10.120Z",
   "environment": {
     "toolsmith": "0.1.0",
-    "commit": "7a16e57",
+    "commit": "50a43bc",
     "node": "v22.13.1",
     "platform": "darwin 27.2.0 arm64",
     "cpu": "Apple M1 Pro",
@@ -16,10 +16,10 @@
   },
   "performance": {
     "benchmark": "performance",
-    "generatedAt": "2026-11-07T20:25:21.603Z",
+    "generatedAt": "2026-11-07T21:03:54.566Z",
     "environment": {
       "toolsmith": "0.1.0",
-      "commit": "7a16e57",
+      "commit": "50a43bc",
       "node": "v22.13.1",
       "platform": "darwin 27.2.0 arm64",
       "cpu": "Apple M1 Pro",
@@ -51,13 +51,13 @@
             "name": "sequential",
             "latency": {
               "n": 40,
-              "mean": 8.42,
-              "sd": 1.57,
-              "min": 6.22,
-              "p50": 8.04,
-              "p95": 11.17,
-              "p99": 12.56,
-              "max": 12.56
+              "mean": 7.81,
+              "sd": 1.39,
+              "min": 5.69,
+              "p50": 7.47,
+              "p95": 10.08,
+              "p99": 11.16,
+              "max": 11.16
             },
             "mcpCalls": 8,
             "apiRequests": 8,
@@ -65,20 +65,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 26.25,
-            "peakRssMb": 187
+            "cpuMsPerRun": 25.63,
+            "peakRssMb": 182
           },
           {
             "name": "parallel-client",
             "latency": {
               "n": 40,
-              "mean": 5.13,
-              "sd": 1.55,
+              "mean": 4.94,
+              "sd": 0.83,
               "min": 3.92,
-              "p50": 4.61,
-              "p95": 6.93,
-              "p99": 13.31,
-              "max": 13.31
+              "p50": 4.67,
+              "p95": 6.29,
+              "p99": 8.15,
+              "max": 8.15
             },
             "mcpCalls": 8,
             "apiRequests": 8,
@@ -86,20 +86,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 18.45,
-            "peakRssMb": 229
+            "cpuMsPerRun": 18.4,
+            "peakRssMb": 186
           },
           {
             "name": "composite",
             "latency": {
               "n": 40,
-              "mean": 2.06,
-              "sd": 0.6,
-              "min": 1.55,
-              "p50": 1.91,
-              "p95": 2.57,
-              "p99": 5.4,
-              "max": 5.4
+              "mean": 2.08,
+              "sd": 0.47,
+              "min": 1.69,
+              "p50": 1.89,
+              "p95": 3.23,
+              "p99": 3.32,
+              "max": 3.32
             },
             "mcpCalls": 1,
             "apiRequests": 8,
@@ -107,8 +107,8 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 11.88,
-            "peakRssMb": 230
+            "cpuMsPerRun": 12.91,
+            "peakRssMb": 198
           }
         ]
       },
@@ -122,13 +122,13 @@
             "name": "sequential",
             "latency": {
               "n": 40,
-              "mean": 1.99,
-              "sd": 0.47,
-              "min": 1.61,
-              "p50": 1.8,
-              "p95": 3.16,
-              "p99": 3.35,
-              "max": 3.35
+              "mean": 2.01,
+              "sd": 0.43,
+              "min": 1.66,
+              "p50": 1.83,
+              "p95": 2.99,
+              "p99": 3.46,
+              "max": 3.46
             },
             "mcpCalls": 3,
             "apiRequests": 3,
@@ -136,20 +136,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 5.17,
-            "peakRssMb": 230
+            "cpuMsPerRun": 5.18,
+            "peakRssMb": 198
           },
           {
             "name": "composite",
             "latency": {
               "n": 40,
-              "mean": 1.12,
-              "sd": 0.25,
-              "min": 0.92,
+              "mean": 1.18,
+              "sd": 0.35,
+              "min": 0.98,
               "p50": 1.04,
-              "p95": 1.35,
-              "p99": 2.45,
-              "max": 2.45
+              "p95": 1.81,
+              "p99": 2.75,
+              "max": 2.75
             },
             "mcpCalls": 1,
             "apiRequests": 3,
@@ -157,8 +157,8 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 3.79,
-            "peakRssMb": 231
+            "cpuMsPerRun": 3.85,
+            "peakRssMb": 199
           }
         ]
       },
@@ -172,13 +172,13 @@
             "name": "sequential",
             "latency": {
               "n": 40,
-              "mean": 112.11,
-              "sd": 4.29,
-              "min": 104.64,
-              "p50": 111.15,
-              "p95": 119.89,
-              "p99": 122.1,
-              "max": 122.1
+              "mean": 121.42,
+              "sd": 8.68,
+              "min": 101.45,
+              "p50": 121.02,
+              "p95": 136.1,
+              "p99": 136.82,
+              "max": 136.82
             },
             "mcpCalls": 8,
             "apiRequests": 8,
@@ -186,20 +186,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 53.92,
-            "peakRssMb": 254
+            "cpuMsPerRun": 71.28,
+            "peakRssMb": 239
           },
           {
             "name": "parallel-client",
             "latency": {
               "n": 40,
-              "mean": 32.32,
-              "sd": 2.58,
-              "min": 26.24,
-              "p50": 31.84,
-              "p95": 37.9,
-              "p99": 39.23,
-              "max": 39.23
+              "mean": 35.24,
+              "sd": 4.79,
+              "min": 26.94,
+              "p50": 35.21,
+              "p95": 41.97,
+              "p99": 49.72,
+              "max": 49.72
             },
             "mcpCalls": 8,
             "apiRequests": 8,
@@ -207,20 +207,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 39.12,
-            "peakRssMb": 271
+            "cpuMsPerRun": 50.08,
+            "peakRssMb": 264
           },
           {
             "name": "composite",
             "latency": {
               "n": 40,
-              "mean": 28.97,
-              "sd": 2.01,
-              "min": 25.78,
-              "p50": 28.84,
-              "p95": 31.65,
-              "p99": 36.91,
-              "max": 36.91
+              "mean": 30.57,
+              "sd": 3.23,
+              "min": 25.25,
+              "p50": 30.21,
+              "p95": 35.92,
+              "p99": 41.47,
+              "max": 41.47
             },
             "mcpCalls": 1,
             "apiRequests": 8,
@@ -228,8 +228,8 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 34.42,
-            "peakRssMb": 271
+            "cpuMsPerRun": 44.2,
+            "peakRssMb": 264
           }
         ]
       },
@@ -243,13 +243,13 @@
             "name": "sequential",
             "latency": {
               "n": 40,
-              "mean": 41.52,
-              "sd": 2.33,
-              "min": 37.66,
-              "p50": 40.63,
-              "p95": 45.56,
-              "p99": 49.61,
-              "max": 49.61
+              "mean": 44.84,
+              "sd": 2.7,
+              "min": 38.47,
+              "p50": 45.27,
+              "p95": 48.1,
+              "p99": 48.29,
+              "max": 48.29
             },
             "mcpCalls": 3,
             "apiRequests": 3,
@@ -257,20 +257,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 16.48,
-            "peakRssMb": 271
+            "cpuMsPerRun": 25.56,
+            "peakRssMb": 264
           },
           {
             "name": "composite",
             "latency": {
               "n": 40,
-              "mean": 40.31,
+              "mean": 42.25,
               "sd": 2.74,
-              "min": 36.36,
-              "p50": 39.58,
-              "p95": 45.67,
-              "p99": 48.7,
-              "max": 48.7
+              "min": 35.69,
+              "p50": 42.07,
+              "p95": 46.37,
+              "p99": 48.6,
+              "max": 48.6
             },
             "mcpCalls": 1,
             "apiRequests": 3,
@@ -278,8 +278,8 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 16.58,
-            "peakRssMb": 271
+            "cpuMsPerRun": 21.47,
+            "peakRssMb": 264
           }
         ]
       },
@@ -293,13 +293,13 @@
             "name": "sequential",
             "latency": {
               "n": 40,
-              "mean": 238.9,
-              "sd": 4.87,
-              "min": 225.33,
-              "p50": 239.57,
-              "p95": 246.18,
-              "p99": 247,
-              "max": 247
+              "mean": 248.83,
+              "sd": 6.1,
+              "min": 231.34,
+              "p50": 249.3,
+              "p95": 257.27,
+              "p99": 263.17,
+              "max": 263.17
             },
             "mcpCalls": 8,
             "apiRequests": 8,
@@ -307,20 +307,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 65.94,
-            "peakRssMb": 272
+            "cpuMsPerRun": 90.13,
+            "peakRssMb": 265
           },
           {
             "name": "parallel-client",
             "latency": {
               "n": 40,
-              "mean": 64.62,
-              "sd": 4.18,
-              "min": 58.42,
-              "p50": 63.5,
-              "p95": 73.43,
-              "p99": 78.06,
-              "max": 78.06
+              "mean": 68.15,
+              "sd": 3.7,
+              "min": 59.32,
+              "p50": 68.3,
+              "p95": 73.25,
+              "p99": 74.3,
+              "max": 74.3
             },
             "mcpCalls": 8,
             "apiRequests": 8,
@@ -328,20 +328,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 47.98,
-            "peakRssMb": 272
+            "cpuMsPerRun": 61.89,
+            "peakRssMb": 265
           },
           {
             "name": "composite",
             "latency": {
               "n": 40,
-              "mean": 60.23,
-              "sd": 3.26,
-              "min": 55.06,
-              "p50": 60,
-              "p95": 65.67,
-              "p99": 66.01,
-              "max": 66.01
+              "mean": 63.44,
+              "sd": 3.06,
+              "min": 55.64,
+              "p50": 62.74,
+              "p95": 67.73,
+              "p99": 69.95,
+              "max": 69.95
             },
             "mcpCalls": 1,
             "apiRequests": 8,
@@ -349,8 +349,8 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 33.71,
-            "peakRssMb": 272
+            "cpuMsPerRun": 53.33,
+            "peakRssMb": 265
           }
         ]
       },
@@ -364,13 +364,13 @@
             "name": "sequential",
             "latency": {
               "n": 40,
-              "mean": 88.48,
-              "sd": 3.1,
-              "min": 82.93,
-              "p50": 88.5,
-              "p95": 93.99,
-              "p99": 95.25,
-              "max": 95.25
+              "mean": 94.1,
+              "sd": 4.09,
+              "min": 86.16,
+              "p50": 93.34,
+              "p95": 100.93,
+              "p99": 103.65,
+              "max": 103.65
             },
             "mcpCalls": 3,
             "apiRequests": 3,
@@ -378,20 +378,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 22.97,
-            "peakRssMb": 272
+            "cpuMsPerRun": 31.32,
+            "peakRssMb": 266
           },
           {
             "name": "composite",
             "latency": {
               "n": 40,
-              "mean": 85.94,
-              "sd": 2.86,
-              "min": 80.91,
-              "p50": 85.84,
-              "p95": 92.28,
-              "p99": 94.37,
-              "max": 94.37
+              "mean": 89.42,
+              "sd": 3.15,
+              "min": 81.22,
+              "p50": 89.22,
+              "p95": 93.11,
+              "p99": 99.25,
+              "max": 99.25
             },
             "mcpCalls": 1,
             "apiRequests": 3,
@@ -399,8 +399,8 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 18.02,
-            "peakRssMb": 272
+            "cpuMsPerRun": 27.54,
+            "peakRssMb": 266
           }
         ]
       },
@@ -414,13 +414,13 @@
             "name": "sequential",
             "latency": {
               "n": 40,
-              "mean": 446.17,
-              "sd": 6.22,
-              "min": 433.78,
-              "p50": 445.54,
-              "p95": 456.06,
-              "p99": 462.74,
-              "max": 462.74
+              "mean": 458.79,
+              "sd": 6.56,
+              "min": 446,
+              "p50": 458.74,
+              "p95": 469.26,
+              "p99": 478.16,
+              "max": 478.16
             },
             "mcpCalls": 8,
             "apiRequests": 8,
@@ -428,20 +428,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 87.03,
-            "peakRssMb": 273
+            "cpuMsPerRun": 115.78,
+            "peakRssMb": 266
           },
           {
             "name": "parallel-client",
             "latency": {
               "n": 40,
-              "mean": 117.1,
-              "sd": 3.22,
-              "min": 111.1,
-              "p50": 116.97,
-              "p95": 122.09,
-              "p99": 122.96,
-              "max": 122.96
+              "mean": 120.38,
+              "sd": 4.13,
+              "min": 112.61,
+              "p50": 120.1,
+              "p95": 126.7,
+              "p99": 130.32,
+              "max": 130.32
             },
             "mcpCalls": 8,
             "apiRequests": 8,
@@ -449,20 +449,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 67.05,
-            "peakRssMb": 162
+            "cpuMsPerRun": 80.61,
+            "peakRssMb": 161
           },
           {
             "name": "composite",
             "latency": {
               "n": 40,
-              "mean": 111.35,
-              "sd": 2.59,
-              "min": 105.22,
-              "p50": 111.43,
-              "p95": 114.79,
-              "p99": 115.93,
-              "max": 115.93
+              "mean": 114.99,
+              "sd": 3.62,
+              "min": 109.96,
+              "p50": 114.52,
+              "p95": 119.68,
+              "p99": 127.94,
+              "max": 127.94
             },
             "mcpCalls": 1,
             "apiRequests": 8,
@@ -470,8 +470,8 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 48.62,
-            "peakRssMb": 163
+            "cpuMsPerRun": 64.76,
+            "peakRssMb": 161
           }
         ]
       },
@@ -485,13 +485,13 @@
             "name": "sequential",
             "latency": {
               "n": 40,
-              "mean": 167.48,
-              "sd": 3.24,
-              "min": 161.74,
-              "p50": 167.49,
-              "p95": 173.66,
-              "p99": 174.38,
-              "max": 174.38
+              "mean": 170.94,
+              "sd": 3.91,
+              "min": 161.63,
+              "p50": 171.25,
+              "p95": 177.65,
+              "p99": 178.12,
+              "max": 178.12
             },
             "mcpCalls": 3,
             "apiRequests": 3,
@@ -499,20 +499,20 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 36.2,
-            "peakRssMb": 163
+            "cpuMsPerRun": 44.62,
+            "peakRssMb": 157
           },
           {
             "name": "composite",
             "latency": {
               "n": 40,
-              "mean": 163.66,
-              "sd": 2.83,
-              "min": 157.36,
-              "p50": 163.25,
-              "p95": 168.41,
-              "p99": 170.5,
-              "max": 170.5
+              "mean": 166.58,
+              "sd": 3.89,
+              "min": 159.93,
+              "p50": 166.14,
+              "p95": 175.33,
+              "p99": 180.45,
+              "max": 180.45
             },
             "mcpCalls": 1,
             "apiRequests": 3,
@@ -520,8 +520,8 @@
             "successRate": 1,
             "correctness": 1,
             "errors": 0,
-            "cpuMsPerRun": 29.79,
-            "peakRssMb": 160
+            "cpuMsPerRun": 32.66,
+            "peakRssMb": 159
           }
         ]
       }
@@ -529,10 +529,10 @@
   },
   "patterns": {
     "benchmark": "patterns",
-    "generatedAt": "2026-11-07T20:25:23.757Z",
+    "generatedAt": "2026-11-07T21:03:56.651Z",
     "environment": {
       "toolsmith": "0.1.0",
-      "commit": "7a16e57",
+      "commit": "50a43bc",
       "node": "v22.13.1",
       "platform": "darwin 27.2.0 arm64",
       "cpu": "Apple M1 Pro",
@@ -665,13 +665,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 3.11,
-          "sd": 1.38,
-          "min": 1.84,
-          "p50": 2.4,
-          "p95": 6.32,
-          "p99": 6.32,
-          "max": 6.32
+          "mean": 3.33,
+          "sd": 1.43,
+          "min": 1.92,
+          "p50": 2.64,
+          "p95": 6.57,
+          "p99": 6.57,
+          "max": 6.57
         }
       },
       {
@@ -713,13 +713,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.59,
-          "sd": 0.37,
-          "min": 1.23,
-          "p50": 1.44,
-          "p95": 2.55,
-          "p99": 2.55,
-          "max": 2.55
+          "mean": 1.72,
+          "sd": 0.51,
+          "min": 1.26,
+          "p50": 1.51,
+          "p95": 3.01,
+          "p99": 3.01,
+          "max": 3.01
         }
       },
       {
@@ -761,106 +761,10 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.78,
-          "sd": 0.56,
+          "mean": 1.57,
+          "sd": 0.33,
           "min": 1.29,
-          "p50": 1.46,
-          "p95": 2.85,
-          "p99": 2.85,
-          "max": 2.85
-        }
-      },
-      {
-        "condition": "boundary noise 80%",
-        "sessions": 150,
-        "workflowRate": 0.5,
-        "noiseRate": 0.8,
-        "interleave": true,
-        "variant": "default",
-        "precision": {
-          "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
-          "p95": 1,
-          "p99": 1,
-          "max": 1
-        },
-        "recall": {
-          "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
-          "p95": 1,
-          "p99": 1,
-          "max": 1
-        },
-        "f1": {
-          "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
-          "p95": 1,
-          "p99": 1,
-          "max": 1
-        },
-        "mineMs": {
-          "n": 10,
-          "mean": 2.07,
-          "sd": 0.55,
-          "min": 1.44,
-          "p50": 1.8,
-          "p95": 2.93,
-          "p99": 2.93,
-          "max": 2.93
-        }
-      },
-      {
-        "condition": "boundary noise 80%",
-        "sessions": 150,
-        "workflowRate": 0.5,
-        "noiseRate": 0.8,
-        "interleave": true,
-        "variant": "no AWO rules",
-        "precision": {
-          "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
-          "p95": 1,
-          "p99": 1,
-          "max": 1
-        },
-        "recall": {
-          "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
-          "p95": 1,
-          "p99": 1,
-          "max": 1
-        },
-        "f1": {
-          "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
-          "p95": 1,
-          "p99": 1,
-          "max": 1
-        },
-        "mineMs": {
-          "n": 10,
-          "mean": 1.69,
-          "sd": 0.48,
-          "min": 1.26,
-          "p50": 1.39,
+          "p50": 1.45,
           "p95": 2.5,
           "p99": 2.5,
           "max": 2.5
@@ -872,7 +776,7 @@
         "workflowRate": 0.5,
         "noiseRate": 0.8,
         "interleave": true,
-        "variant": "contiguous (v0 baseline)",
+        "variant": "default",
         "precision": {
           "n": 10,
           "mean": 1,
@@ -906,67 +810,19 @@
         "mineMs": {
           "n": 10,
           "mean": 1.96,
-          "sd": 0.43,
-          "min": 1.66,
-          "p50": 1.81,
-          "p95": 3.25,
-          "p99": 3.25,
-          "max": 3.25
-        }
-      },
-      {
-        "condition": "rare workflows (10% of sessions)",
-        "sessions": 150,
-        "workflowRate": 0.1,
-        "noiseRate": 0.2,
-        "interleave": true,
-        "variant": "default",
-        "precision": {
-          "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
-          "p95": 1,
-          "p99": 1,
-          "max": 1
-        },
-        "recall": {
-          "n": 10,
-          "mean": 0.83,
-          "sd": 0.17,
-          "min": 0.67,
-          "p50": 0.67,
-          "p95": 1,
-          "p99": 1,
-          "max": 1
-        },
-        "f1": {
-          "n": 10,
-          "mean": 0.9,
-          "sd": 0.1,
-          "min": 0.8,
-          "p50": 0.8,
-          "p95": 1,
-          "p99": 1,
-          "max": 1
-        },
-        "mineMs": {
-          "n": 10,
-          "mean": 0.89,
           "sd": 0.49,
-          "min": 0.49,
-          "p50": 0.6,
-          "p95": 1.91,
-          "p99": 1.91,
-          "max": 1.91
+          "min": 1.48,
+          "p50": 1.63,
+          "p95": 3.01,
+          "p99": 3.01,
+          "max": 3.01
         }
       },
       {
-        "condition": "rare workflows (10% of sessions)",
+        "condition": "boundary noise 80%",
         "sessions": 150,
-        "workflowRate": 0.1,
-        "noiseRate": 0.2,
+        "workflowRate": 0.5,
+        "noiseRate": 0.8,
         "interleave": true,
         "variant": "no AWO rules",
         "precision": {
@@ -981,40 +837,40 @@
         },
         "recall": {
           "n": 10,
-          "mean": 0.83,
-          "sd": 0.17,
-          "min": 0.67,
-          "p50": 0.67,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
           "p95": 1,
           "p99": 1,
           "max": 1
         },
         "f1": {
           "n": 10,
-          "mean": 0.9,
-          "sd": 0.1,
-          "min": 0.8,
-          "p50": 0.8,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
           "p95": 1,
           "p99": 1,
           "max": 1
         },
         "mineMs": {
           "n": 10,
-          "mean": 0.7,
-          "sd": 0.37,
-          "min": 0.43,
-          "p50": 0.57,
-          "p95": 1.77,
-          "p99": 1.77,
-          "max": 1.77
+          "mean": 1.58,
+          "sd": 0.39,
+          "min": 1.23,
+          "p50": 1.39,
+          "p95": 2.54,
+          "p99": 2.54,
+          "max": 2.54
         }
       },
       {
-        "condition": "rare workflows (10% of sessions)",
+        "condition": "boundary noise 80%",
         "sessions": 150,
-        "workflowRate": 0.1,
-        "noiseRate": 0.2,
+        "workflowRate": 0.5,
+        "noiseRate": 0.8,
         "interleave": true,
         "variant": "contiguous (v0 baseline)",
         "precision": {
@@ -1029,41 +885,41 @@
         },
         "recall": {
           "n": 10,
-          "mean": 0.83,
-          "sd": 0.17,
-          "min": 0.67,
-          "p50": 0.67,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
           "p95": 1,
           "p99": 1,
           "max": 1
         },
         "f1": {
           "n": 10,
-          "mean": 0.9,
-          "sd": 0.1,
-          "min": 0.8,
-          "p50": 0.8,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
           "p95": 1,
           "p99": 1,
           "max": 1
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.14,
-          "sd": 0.35,
-          "min": 0.95,
-          "p50": 1.03,
-          "p95": 2.18,
-          "p99": 2.18,
-          "max": 2.18
+          "mean": 1.98,
+          "sd": 0.14,
+          "min": 1.76,
+          "p50": 1.98,
+          "p95": 2.27,
+          "p99": 2.27,
+          "max": 2.27
         }
       },
       {
-        "condition": "block-style loops",
+        "condition": "rare workflows (10% of sessions)",
         "sessions": 150,
-        "workflowRate": 0.5,
+        "workflowRate": 0.1,
         "noiseRate": 0.2,
-        "interleave": false,
+        "interleave": true,
         "variant": "default",
         "precision": {
           "n": 10,
@@ -1077,41 +933,41 @@
         },
         "recall": {
           "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
+          "mean": 0.83,
+          "sd": 0.17,
+          "min": 0.67,
+          "p50": 0.67,
           "p95": 1,
           "p99": 1,
           "max": 1
         },
         "f1": {
           "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
+          "mean": 0.9,
+          "sd": 0.1,
+          "min": 0.8,
+          "p50": 0.8,
           "p95": 1,
           "p99": 1,
           "max": 1
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.32,
-          "sd": 0.17,
-          "min": 1.12,
-          "p50": 1.23,
-          "p95": 1.63,
-          "p99": 1.63,
-          "max": 1.63
+          "mean": 0.93,
+          "sd": 0.57,
+          "min": 0.48,
+          "p50": 0.65,
+          "p95": 2.39,
+          "p99": 2.39,
+          "max": 2.39
         }
       },
       {
-        "condition": "block-style loops",
+        "condition": "rare workflows (10% of sessions)",
         "sessions": 150,
-        "workflowRate": 0.5,
+        "workflowRate": 0.1,
         "noiseRate": 0.2,
-        "interleave": false,
+        "interleave": true,
         "variant": "no AWO rules",
         "precision": {
           "n": 10,
@@ -1125,41 +981,41 @@
         },
         "recall": {
           "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
+          "mean": 0.83,
+          "sd": 0.17,
+          "min": 0.67,
+          "p50": 0.67,
           "p95": 1,
           "p99": 1,
           "max": 1
         },
         "f1": {
           "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
+          "mean": 0.9,
+          "sd": 0.1,
+          "min": 0.8,
+          "p50": 0.8,
           "p95": 1,
           "p99": 1,
           "max": 1
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.28,
-          "sd": 0.37,
-          "min": 0.96,
-          "p50": 1.09,
-          "p95": 2.03,
-          "p99": 2.03,
-          "max": 2.03
+          "mean": 0.61,
+          "sd": 0.28,
+          "min": 0.44,
+          "p50": 0.5,
+          "p95": 1.42,
+          "p99": 1.42,
+          "max": 1.42
         }
       },
       {
-        "condition": "block-style loops",
+        "condition": "rare workflows (10% of sessions)",
         "sessions": 150,
-        "workflowRate": 0.5,
+        "workflowRate": 0.1,
         "noiseRate": 0.2,
-        "interleave": false,
+        "interleave": true,
         "variant": "contiguous (v0 baseline)",
         "precision": {
           "n": 10,
@@ -1173,42 +1029,41 @@
         },
         "recall": {
           "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
+          "mean": 0.83,
+          "sd": 0.17,
+          "min": 0.67,
+          "p50": 0.67,
           "p95": 1,
           "p99": 1,
           "max": 1
         },
         "f1": {
           "n": 10,
-          "mean": 1,
-          "sd": 0,
-          "min": 1,
-          "p50": 1,
+          "mean": 0.9,
+          "sd": 0.1,
+          "min": 0.8,
+          "p50": 0.8,
           "p95": 1,
           "p99": 1,
           "max": 1
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.42,
-          "sd": 0.31,
-          "min": 1.16,
-          "p50": 1.26,
-          "p95": 2.11,
-          "p99": 2.11,
-          "max": 2.11
+          "mean": 1.11,
+          "sd": 0.29,
+          "min": 0.88,
+          "p50": 1,
+          "p95": 1.95,
+          "p99": 1.95,
+          "max": 1.95
         }
       },
       {
-        "condition": "noise between steps 10%",
+        "condition": "block-style loops",
         "sessions": 150,
         "workflowRate": 0.5,
         "noiseRate": 0.2,
-        "interleave": true,
-        "innerNoiseRate": 0.1,
+        "interleave": false,
         "variant": "default",
         "precision": {
           "n": 10,
@@ -1243,12 +1098,157 @@
         "mineMs": {
           "n": 10,
           "mean": 1.55,
-          "sd": 0.28,
-          "min": 1.25,
-          "p50": 1.42,
-          "p95": 2.06,
-          "p99": 2.06,
-          "max": 2.06
+          "sd": 0.36,
+          "min": 1.18,
+          "p50": 1.36,
+          "p95": 2.36,
+          "p99": 2.36,
+          "max": 2.36
+        }
+      },
+      {
+        "condition": "block-style loops",
+        "sessions": 150,
+        "workflowRate": 0.5,
+        "noiseRate": 0.2,
+        "interleave": false,
+        "variant": "no AWO rules",
+        "precision": {
+          "n": 10,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "p99": 1,
+          "max": 1
+        },
+        "recall": {
+          "n": 10,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "p99": 1,
+          "max": 1
+        },
+        "f1": {
+          "n": 10,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "p99": 1,
+          "max": 1
+        },
+        "mineMs": {
+          "n": 10,
+          "mean": 1.31,
+          "sd": 0.41,
+          "min": 0.9,
+          "p50": 1.05,
+          "p95": 2.1,
+          "p99": 2.1,
+          "max": 2.1
+        }
+      },
+      {
+        "condition": "block-style loops",
+        "sessions": 150,
+        "workflowRate": 0.5,
+        "noiseRate": 0.2,
+        "interleave": false,
+        "variant": "contiguous (v0 baseline)",
+        "precision": {
+          "n": 10,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "p99": 1,
+          "max": 1
+        },
+        "recall": {
+          "n": 10,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "p99": 1,
+          "max": 1
+        },
+        "f1": {
+          "n": 10,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "p99": 1,
+          "max": 1
+        },
+        "mineMs": {
+          "n": 10,
+          "mean": 1.5,
+          "sd": 0.42,
+          "min": 1.12,
+          "p50": 1.33,
+          "p95": 2.35,
+          "p99": 2.35,
+          "max": 2.35
+        }
+      },
+      {
+        "condition": "noise between steps 10%",
+        "sessions": 150,
+        "workflowRate": 0.5,
+        "noiseRate": 0.2,
+        "interleave": true,
+        "innerNoiseRate": 0.1,
+        "variant": "default",
+        "precision": {
+          "n": 10,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "p99": 1,
+          "max": 1
+        },
+        "recall": {
+          "n": 10,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "p99": 1,
+          "max": 1
+        },
+        "f1": {
+          "n": 10,
+          "mean": 1,
+          "sd": 0,
+          "min": 1,
+          "p50": 1,
+          "p95": 1,
+          "p99": 1,
+          "max": 1
+        },
+        "mineMs": {
+          "n": 10,
+          "mean": 1.72,
+          "sd": 0.47,
+          "min": 1.19,
+          "p50": 1.47,
+          "p95": 2.53,
+          "p99": 2.53,
+          "max": 2.53
         }
       },
       {
@@ -1291,13 +1291,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.59,
-          "sd": 0.47,
-          "min": 1.06,
-          "p50": 1.23,
-          "p95": 2.3,
-          "p99": 2.3,
-          "max": 2.3
+          "mean": 1.39,
+          "sd": 0.44,
+          "min": 1.02,
+          "p50": 1.15,
+          "p95": 2.43,
+          "p99": 2.43,
+          "max": 2.43
         }
       },
       {
@@ -1340,13 +1340,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.77,
-          "sd": 0.45,
-          "min": 1.41,
+          "mean": 1.65,
+          "sd": 0.27,
+          "min": 1.4,
           "p50": 1.57,
-          "p95": 2.68,
-          "p99": 2.68,
-          "max": 2.68
+          "p95": 2.41,
+          "p99": 2.41,
+          "max": 2.41
         }
       },
       {
@@ -1389,13 +1389,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.81,
-          "sd": 0.4,
-          "min": 1.12,
-          "p50": 1.81,
-          "p95": 2.36,
-          "p99": 2.36,
-          "max": 2.36
+          "mean": 1.66,
+          "sd": 0.42,
+          "min": 1.09,
+          "p50": 1.44,
+          "p95": 2.24,
+          "p99": 2.24,
+          "max": 2.24
         }
       },
       {
@@ -1438,13 +1438,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.4,
-          "sd": 0.36,
-          "min": 1,
-          "p50": 1.18,
-          "p95": 1.99,
-          "p99": 1.99,
-          "max": 1.99
+          "mean": 1.54,
+          "sd": 0.48,
+          "min": 1.05,
+          "p50": 1.25,
+          "p95": 2.38,
+          "p99": 2.38,
+          "max": 2.38
         }
       },
       {
@@ -1487,13 +1487,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 2.18,
-          "sd": 0.54,
-          "min": 1.67,
-          "p50": 1.94,
-          "p95": 3.16,
-          "p99": 3.16,
-          "max": 3.16
+          "mean": 1.89,
+          "sd": 0.26,
+          "min": 1.61,
+          "p50": 1.81,
+          "p95": 2.52,
+          "p99": 2.52,
+          "max": 2.52
         }
       },
       {
@@ -1536,13 +1536,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.34,
-          "sd": 0.29,
-          "min": 1.05,
-          "p50": 1.15,
-          "p95": 1.92,
-          "p99": 1.92,
-          "max": 1.92
+          "mean": 1.22,
+          "sd": 0.26,
+          "min": 0.96,
+          "p50": 1.14,
+          "p95": 1.75,
+          "p99": 1.75,
+          "max": 1.75
         }
       },
       {
@@ -1586,12 +1586,12 @@
         "mineMs": {
           "n": 10,
           "mean": 1.07,
-          "sd": 0.32,
-          "min": 0.81,
-          "p50": 0.93,
-          "p95": 1.78,
-          "p99": 1.78,
-          "max": 1.78
+          "sd": 0.31,
+          "min": 0.82,
+          "p50": 0.94,
+          "p95": 1.73,
+          "p99": 1.73,
+          "max": 1.73
         }
       },
       {
@@ -1634,13 +1634,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.49,
-          "sd": 0.85,
+          "mean": 1.52,
+          "sd": 0.76,
           "min": 1,
-          "p50": 1.05,
-          "p95": 3.89,
-          "p99": 3.89,
-          "max": 3.89
+          "p50": 1.1,
+          "p95": 3.59,
+          "p99": 3.59,
+          "max": 3.59
         }
       },
       {
@@ -1683,13 +1683,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.46,
-          "sd": 0.52,
-          "min": 1.06,
-          "p50": 1.27,
-          "p95": 2.66,
-          "p99": 2.66,
-          "max": 2.66
+          "mean": 1.27,
+          "sd": 0.32,
+          "min": 1.03,
+          "p50": 1.1,
+          "p95": 2.1,
+          "p99": 2.1,
+          "max": 2.1
         }
       },
       {
@@ -1732,13 +1732,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.4,
-          "sd": 0.42,
-          "min": 0.93,
-          "p50": 1.25,
-          "p95": 2.24,
-          "p99": 2.24,
-          "max": 2.24
+          "mean": 1.39,
+          "sd": 0.37,
+          "min": 1.01,
+          "p50": 1.22,
+          "p95": 2.28,
+          "p99": 2.28,
+          "max": 2.28
         }
       },
       {
@@ -1781,10 +1781,10 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.55,
-          "sd": 0.42,
+          "mean": 1.52,
+          "sd": 0.45,
           "min": 0.96,
-          "p50": 1.42,
+          "p50": 1.27,
           "p95": 2.39,
           "p99": 2.39,
           "max": 2.39
@@ -1830,13 +1830,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.54,
-          "sd": 0.24,
+          "mean": 1.6,
+          "sd": 0.35,
           "min": 1.21,
-          "p50": 1.56,
-          "p95": 1.87,
-          "p99": 1.87,
-          "max": 1.87
+          "p50": 1.55,
+          "p95": 2.17,
+          "p99": 2.17,
+          "max": 2.17
         }
       },
       {
@@ -1879,13 +1879,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.49,
-          "sd": 0.47,
-          "min": 1.06,
+          "mean": 1.36,
+          "sd": 0.42,
+          "min": 0.97,
           "p50": 1.16,
-          "p95": 2.12,
-          "p99": 2.12,
-          "max": 2.12
+          "p95": 2.27,
+          "p99": 2.27,
+          "max": 2.27
         }
       },
       {
@@ -1928,13 +1928,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.58,
-          "sd": 0.53,
+          "mean": 1.44,
+          "sd": 0.28,
           "min": 1.21,
-          "p50": 1.34,
-          "p95": 2.72,
-          "p99": 2.72,
-          "max": 2.72
+          "p50": 1.31,
+          "p95": 2.1,
+          "p99": 2.1,
+          "max": 2.1
         }
       },
       {
@@ -1977,13 +1977,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 2.04,
-          "sd": 0.64,
-          "min": 1.25,
-          "p50": 2.04,
-          "p95": 3.26,
-          "p99": 3.26,
-          "max": 3.26
+          "mean": 1.6,
+          "sd": 0.4,
+          "min": 1.23,
+          "p50": 1.44,
+          "p95": 2.6,
+          "p99": 2.6,
+          "max": 2.6
         }
       },
       {
@@ -2026,13 +2026,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.38,
-          "sd": 0.43,
-          "min": 1,
-          "p50": 1.25,
-          "p95": 2.4,
-          "p99": 2.4,
-          "max": 2.4
+          "mean": 1.37,
+          "sd": 0.53,
+          "min": 0.94,
+          "p50": 1.12,
+          "p95": 2.61,
+          "p99": 2.61,
+          "max": 2.61
         }
       },
       {
@@ -2075,13 +2075,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.8,
-          "sd": 0.61,
-          "min": 1.35,
-          "p50": 1.52,
-          "p95": 3.16,
-          "p99": 3.16,
-          "max": 3.16
+          "mean": 1.79,
+          "sd": 0.49,
+          "min": 1.27,
+          "p50": 1.58,
+          "p95": 2.75,
+          "p99": 2.75,
+          "max": 2.75
         }
       },
       {
@@ -2124,13 +2124,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.21,
-          "sd": 0.27,
-          "min": 0.94,
-          "p50": 1.13,
-          "p95": 1.95,
-          "p99": 1.95,
-          "max": 1.95
+          "mean": 1.16,
+          "sd": 0.05,
+          "min": 1.05,
+          "p50": 1.17,
+          "p95": 1.25,
+          "p99": 1.25,
+          "max": 1.25
         }
       },
       {
@@ -2173,13 +2173,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.43,
-          "sd": 0.65,
-          "min": 0.84,
-          "p50": 1.02,
-          "p95": 2.51,
-          "p99": 2.51,
-          "max": 2.51
+          "mean": 1.2,
+          "sd": 0.44,
+          "min": 0.8,
+          "p50": 0.96,
+          "p95": 1.98,
+          "p99": 1.98,
+          "max": 1.98
         }
       },
       {
@@ -2222,13 +2222,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.34,
-          "sd": 0.49,
-          "min": 0.97,
-          "p50": 1.11,
-          "p95": 2.34,
-          "p99": 2.34,
-          "max": 2.34
+          "mean": 1.24,
+          "sd": 0.33,
+          "min": 1,
+          "p50": 1.1,
+          "p95": 1.95,
+          "p99": 1.95,
+          "max": 1.95
         }
       },
       {
@@ -2274,13 +2274,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.47,
-          "sd": 0.48,
-          "min": 0.98,
-          "p50": 1.19,
-          "p95": 2.33,
-          "p99": 2.33,
-          "max": 2.33
+          "mean": 1.42,
+          "sd": 0.42,
+          "min": 1,
+          "p50": 1.16,
+          "p95": 2.14,
+          "p99": 2.14,
+          "max": 2.14
         }
       },
       {
@@ -2326,13 +2326,13 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.3,
-          "sd": 0.44,
+          "mean": 1.2,
+          "sd": 0.39,
           "min": 0.85,
-          "p50": 1.12,
-          "p95": 2.3,
-          "p99": 2.3,
-          "max": 2.3
+          "p50": 1.01,
+          "p95": 1.9,
+          "p99": 1.9,
+          "max": 1.9
         }
       },
       {
@@ -2378,23 +2378,23 @@
         },
         "mineMs": {
           "n": 10,
-          "mean": 1.87,
-          "sd": 0.55,
-          "min": 1.34,
-          "p50": 1.58,
-          "p95": 2.77,
-          "p99": 2.77,
-          "max": 2.77
+          "mean": 1.68,
+          "sd": 0.36,
+          "min": 1.35,
+          "p50": 1.53,
+          "p95": 2.39,
+          "p99": 2.39,
+          "max": 2.39
         }
       }
     ]
   },
   "scalability": {
     "benchmark": "scalability",
-    "generatedAt": "2026-11-07T20:25:37.245Z",
+    "generatedAt": "2026-11-07T21:04:10.009Z",
     "environment": {
       "toolsmith": "0.1.0",
-      "commit": "7a16e57",
+      "commit": "50a43bc",
       "node": "v22.13.1",
       "platform": "darwin 27.2.0 arm64",
       "cpu": "Apple M1 Pro",
@@ -2416,12 +2416,12 @@
         "ms": {
           "n": 3,
           "mean": 5.83,
-          "sd": 1.46,
-          "min": 4.37,
-          "p50": 5.31,
-          "p95": 7.82,
-          "p99": 7.82,
-          "max": 7.82
+          "sd": 1.5,
+          "min": 4.23,
+          "p50": 5.43,
+          "p95": 7.83,
+          "p99": 7.83,
+          "max": 7.83
         }
       },
       {
@@ -2429,13 +2429,13 @@
         "traces": 4390,
         "ms": {
           "n": 3,
-          "mean": 14.95,
-          "sd": 2.26,
-          "min": 12.83,
-          "p50": 13.95,
-          "p95": 18.08,
-          "p99": 18.08,
-          "max": 18.08
+          "mean": 14.67,
+          "sd": 1.7,
+          "min": 12.98,
+          "p50": 14.04,
+          "p95": 16.99,
+          "p99": 16.99,
+          "max": 16.99
         }
       },
       {
@@ -2443,13 +2443,13 @@
         "traces": 21908,
         "ms": {
           "n": 3,
-          "mean": 72.61,
-          "sd": 5.08,
-          "min": 66.14,
-          "p50": 73.15,
-          "p95": 78.55,
-          "p99": 78.55,
-          "max": 78.55
+          "mean": 73.35,
+          "sd": 6.89,
+          "min": 64.86,
+          "p50": 73.46,
+          "p95": 81.74,
+          "p99": 81.74,
+          "max": 81.74
         }
       },
       {
@@ -2457,13 +2457,13 @@
         "traces": 87862,
         "ms": {
           "n": 3,
-          "mean": 325.97,
-          "sd": 47.81,
-          "min": 285.47,
-          "p50": 299.34,
-          "p95": 393.1,
-          "p99": 393.1,
-          "max": 393.1
+          "mean": 322.42,
+          "sd": 31.13,
+          "min": 299.26,
+          "p50": 301.57,
+          "p95": 366.43,
+          "p99": 366.43,
+          "max": 366.43
         }
       }
     ],
@@ -2472,138 +2472,138 @@
         "concurrency": 1,
         "calls": 100,
         "errors": 0,
-        "callsPerSec": 114,
+        "callsPerSec": 113,
         "latency": {
           "n": 100,
-          "mean": 8.76,
-          "sd": 1.87,
-          "min": 6.92,
-          "p50": 8.48,
-          "p95": 9.79,
-          "p99": 13.43,
-          "max": 25.16
+          "mean": 8.87,
+          "sd": 1.72,
+          "min": 7.65,
+          "p50": 8.54,
+          "p95": 10.27,
+          "p99": 12.13,
+          "max": 24.19
         },
-        "cpuMs": 381,
-        "rssMb": 413
+        "cpuMs": 396,
+        "rssMb": 416
       },
       {
         "concurrency": 10,
         "calls": 1000,
         "errors": 0,
-        "callsPerSec": 774,
+        "callsPerSec": 839,
         "latency": {
           "n": 1000,
-          "mean": 12.86,
-          "sd": 2.16,
-          "min": 6.54,
-          "p50": 13.03,
-          "p95": 15.91,
-          "p99": 19.61,
-          "max": 21.84
+          "mean": 11.84,
+          "sd": 2.27,
+          "min": 7.01,
+          "p50": 11.66,
+          "p95": 15.46,
+          "p99": 19.07,
+          "max": 21.77
         },
-        "cpuMs": 1343,
-        "rssMb": 510
+        "cpuMs": 1349,
+        "rssMb": 516
       },
       {
         "concurrency": 50,
         "calls": 5000,
         "errors": 0,
-        "callsPerSec": 1717,
+        "callsPerSec": 1725,
         "latency": {
           "n": 5000,
-          "mean": 28.63,
-          "sd": 10.27,
-          "min": 7.22,
-          "p50": 28.52,
-          "p95": 38.87,
-          "p99": 54.79,
-          "max": 220.54
+          "mean": 28.6,
+          "sd": 8.23,
+          "min": 7.43,
+          "p50": 29.11,
+          "p95": 36.91,
+          "p99": 47.15,
+          "max": 183.23
         },
-        "cpuMs": 4453,
-        "rssMb": 807
+        "cpuMs": 4496,
+        "rssMb": 824
       },
       {
         "concurrency": 100,
         "calls": 10000,
         "errors": 0,
-        "callsPerSec": 2056,
+        "callsPerSec": 2061,
         "latency": {
           "n": 10000,
-          "mean": 46.92,
-          "sd": 24.71,
-          "min": 6.89,
-          "p50": 46.61,
-          "p95": 54.09,
-          "p99": 89.86,
-          "max": 581.45
+          "mean": 46.99,
+          "sd": 22.62,
+          "min": 5.54,
+          "p50": 46.54,
+          "p95": 53.34,
+          "p99": 87.35,
+          "max": 552.32
         },
-        "cpuMs": 6478,
-        "rssMb": 992
+        "cpuMs": 6475,
+        "rssMb": 1007
       }
     ],
     "catalog": [
       {
         "operations": 50,
         "tools": 51,
-        "importMs": 56,
-        "catalogRebuildMs": 1.1,
+        "importMs": 59,
+        "catalogRebuildMs": 0.9,
         "listToolsMs": {
           "n": 5,
-          "mean": 2.76,
-          "sd": 1.41,
-          "min": 1.48,
-          "p50": 1.7,
-          "p95": 4.87,
-          "p99": 4.87,
-          "max": 4.87
+          "mean": 2.3,
+          "sd": 1.33,
+          "min": 1.14,
+          "p50": 1.27,
+          "p95": 4.03,
+          "p99": 4.03,
+          "max": 4.03
         }
       },
       {
         "operations": 200,
         "tools": 201,
-        "importMs": 55,
-        "catalogRebuildMs": 2,
+        "importMs": 54,
+        "catalogRebuildMs": 1.8,
         "listToolsMs": {
           "n": 5,
-          "mean": 3.62,
-          "sd": 0.95,
-          "min": 2.79,
-          "p50": 3.31,
-          "p95": 5.43,
-          "p99": 5.43,
-          "max": 5.43
+          "mean": 3.59,
+          "sd": 0.53,
+          "min": 2.91,
+          "p50": 3.47,
+          "p95": 4.49,
+          "p99": 4.49,
+          "max": 4.49
         }
       },
       {
         "operations": 1000,
         "tools": 1001,
-        "importMs": 140,
-        "catalogRebuildMs": 8.6,
+        "importMs": 145,
+        "catalogRebuildMs": 8.5,
         "listToolsMs": {
           "n": 5,
-          "mean": 12.27,
-          "sd": 1.77,
-          "min": 10.44,
-          "p50": 12.4,
-          "p95": 15.4,
-          "p99": 15.4,
-          "max": 15.4
+          "mean": 12.03,
+          "sd": 2.32,
+          "min": 9.66,
+          "p50": 11.86,
+          "p95": 16.1,
+          "p99": 16.1,
+          "max": 16.1
         }
       },
       {
         "operations": 2000,
         "tools": 2001,
-        "importMs": 232,
-        "catalogRebuildMs": 40.2,
+        "importMs": 217,
+        "catalogRebuildMs": 19.3,
         "listToolsMs": {
           "n": 5,
-          "mean": 23.49,
-          "sd": 0.98,
-          "min": 22.56,
-          "p50": 23.04,
-          "p95": 25.12,
-          "p99": 25.12,
-          "max": 25.12
+          "mean": 40.5,
+          "sd": 8.11,
+          "min": 30.59,
+          "p50": 37.01,
+          "p95": 50.79,
+          "p99": 50.79,
+          "max": 50.79
         }
       }
     ]

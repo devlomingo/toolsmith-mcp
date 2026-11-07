@@ -76,9 +76,9 @@ end-to-end latency at the MCP client:**
 
 | Demo API latency | Sequential agent (8 MCP calls) | Best-case parallel client (8 MCP calls) | Composite (1 MCP call) |
 |---|---|---|---|
-| 0 ms | 8.0 ms | 4.6 ms | 1.9 ms |
-| 25 ms | 239.6 ms | 63.5 ms | 60.0 ms |
-| 50 ms | 445.5 ms | 117.0 ms | 111.4 ms |
+| 0 ms | 7.5 ms | 4.7 ms | 1.9 ms |
+| 25 ms | 249.3 ms | 68.3 ms | 62.7 ms |
+| 50 ms | 458.7 ms | 120.1 ms | 114.5 ms |
 
 How to read this table:
 
@@ -88,7 +88,7 @@ How to read this table:
   25 ms). The real saving is **7 fewer MCP round-trips**: in a real agent
   those are model turns, which this benchmark does not include.
 - **A strictly sequential chain gains little.** A 3-step dependent chain
-  gains 2–3% at 10–50 ms API latency.
+  gains 3–7% at 10–50 ms API latency.
 - **No correctness was lost:** every composite run matched the sequential
   reference, with the same 8 underlying API requests.
 

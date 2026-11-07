@@ -1,9 +1,9 @@
 {
   "benchmark": "performance",
-  "generatedAt": "2026-11-07T20:25:21.603Z",
+  "generatedAt": "2026-11-07T21:03:54.566Z",
   "environment": {
     "toolsmith": "0.1.0",
-    "commit": "7a16e57",
+    "commit": "50a43bc",
     "node": "v22.13.1",
     "platform": "darwin 27.2.0 arm64",
     "cpu": "Apple M1 Pro",
@@ -35,13 +35,13 @@
           "name": "sequential",
           "latency": {
             "n": 40,
-            "mean": 8.42,
-            "sd": 1.57,
-            "min": 6.22,
-            "p50": 8.04,
-            "p95": 11.17,
-            "p99": 12.56,
-            "max": 12.56
+            "mean": 7.81,
+            "sd": 1.39,
+            "min": 5.69,
+            "p50": 7.47,
+            "p95": 10.08,
+            "p99": 11.16,
+            "max": 11.16
           },
           "mcpCalls": 8,
           "apiRequests": 8,
@@ -49,20 +49,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 26.25,
-          "peakRssMb": 187
+          "cpuMsPerRun": 25.63,
+          "peakRssMb": 182
         },
         {
           "name": "parallel-client",
           "latency": {
             "n": 40,
-            "mean": 5.13,
-            "sd": 1.55,
+            "mean": 4.94,
+            "sd": 0.83,
             "min": 3.92,
-            "p50": 4.61,
-            "p95": 6.93,
-            "p99": 13.31,
-            "max": 13.31
+            "p50": 4.67,
+            "p95": 6.29,
+            "p99": 8.15,
+            "max": 8.15
           },
           "mcpCalls": 8,
           "apiRequests": 8,
@@ -70,20 +70,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 18.45,
-          "peakRssMb": 229
+          "cpuMsPerRun": 18.4,
+          "peakRssMb": 186
         },
         {
           "name": "composite",
           "latency": {
             "n": 40,
-            "mean": 2.06,
-            "sd": 0.6,
-            "min": 1.55,
-            "p50": 1.91,
-            "p95": 2.57,
-            "p99": 5.4,
-            "max": 5.4
+            "mean": 2.08,
+            "sd": 0.47,
+            "min": 1.69,
+            "p50": 1.89,
+            "p95": 3.23,
+            "p99": 3.32,
+            "max": 3.32
           },
           "mcpCalls": 1,
           "apiRequests": 8,
@@ -91,8 +91,8 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 11.88,
-          "peakRssMb": 230
+          "cpuMsPerRun": 12.91,
+          "peakRssMb": 198
         }
       ]
     },
@@ -106,13 +106,13 @@
           "name": "sequential",
           "latency": {
             "n": 40,
-            "mean": 1.99,
-            "sd": 0.47,
-            "min": 1.61,
-            "p50": 1.8,
-            "p95": 3.16,
-            "p99": 3.35,
-            "max": 3.35
+            "mean": 2.01,
+            "sd": 0.43,
+            "min": 1.66,
+            "p50": 1.83,
+            "p95": 2.99,
+            "p99": 3.46,
+            "max": 3.46
           },
           "mcpCalls": 3,
           "apiRequests": 3,
@@ -120,20 +120,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 5.17,
-          "peakRssMb": 230
+          "cpuMsPerRun": 5.18,
+          "peakRssMb": 198
         },
         {
           "name": "composite",
           "latency": {
             "n": 40,
-            "mean": 1.12,
-            "sd": 0.25,
-            "min": 0.92,
+            "mean": 1.18,
+            "sd": 0.35,
+            "min": 0.98,
             "p50": 1.04,
-            "p95": 1.35,
-            "p99": 2.45,
-            "max": 2.45
+            "p95": 1.81,
+            "p99": 2.75,
+            "max": 2.75
           },
           "mcpCalls": 1,
           "apiRequests": 3,
@@ -141,8 +141,8 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 3.79,
-          "peakRssMb": 231
+          "cpuMsPerRun": 3.85,
+          "peakRssMb": 199
         }
       ]
     },
@@ -156,13 +156,13 @@
           "name": "sequential",
           "latency": {
             "n": 40,
-            "mean": 112.11,
-            "sd": 4.29,
-            "min": 104.64,
-            "p50": 111.15,
-            "p95": 119.89,
-            "p99": 122.1,
-            "max": 122.1
+            "mean": 121.42,
+            "sd": 8.68,
+            "min": 101.45,
+            "p50": 121.02,
+            "p95": 136.1,
+            "p99": 136.82,
+            "max": 136.82
           },
           "mcpCalls": 8,
           "apiRequests": 8,
@@ -170,20 +170,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 53.92,
-          "peakRssMb": 254
+          "cpuMsPerRun": 71.28,
+          "peakRssMb": 239
         },
         {
           "name": "parallel-client",
           "latency": {
             "n": 40,
-            "mean": 32.32,
-            "sd": 2.58,
-            "min": 26.24,
-            "p50": 31.84,
-            "p95": 37.9,
-            "p99": 39.23,
-            "max": 39.23
+            "mean": 35.24,
+            "sd": 4.79,
+            "min": 26.94,
+            "p50": 35.21,
+            "p95": 41.97,
+            "p99": 49.72,
+            "max": 49.72
           },
           "mcpCalls": 8,
           "apiRequests": 8,
@@ -191,20 +191,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 39.12,
-          "peakRssMb": 271
+          "cpuMsPerRun": 50.08,
+          "peakRssMb": 264
         },
         {
           "name": "composite",
           "latency": {
             "n": 40,
-            "mean": 28.97,
-            "sd": 2.01,
-            "min": 25.78,
-            "p50": 28.84,
-            "p95": 31.65,
-            "p99": 36.91,
-            "max": 36.91
+            "mean": 30.57,
+            "sd": 3.23,
+            "min": 25.25,
+            "p50": 30.21,
+            "p95": 35.92,
+            "p99": 41.47,
+            "max": 41.47
           },
           "mcpCalls": 1,
           "apiRequests": 8,
@@ -212,8 +212,8 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 34.42,
-          "peakRssMb": 271
+          "cpuMsPerRun": 44.2,
+          "peakRssMb": 264
         }
       ]
     },
@@ -227,13 +227,13 @@
           "name": "sequential",
           "latency": {
             "n": 40,
-            "mean": 41.52,
-            "sd": 2.33,
-            "min": 37.66,
-            "p50": 40.63,
-            "p95": 45.56,
-            "p99": 49.61,
-            "max": 49.61
+            "mean": 44.84,
+            "sd": 2.7,
+            "min": 38.47,
+            "p50": 45.27,
+            "p95": 48.1,
+            "p99": 48.29,
+            "max": 48.29
           },
           "mcpCalls": 3,
           "apiRequests": 3,
@@ -241,20 +241,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 16.48,
-          "peakRssMb": 271
+          "cpuMsPerRun": 25.56,
+          "peakRssMb": 264
         },
         {
           "name": "composite",
           "latency": {
             "n": 40,
-            "mean": 40.31,
+            "mean": 42.25,
             "sd": 2.74,
-            "min": 36.36,
-            "p50": 39.58,
-            "p95": 45.67,
-            "p99": 48.7,
-            "max": 48.7
+            "min": 35.69,
+            "p50": 42.07,
+            "p95": 46.37,
+            "p99": 48.6,
+            "max": 48.6
           },
           "mcpCalls": 1,
           "apiRequests": 3,
@@ -262,8 +262,8 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 16.58,
-          "peakRssMb": 271
+          "cpuMsPerRun": 21.47,
+          "peakRssMb": 264
         }
       ]
     },
@@ -277,13 +277,13 @@
           "name": "sequential",
           "latency": {
             "n": 40,
-            "mean": 238.9,
-            "sd": 4.87,
-            "min": 225.33,
-            "p50": 239.57,
-            "p95": 246.18,
-            "p99": 247,
-            "max": 247
+            "mean": 248.83,
+            "sd": 6.1,
+            "min": 231.34,
+            "p50": 249.3,
+            "p95": 257.27,
+            "p99": 263.17,
+            "max": 263.17
           },
           "mcpCalls": 8,
           "apiRequests": 8,
@@ -291,20 +291,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 65.94,
-          "peakRssMb": 272
+          "cpuMsPerRun": 90.13,
+          "peakRssMb": 265
         },
         {
           "name": "parallel-client",
           "latency": {
             "n": 40,
-            "mean": 64.62,
-            "sd": 4.18,
-            "min": 58.42,
-            "p50": 63.5,
-            "p95": 73.43,
-            "p99": 78.06,
-            "max": 78.06
+            "mean": 68.15,
+            "sd": 3.7,
+            "min": 59.32,
+            "p50": 68.3,
+            "p95": 73.25,
+            "p99": 74.3,
+            "max": 74.3
           },
           "mcpCalls": 8,
           "apiRequests": 8,
@@ -312,20 +312,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 47.98,
-          "peakRssMb": 272
+          "cpuMsPerRun": 61.89,
+          "peakRssMb": 265
         },
         {
           "name": "composite",
           "latency": {
             "n": 40,
-            "mean": 60.23,
-            "sd": 3.26,
-            "min": 55.06,
-            "p50": 60,
-            "p95": 65.67,
-            "p99": 66.01,
-            "max": 66.01
+            "mean": 63.44,
+            "sd": 3.06,
+            "min": 55.64,
+            "p50": 62.74,
+            "p95": 67.73,
+            "p99": 69.95,
+            "max": 69.95
           },
           "mcpCalls": 1,
           "apiRequests": 8,
@@ -333,8 +333,8 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 33.71,
-          "peakRssMb": 272
+          "cpuMsPerRun": 53.33,
+          "peakRssMb": 265
         }
       ]
     },
@@ -348,13 +348,13 @@
           "name": "sequential",
           "latency": {
             "n": 40,
-            "mean": 88.48,
-            "sd": 3.1,
-            "min": 82.93,
-            "p50": 88.5,
-            "p95": 93.99,
-            "p99": 95.25,
-            "max": 95.25
+            "mean": 94.1,
+            "sd": 4.09,
+            "min": 86.16,
+            "p50": 93.34,
+            "p95": 100.93,
+            "p99": 103.65,
+            "max": 103.65
           },
           "mcpCalls": 3,
           "apiRequests": 3,
@@ -362,20 +362,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 22.97,
-          "peakRssMb": 272
+          "cpuMsPerRun": 31.32,
+          "peakRssMb": 266
         },
         {
           "name": "composite",
           "latency": {
             "n": 40,
-            "mean": 85.94,
-            "sd": 2.86,
-            "min": 80.91,
-            "p50": 85.84,
-            "p95": 92.28,
-            "p99": 94.37,
-            "max": 94.37
+            "mean": 89.42,
+            "sd": 3.15,
+            "min": 81.22,
+            "p50": 89.22,
+            "p95": 93.11,
+            "p99": 99.25,
+            "max": 99.25
           },
           "mcpCalls": 1,
           "apiRequests": 3,
@@ -383,8 +383,8 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 18.02,
-          "peakRssMb": 272
+          "cpuMsPerRun": 27.54,
+          "peakRssMb": 266
         }
       ]
     },
@@ -398,13 +398,13 @@
           "name": "sequential",
           "latency": {
             "n": 40,
-            "mean": 446.17,
-            "sd": 6.22,
-            "min": 433.78,
-            "p50": 445.54,
-            "p95": 456.06,
-            "p99": 462.74,
-            "max": 462.74
+            "mean": 458.79,
+            "sd": 6.56,
+            "min": 446,
+            "p50": 458.74,
+            "p95": 469.26,
+            "p99": 478.16,
+            "max": 478.16
           },
           "mcpCalls": 8,
           "apiRequests": 8,
@@ -412,20 +412,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 87.03,
-          "peakRssMb": 273
+          "cpuMsPerRun": 115.78,
+          "peakRssMb": 266
         },
         {
           "name": "parallel-client",
           "latency": {
             "n": 40,
-            "mean": 117.1,
-            "sd": 3.22,
-            "min": 111.1,
-            "p50": 116.97,
-            "p95": 122.09,
-            "p99": 122.96,
-            "max": 122.96
+            "mean": 120.38,
+            "sd": 4.13,
+            "min": 112.61,
+            "p50": 120.1,
+            "p95": 126.7,
+            "p99": 130.32,
+            "max": 130.32
           },
           "mcpCalls": 8,
           "apiRequests": 8,
@@ -433,20 +433,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 67.05,
-          "peakRssMb": 162
+          "cpuMsPerRun": 80.61,
+          "peakRssMb": 161
         },
         {
           "name": "composite",
           "latency": {
             "n": 40,
-            "mean": 111.35,
-            "sd": 2.59,
-            "min": 105.22,
-            "p50": 111.43,
-            "p95": 114.79,
-            "p99": 115.93,
-            "max": 115.93
+            "mean": 114.99,
+            "sd": 3.62,
+            "min": 109.96,
+            "p50": 114.52,
+            "p95": 119.68,
+            "p99": 127.94,
+            "max": 127.94
           },
           "mcpCalls": 1,
           "apiRequests": 8,
@@ -454,8 +454,8 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 48.62,
-          "peakRssMb": 163
+          "cpuMsPerRun": 64.76,
+          "peakRssMb": 161
         }
       ]
     },
@@ -469,13 +469,13 @@
           "name": "sequential",
           "latency": {
             "n": 40,
-            "mean": 167.48,
-            "sd": 3.24,
-            "min": 161.74,
-            "p50": 167.49,
-            "p95": 173.66,
-            "p99": 174.38,
-            "max": 174.38
+            "mean": 170.94,
+            "sd": 3.91,
+            "min": 161.63,
+            "p50": 171.25,
+            "p95": 177.65,
+            "p99": 178.12,
+            "max": 178.12
           },
           "mcpCalls": 3,
           "apiRequests": 3,
@@ -483,20 +483,20 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 36.2,
-          "peakRssMb": 163
+          "cpuMsPerRun": 44.62,
+          "peakRssMb": 157
         },
         {
           "name": "composite",
           "latency": {
             "n": 40,
-            "mean": 163.66,
-            "sd": 2.83,
-            "min": 157.36,
-            "p50": 163.25,
-            "p95": 168.41,
-            "p99": 170.5,
-            "max": 170.5
+            "mean": 166.58,
+            "sd": 3.89,
+            "min": 159.93,
+            "p50": 166.14,
+            "p95": 175.33,
+            "p99": 180.45,
+            "max": 180.45
           },
           "mcpCalls": 1,
           "apiRequests": 3,
@@ -504,8 +504,8 @@
           "successRate": 1,
           "correctness": 1,
           "errors": 0,
-          "cpuMsPerRun": 29.79,
-          "peakRssMb": 160
+          "cpuMsPerRun": 32.66,
+          "peakRssMb": 159
         }
       ]
     }
