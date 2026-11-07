@@ -1,0 +1,51 @@
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', 'benchmarks/results/**', 'benchmarks/charts/**', 'docs/images/**', 'package.json', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Build site from committed benchmark results
+        run: node site/build.mjs
+      - name: Check internal links and assets
+        run: node site/check-links.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Verify the published page responds
+        run: |
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "${{ steps.deployment.outputs.page_url }}")
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "Published page did not return 200 (last: $code)"; exit 1

@@ -37,7 +37,9 @@
     "benchmark:report": "node benchmarks/scripts/report.mjs",
     "site:build": "node site/build.mjs",
     "site:check": "node site/check-links.mjs",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prepare": "npm run build",
+    "benchmark:check": "node benchmarks/scripts/check-regression.mjs"
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "^13.0.0",
@@ -58,5 +60,23 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.1",
     "vitest": "^5.1.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devlomingo/toolsmith-mcp.git"
+  },
+  "homepage": "https://devlomingo.github.io/toolsmith-mcp/",
+  "bugs": {
+    "url": "https://github.com/devlomingo/toolsmith-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "openapi",
+    "ai-agents",
+    "gateway",
+    "tools",
+    "workflow-mining"
+  ],
+  "author": "devlomingo"
 }

@@ -12,7 +12,7 @@ builder's conclusions. The builder may write unit tests alongside changes, but
 
 Setting this up must be easy for someone who is not the author:
 
-- One command to start: `npx toolsmith-mcp init` then `npx toolsmith-mcp start`.
+- One install command (`npm i -g github:devlomingo/toolsmith-mcp`, or Docker), then `toolsmith-mcp demo` / `init` / `start`.
 - Sensible defaults and no required config for a first run.
 - Copy-pasteable client config snippets (stdio and HTTP) printed by the CLI.
 - Every error says what went wrong and what to do next. No stack traces for

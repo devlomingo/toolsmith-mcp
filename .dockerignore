@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.toolsmith
+benchmarks/results
+coverage
+site
+*.db
+.env

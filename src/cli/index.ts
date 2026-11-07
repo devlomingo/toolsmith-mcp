@@ -464,8 +464,8 @@ function clientConfig(loaded: LoadedConfig): number {
       {
         mcpServers: {
           toolsmith: {
-            command: 'npx',
-            args: ['-y', 'toolsmith-mcp', 'start', '--stdio', '--config', cfgPath],
+            command: 'toolsmith-mcp',
+            args: ['start', '--stdio', '--config', cfgPath],
           },
         },
       },

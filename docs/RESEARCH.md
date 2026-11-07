@@ -21,6 +21,12 @@ source URL and a tag:
    (arXiv 2601.22037) describes nearly the same pipeline as our feature 4,
    so we should cite it and not claim novelty.
 
+4. Generating tools from API documentation is also prior art: ToolFactory
+   (arXiv 2501.16945) extracts endpoints with an LLM and validates each
+   generated tool by calling it. What we took from it and from AWO is in
+   [PAPERS.md](PAPERS.md). The decisions these findings led to are in
+   [adr/](adr/README.md).
+
 ## MCP specification
 
 ### Version and revision model
@@ -273,6 +279,11 @@ source URL and a tag:
   fewer LLM calls and +4.2 points in success rate. **Verified**,
   https://arxiv.org/abs/2601.22037
   **This is the closest prior art to our feature 4.**
+- **ToolFactory** (2025-01): extracts REST endpoint descriptions from
+  unstructured docs with a soft-prompt-tuned Llama-3-8B and validates each
+  generated tool with a live call. Parameter values are the dominant
+  failure, which it addresses with a knowledge base of verified values.
+  **Verified** (full text), https://arxiv.org/abs/2501.16945
 - **MACRO** (2026-03): mines recurring multi-step sequences from verified
   trajectories and registers them as composite tools, in a medical imaging
   setting. **Verified**, https://arxiv.org/abs/2603.05860

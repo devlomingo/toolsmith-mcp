@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 218" width="760" height="218" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 306" width="760" height="306" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
 <title id="t">dependent-chain: median end-to-end latency</title><desc id="d">Order → its customer → that customer’s orders (strictly sequential, nothing to parallelize)</desc>
 <style>
   .bg{fill:#fcfcfb}.ttl{fill:#1b1b1a;font-size:16px;font-weight:600}.sub,.tick,.leg{fill:#5f5e58;font-size:12px}.lbl{fill:#2f2e2b;font-size:12.5px}.val{fill:#2f2e2b;font-size:11.5px;font-variant-numeric:tabular-nums}
@@ -9,16 +9,26 @@
 <text class="ttl" x="20" y="28">dependent-chain: median end-to-end latency</text>
 <text class="sub" x="20" y="44">Order → its customer → that customer’s orders (strictly sequential, nothing to parallelize)</text>
 <rect class="s1" x="20" y="52" width="12" height="12" rx="3"/><text class="leg" x="38" y="62">Sequential agent (1 call at a time)</text><rect class="s2" x="20" y="70" width="12" height="12" rx="3"/><text class="leg" x="38" y="80">Composite tool (1 call)</text>
-<line class="grid" x1="280" x2="280" y1="90" y2="188"/><text class="tick" x="280" y="204" text-anchor="middle">0</text><line class="grid" x1="382.5" x2="382.5" y1="90" y2="188"/><text class="tick" x="382.5" y="204" text-anchor="middle">25</text><line class="grid" x1="485" x2="485" y1="90" y2="188"/><text class="tick" x="485" y="204" text-anchor="middle">50</text><line class="grid" x1="587.5" x2="587.5" y1="90" y2="188"/><text class="tick" x="587.5" y="204" text-anchor="middle">75</text><line class="grid" x1="690" x2="690" y1="90" y2="188"/><text class="tick" x="690" y="204" text-anchor="middle">100</text>
+<line class="grid" x1="280" x2="280" y1="90" y2="276"/><text class="tick" x="280" y="292" text-anchor="middle">0</text><line class="grid" x1="382.5" x2="382.5" y1="90" y2="276"/><text class="tick" x="382.5" y="292" text-anchor="middle">50</text><line class="grid" x1="485" x2="485" y1="90" y2="276"/><text class="tick" x="485" y="292" text-anchor="middle">100</text><line class="grid" x1="587.5" x2="587.5" y1="90" y2="276"/><text class="tick" x="587.5" y="292" text-anchor="middle">150</text><line class="grid" x1="690" x2="690" y1="90" y2="276"/><text class="tick" x="690" y="292" text-anchor="middle">200</text>
 <text class="lbl" x="270" y="115" text-anchor="end">API latency 0 ms</text>
-<path class="s1" d="M280,96 h6.290999999999997 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-6.290999999999997 z"><title>API latency 0 ms — Sequential agent (1 call at a time): 2.5 ms (p50)</title></path>
-<text class="val" x="296.291" y="107">2.5</text>
-<path class="s2" d="M280,112 h1.740000000000009 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-1.740000000000009 z"><title>API latency 0 ms — Composite tool (1 call): 1.4 ms (p50)</title></path>
-<text class="val" x="291.74" y="123">1.4</text>
-<text class="lbl" x="270" y="159" text-anchor="end">API latency 25 ms</text>
-<path class="s1" d="M280,140 h377.1769999999999 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-377.1769999999999 z"><title>API latency 25 ms — Sequential agent (1 call at a time): 93 ms (p50)</title></path>
-<text class="val" x="667.1769999999999" y="151">93</text>
-<path class="s2" d="M280,156 h353.68399999999997 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-353.68399999999997 z"><title>API latency 25 ms — Composite tool (1 call): 87.2 ms (p50)</title></path>
-<text class="val" x="643.684" y="167">87.2</text>
-<text class="tick" x="20" y="204">ms (p50)</text>
+<path class="s1" d="M280,96 h0 a3.6899999999999977,3.6899999999999977 0 0 1 3.6899999999999977,3.6899999999999977 v6.6200000000000045 a3.6899999999999977,3.6899999999999977 0 0 1 -3.6899999999999977,3.6899999999999977 h-0 z"><title>API latency 0 ms — Sequential agent (1 call at a time): 1.8 ms (p50)</title></path>
+<text class="val" x="289.69" y="107">1.8</text>
+<path class="s2" d="M280,112 h0 a2.132000000000005,2.132000000000005 0 0 1 2.132000000000005,2.132000000000005 v9.73599999999999 a2.132000000000005,2.132000000000005 0 0 1 -2.132000000000005,2.132000000000005 h-0 z"><title>API latency 0 ms — Composite tool (1 call): 1 ms (p50)</title></path>
+<text class="val" x="288.132" y="123">1</text>
+<text class="lbl" x="270" y="159" text-anchor="end">API latency 10 ms</text>
+<path class="s1" d="M280,140 h79.29150000000004 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-79.29150000000004 z"><title>API latency 10 ms — Sequential agent (1 call at a time): 40.6 ms (p50)</title></path>
+<text class="val" x="369.29150000000004" y="151">40.6</text>
+<path class="s2" d="M280,156 h77.13900000000001 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-77.13900000000001 z"><title>API latency 10 ms — Composite tool (1 call): 39.6 ms (p50)</title></path>
+<text class="val" x="367.139" y="167">39.6</text>
+<text class="lbl" x="270" y="203" text-anchor="end">API latency 25 ms</text>
+<path class="s1" d="M280,184 h177.425 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-177.425 z"><title>API latency 25 ms — Sequential agent (1 call at a time): 88.5 ms (p50)</title></path>
+<text class="val" x="467.425" y="195">88.5</text>
+<path class="s2" d="M280,200 h171.97199999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-171.97199999999998 z"><title>API latency 25 ms — Composite tool (1 call): 85.8 ms (p50)</title></path>
+<text class="val" x="461.972" y="211">85.8</text>
+<text class="lbl" x="270" y="247" text-anchor="end">API latency 50 ms</text>
+<path class="s1" d="M280,228 h339.35450000000003 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-339.35450000000003 z"><title>API latency 50 ms — Sequential agent (1 call at a time): 167 ms (p50)</title></path>
+<text class="val" x="629.3545" y="239">167</text>
+<path class="s2" d="M280,244 h330.6625 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-330.6625 z"><title>API latency 50 ms — Composite tool (1 call): 163 ms (p50)</title></path>
+<text class="val" x="620.6625" y="255">163</text>
+<text class="tick" x="20" y="292">ms (p50)</text>
 </svg>

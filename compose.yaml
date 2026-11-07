@@ -1,0 +1,14 @@
+# docker compose up: runs the gateway with ./toolsmith.config.json and ./.env.
+# Create them first with: docker compose run --rm toolsmith init
+services:
+  toolsmith:
+    build: .
+    image: toolsmith-mcp:local
+    ports:
+      - "127.0.0.1:7420:7420"
+    volumes:
+      - ./:/work
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
