@@ -45,7 +45,12 @@ export function environment() {
   };
   let commit = null;
   try {
-    commit = execSync('git rev-parse --short HEAD', { cwd: ROOT }).toString().trim();
+    commit = execSync('git rev-parse --short HEAD', {
+      cwd: ROOT,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
   } catch {
     /* not a git checkout */
   }

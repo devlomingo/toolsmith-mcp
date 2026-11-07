@@ -57,6 +57,7 @@ from or wherever `--config <path>` points.
 | `port` | `7420` | HTTP port for `/mcp`, `/api` and `/dashboard`. |
 | `mcpToken` | none | Bearer token that MCP clients must send. Required off-loopback; recommended always. |
 | `adminToken` | none | Bearer token for the dashboard and admin API. Required to run `start`. |
+| `clients` | `[]` | Extra MCP clients, each `{ "name": "agent-a", "token": "${env:AGENT_A_TOKEN}" }`. The token identifies the client, and per-call approvals are bound to it. Give each agent its own. |
 
 ### `integrations[]`
 

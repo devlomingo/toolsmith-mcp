@@ -72,6 +72,7 @@ export function isPrivateAddress(ip: string): boolean {
   if (zeroPrefix(8)) return true; // ::
   if (zeroPrefix(7) && h[7] === 1) return true; // ::1
   if (zeroPrefix(5) && h[5] === 0xffff) return isPrivateAddress(v4From(h[6]!, h[7]!)); // ::ffff:0:0/96 mapped
+  if (zeroPrefix(4) && h[4] === 0xffff && h[5] === 0) return isPrivateAddress(v4From(h[6]!, h[7]!)); // ::ffff:0:0/96 IPv4-translated
   if (zeroPrefix(6)) return isPrivateAddress(v4From(h[6]!, h[7]!)); // ::/96 compatible (deprecated)
   if (h[0] === 0x64 && h[1] === 0xff9b) return true; // NAT64: any v4 incl. private
   if (h[0] === 0x2002) return isPrivateAddress(v4From(h[1]!, h[2]!)); // 6to4

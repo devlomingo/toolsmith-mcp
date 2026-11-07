@@ -21,6 +21,17 @@ export class UsageObserver {
     private readonly opts: ObserverOptions,
   ) {}
 
+  /**
+   * Result paths are built from response object keys, which can themselves
+   * be data (maps keyed by email, an echoed header). Redact them like values.
+   */
+  private redactPaths(fp: Record<string, string[]>): Record<string, string[]> {
+    const out: Record<string, string[]> = {};
+    for (const [hash, paths] of Object.entries(fp))
+      out[hash] = paths.map((p) => this.redactor.redactString(p));
+    return out;
+  }
+
   async observe(
     tool: ToolDefinition,
     args: JsonObject,
@@ -62,7 +73,9 @@ export class UsageObserver {
         retries: result.retries,
         args: this.opts.captureArguments === 'redacted' ? this.redactor.redact(args) : null,
         argFingerprints: this.fingerprinter.argFingerprints(args),
-        resultFingerprints: result.ok ? this.fingerprinter.resultFingerprints(result.data) : {},
+        resultFingerprints: result.ok
+          ? this.redactPaths(this.fingerprinter.resultFingerprints(result.data))
+          : {},
         resultBytes: Buffer.byteLength(serialized),
       });
       this.opts.onTrace?.(id);

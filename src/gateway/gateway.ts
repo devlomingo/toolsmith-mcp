@@ -316,8 +316,9 @@ export class Dispatcher {
     if (!check.valid) return fail('validation', `Invalid arguments for ${name}: ${check.message}`);
 
     if (entry.perCallApproval) {
-      if (!this.approvals.consume(name, args, ctx.sessionId, ctx.approvalId)) {
-        const pending = this.approvals.request(name, args, ctx.sessionId);
+      const principal = ctx.principal ?? ctx.sessionId;
+      if (!this.approvals.consume(name, args, principal, ctx.approvalId)) {
+        const pending = this.approvals.request(name, args, principal);
         return {
           ...fail(
             'approval_required',

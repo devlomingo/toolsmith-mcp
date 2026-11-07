@@ -21,11 +21,11 @@ explicit approval.
 - Destructive tools of upstream MCP servers need per-call approval too,
   unless the operator opts out per server or tool. An unannotated tool counts
   as destructive, following the MCP default.
-- Approvals are bound to the requesting session.
+- Approvals are bound to the requesting client, which is authenticated by its MCP token (or, over stdio, its process). Self-reported session headers only group traces.
 - CLI commands that grant access require an interactive terminal and a
-  typed confirmation, so an agent with shell access cannot approve itself
-  by running a command. This raises the bar; it is not a boundary against
-  code running as the same OS user.
+  typed confirmation, which stops an agent approving by accident. This
+  raises the bar, but it is not a boundary: a process can fake a terminal or
+  read the token.
 
 ## Consequences
 

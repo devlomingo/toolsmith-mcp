@@ -238,6 +238,7 @@ export class Toolsmith {
       baseUrl: cfg.baseUrl,
       include: cfg.include,
       exclude: cfg.exclude,
+      allowPrivateNetwork: cfg.allowPrivateNetwork,
     });
     def.specSource = cfg.spec;
     const artifact = this.registry.ensureArtifact('openapi', name);

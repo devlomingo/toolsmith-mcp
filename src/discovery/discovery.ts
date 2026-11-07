@@ -70,6 +70,8 @@ const VERBS: Record<string, AccessLevel> = {
   refund: 'destructive',
 };
 
+const MAX_OPEN_PROPOSALS = 50;
+
 const MODIFIERS = new Set([
   'latest',
   'recent',
@@ -233,7 +235,11 @@ export class DiscoveryEngine {
         return {
           o,
           hit,
-          score: hit.length / concepts.length + resourceBonus * (hit.length > 0 ? 1 : 0),
+          // An operation whose verb matches the request (delete → DELETE) beats a read of the same resource.
+          score:
+            hit.length / concepts.length +
+            resourceBonus * (hit.length > 0 ? 1 : 0) +
+            (intent !== 'read' && o.op.access === intent && hit.length > 0 ? 0.3 : 0),
         };
       })
       .filter((x) => x.hit.length > 0)
@@ -302,6 +308,21 @@ export class DiscoveryEngine {
         });
       }
       const def = chainToComposite(request, chain, modifiers);
+      // Agents can call request_capability freely; cap how many unreviewed
+      // proposals they can leave behind.
+      const open =
+        this.registry.versionsByStatus('proposed').length +
+        this.registry.versionsByStatus('awaiting_approval').length;
+      if (open >= MAX_OPEN_PROPOSALS && !this.registry.getArtifactByName(def.name)) {
+        return this.persist(sessionId, {
+          ...base,
+          verdict: 'composable',
+          explanation: `${chain.map((c) => c.op.tool).join(' → ')} can do this when called in order. No new tool was proposed: ${open} proposals already await review.`,
+          uncovered: [],
+          matches,
+          chain: chainView,
+        });
+      }
       const artifact = this.registry.ensureArtifact('composite', def.name);
       const { version } = this.registry.addVersion(
         artifact.id,

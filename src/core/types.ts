@@ -62,8 +62,13 @@ export type ErrorCode =
   | 'internal';
 
 export interface CallContext {
-  /** Logical agent session (MCP session id, or a per-connection id for stdio). */
+  /** Logical agent session for tracing and workflow discovery. */
   sessionId: string;
+  /**
+   * Authenticated caller (the MCP token's client, or the stdio process).
+   * Per-call approvals are bound to it. Defaults to sessionId.
+   */
+  principal?: string;
   /** Set when the call is a step inside a composite tool. */
   parentCallId?: string;
   signal?: AbortSignal;

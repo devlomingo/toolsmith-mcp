@@ -20,8 +20,15 @@ for (const s of perf.scenarios) {
     failures.push(
       `${s.name}: composite API requests ${by.composite.apiRequests} != sequential ${by.sequential.apiRequests}`,
     );
-  if (s.apiLatencyMs >= 25 && by.composite.latency.p50 > by.sequential.latency.p50)
-    failures.push(`${s.name}: composite p50 slower than sequential`);
+  // Only assert latency where parallelism gives a structural margin (the
+  // fan-out scenario is ~4x faster). A strictly sequential chain differs from
+  // its baseline by a few percent, which shared CI runners can invert.
+  if (
+    s.scenario === 'order-details' &&
+    s.apiLatencyMs >= 25 &&
+    by.composite.latency.p50 > 0.6 * by.sequential.latency.p50
+  )
+    failures.push(`${s.name}: composite p50 not clearly faster than sequential`);
 }
 const pat = JSON.parse(readFileSync(join(RESULTS, 'patterns.json'), 'utf8'));
 if (pat.overall.f1.mean < 0.9) failures.push(`pattern F1 ${pat.overall.f1.mean} < 0.9`);

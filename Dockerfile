@@ -14,6 +14,7 @@ WORKDIR /app
 COPY --from=build /src/node_modules ./node_modules
 COPY --from=build /src/dist ./dist
 COPY dashboard ./dashboard
+COPY benchmarks/results/latest.json ./benchmarks/results/latest.json
 COPY package.json LICENSE README.md ./
 RUN ln -s /app/dist/cli/index.js /usr/local/bin/toolsmith-mcp && mkdir /work && chown node:node /work
 USER node

@@ -1,7 +1,10 @@
 import SwaggerParser from '@apidevtools/swagger-parser';
 import { readFile } from 'node:fs/promises';
 import { load as parseYaml } from 'js-yaml';
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 import { ToolsmithError } from '../core/errors.js';
+import { isPrivateAddress } from '../security/ssrf.js';
 import { camelCase } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
 import { toJsonSchema, wrapAsObjectSchema } from './schema-utils.js';
@@ -24,14 +27,65 @@ export interface ImportOptions {
   baseUrl?: string;
   include?: string[];
   exclude?: string[];
+  /** Allow downloading the spec from private / loopback addresses. */
+  allowPrivateNetwork?: boolean;
 }
 
 /** Load a spec from a path, an http(s) URL, or an already-parsed object. */
-export async function loadSpecDocument(source: string | Doc): Promise<Doc> {
+/**
+ * Download a spec with the same egress rules as tool calls: no private,
+ * loopback or metadata addresses unless allowed, and every redirect hop
+ * re-checked. (Resolve-then-fetch leaves a DNS-rebinding window that the
+ * tool executor's connect-time check does not; spec URLs come from the
+ * operator, not the agent.)
+ */
+async function fetchSpec(url: string, allowPrivateNetwork: boolean): Promise<Response> {
+  let current = new URL(url);
+  for (let hop = 0; hop < 5; hop++) {
+    if (current.protocol !== 'https:' && current.protocol !== 'http:') {
+      throw new ToolsmithError(`Refusing to fetch the spec over ${current.protocol}`, 'policy');
+    }
+    if (!allowPrivateNetwork) {
+      const host = current.hostname.replace(/^\[|\]$/g, '');
+      const addresses = isIP(host)
+        ? [host]
+        : (await lookup(host, { all: true }).catch(() => [])).map((a) => a.address);
+      const bad = addresses.find((a) => isPrivateAddress(a));
+      if (bad) {
+        throw new ToolsmithError(
+          `Refusing to download the spec from ${current.host}: it resolves to private address ${bad}`,
+          'policy',
+          'If the spec really is on your local network, pass --allow-private-network (or set "allowPrivateNetwork": true).',
+        );
+      }
+    }
+    let res: Response;
+    try {
+      res = await fetch(current, { signal: AbortSignal.timeout(20_000), redirect: 'manual' });
+    } catch (err) {
+      throw new ToolsmithError(
+        `Could not reach ${current.host} to download the API spec (${(err as Error).cause ? String((err as { cause: { code?: string } }).cause.code ?? (err as Error).message) : (err as Error).message})`,
+        'network',
+        'Check the URL and your connection, or download the spec and pass the local file path instead.',
+      );
+    }
+    if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
+      current = new URL(res.headers.get('location')!, current);
+      continue;
+    }
+    return res;
+  }
+  throw new ToolsmithError('Too many redirects while downloading the spec', 'network');
+}
+
+export async function loadSpecDocument(
+  source: string | Doc,
+  opts: { allowPrivateNetwork?: boolean } = {},
+): Promise<Doc> {
   if (typeof source !== 'string') return structuredClone(source);
   let text: string;
   if (/^https?:\/\//i.test(source)) {
-    const res = await fetch(source, { signal: AbortSignal.timeout(20_000), redirect: 'follow' });
+    const res = await fetchSpec(source, opts.allowPrivateNetwork ?? false);
     if (!res.ok) {
       throw new ToolsmithError(
         `Could not download the API spec (${res.status} ${res.statusText}) from ${source}`,
@@ -75,7 +129,7 @@ export async function importOpenApi(
   source: string | Doc,
   opts: ImportOptions,
 ): Promise<OpenApiIntegrationDef> {
-  const raw = await loadSpecDocument(source);
+  const raw = await loadSpecDocument(source, { allowPrivateNetwork: opts.allowPrivateNetwork });
   const findings: SpecFinding[] = [];
   const specVersion = String(raw.openapi ?? raw.swagger ?? '');
   if (!specVersion) {

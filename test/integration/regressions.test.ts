@@ -410,3 +410,139 @@ describe.runIf(existsSync(CLI))('CLI (built)', () => {
     expect(r.stdout).not.toContain('admin-secret-zzz');
   });
 });
+
+// ---- Round 2 (FINAL_VALIDATION_REPORT.md) ----------------------------------
+
+describe('N1: Basic-auth credentials echoed back', () => {
+  it('scrubs the encoded header value and the decoded password', async () => {
+    const srv = createServer((q, s) => {
+      s.writeHead(200, { 'content-type': 'application/json' });
+      const auth = String(q.headers.authorization);
+      s.end(
+        JSON.stringify({
+          header: auth,
+          [auth]: 'as a key',
+          decoded: Buffer.from(auth.slice(6), 'base64').toString(),
+        }),
+      );
+    });
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+    process.env.ECHO_U = 'echouser';
+    process.env.ECHO_P = 'echo-PASS-55555';
+    const cfg = IntegrationSchema.parse({
+      name: 't',
+      spec: 'x',
+      allowPrivateNetwork: true,
+      auth: { type: 'basic', username: '${env:ECHO_U}', password: '${env:ECHO_P}' },
+    });
+    const port = (srv.address() as { port: number }).port;
+    const r = await new HttpIntegrationClient(cfg, `http://127.0.0.1:${port}`, new Redactor()).call(
+      op('/echo'),
+      {},
+    );
+    srv.close();
+    const text = JSON.stringify(r.data);
+    expect(text).not.toContain(Buffer.from('echouser:echo-PASS-55555').toString('base64'));
+    expect(text).not.toContain('echo-PASS-55555');
+  });
+});
+
+describe('N2: approvals bound to the authenticated client over HTTP', () => {
+  it('a second client (own token) cannot spend the first client approval, and cannot spoof identity headers', async () => {
+    const { Client, StreamableHTTPClientTransport } = await import('@modelcontextprotocol/client');
+    const { startHttpServer } = await import('../../src/server/http.js');
+    h = await makeHarness({
+      config: { server: { clients: [{ name: 'agent-b', token: 'token-for-agent-b' }] } },
+    });
+    await approveShop(h.app, { allowWrite: true, allowDestructive: true });
+    const gw = await startHttpServer(h.app, {
+      host: '127.0.0.1',
+      port: 0,
+      mcpToken: 'token-for-agent-a',
+      adminToken: 'adm',
+    });
+    const connect = async (
+      token: string,
+      mode: 'legacy' | 'auto',
+      extra: Record<string, string> = {},
+    ) => {
+      const c = new Client(
+        { name: 'same-name', version: '1' },
+        { capabilities: {}, versionNegotiation: { mode } },
+      );
+      await c.connect(
+        new StreamableHTTPClientTransport(new URL(`${gw.url}/mcp`), {
+          requestInit: { headers: { authorization: `Bearer ${token}`, ...extra } },
+        }),
+      );
+      return c;
+    };
+    try {
+      for (const mode of ['legacy', 'auto'] as const) {
+        const id = mode === 'legacy' ? 5 : 6;
+        const a = await connect('token-for-agent-a', mode);
+        const first = await a.callTool({ name: 'shop__deleteProduct', arguments: { id } });
+        expect(first.isError).toBe(true);
+        const pending = h.app.approvals
+          .list('pending')
+          .find((p) => JSON.stringify(p.args).includes(`"id":${id}`))!;
+        expect(pending.sessionId).toBe('http:default');
+        h.app.approvals.decide(pending.id, true, 'human:test');
+        // agent-b: same client name, same arguments, plus a forged identity header
+        const b = await connect('token-for-agent-b', mode, { 'x-toolsmith-client': 'default' });
+        const stolen = await b.callTool({ name: 'shop__deleteProduct', arguments: { id } });
+        expect(stolen.isError, `${mode}: agent-b must not use agent-a's approval`).toBe(true);
+        expect(h.shop.products.some((p) => p.id === id)).toBe(true);
+        const ok = await a.callTool({ name: 'shop__deleteProduct', arguments: { id } });
+        expect(ok.isError).toBeFalsy();
+        await a.close();
+        await b.close();
+      }
+    } finally {
+      await gw.close();
+    }
+  });
+});
+
+describe('n6 / m1: more SSRF shapes', () => {
+  it('blocks IPv4-translated IPv6 (::ffff:0:a.b.c.d)', () => {
+    expect(isPrivateAddress('::ffff:0:7f00:1')).toBe(true);
+    expect(isPrivateAddress('::ffff:0:127.0.0.1')).toBe(true);
+  });
+
+  it('refuses to download a spec from a private address unless allowed', async () => {
+    const { importOpenApi } = await import('../../src/openapi/import.js');
+    let hits = 0;
+    const srv = createServer((_q, s) => {
+      hits++;
+      s.writeHead(200, { 'content-type': 'application/json' });
+      s.end('{}');
+    });
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+    const port = (srv.address() as { port: number }).port;
+    await expect(
+      importOpenApi(`http://127.0.0.1:${port}/openapi.json`, { name: 'x' }),
+    ).rejects.toThrow(/private address/);
+    await expect(
+      importOpenApi(`http://localhost:${port}/openapi.json`, { name: 'x' }),
+    ).rejects.toThrow(/private address/);
+    expect(hits).toBe(0);
+    srv.close();
+  });
+
+  it('reports an unreachable spec URL as a normal error, not a crash', async () => {
+    const { importOpenApi } = await import('../../src/openapi/import.js');
+    await expect(
+      importOpenApi('http://127.0.0.1:9/openapi.json', { name: 'x', allowPrivateNetwork: true }),
+    ).rejects.toMatchObject({ name: 'ToolsmithError', code: 'network' });
+  });
+});
+
+describe('m12: capability verbs', () => {
+  it('"delete a product" points at the delete operation, not a read', async () => {
+    h = await makeHarness();
+    await approveShop(h.app, { allowWrite: true, allowDestructive: true });
+    const a = h.app.discovery.analyze('delete a product', 's');
+    expect(a.matches[0]!.tool).toBe('shop__deleteProduct');
+  });
+});

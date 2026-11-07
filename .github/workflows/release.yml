@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Check the tag matches package.json
+        run: test "v$(node -p 'require("./package.json").version')" = "${GITHUB_REF_NAME}"
+      - name: Pack
+        run: npm pack
+      - name: Smoke-test the tarball as an end user would install it
+        run: |
+          npm install -g --prefix "$RUNNER_TEMP/pfx" ./toolsmith-mcp-*.tgz
+          "$RUNNER_TEMP/pfx/bin/toolsmith-mcp" --version
+      - name: Release notes from CHANGELOG
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '$0 ~ "^## \\[" v "\\]" {f=1; next} f && /^## \[/ {exit} f' CHANGELOG.md > notes.md
+          test -s notes.md
+      - name: Publish the GitHub release with the tarball attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" ./toolsmith-mcp-*.tgz --title "toolsmith-mcp $GITHUB_REF_NAME" --notes-file notes.md

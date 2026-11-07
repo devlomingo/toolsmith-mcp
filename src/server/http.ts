@@ -55,7 +55,11 @@ export async function startHttpServer(
   const adminToken =
     opts.adminToken ??
     (app.config.server.adminToken ? resolveEnvRefs(app.config.server.adminToken) : undefined);
-  if (!isLoopback(host) && !mcpToken) {
+  const clientTokens: Array<{ name: string; token: string }> = [
+    ...(mcpToken ? [{ name: 'default', token: mcpToken }] : []),
+    ...app.config.server.clients.map((c) => ({ name: c.name, token: resolveEnvRefs(c.token) })),
+  ];
+  if (!isLoopback(host) && clientTokens.length === 0) {
     throw new Error(
       `Refusing to listen on ${host} without server.mcpToken. Set one, or bind to 127.0.0.1.`,
     );
@@ -81,10 +85,23 @@ export async function startHttpServer(
 
       if (url.pathname === '/healthz') return json(res, 200, { ok: true });
       if (url.pathname === '/mcp') {
-        if (mcpToken && !tokenMatches(req.headers.authorization, mcpToken)) {
+        // Identify the client by its token. These headers are set only by
+        // the gateway: anything a client sends under these names is dropped.
+        delete req.headers['x-toolsmith-client'];
+        delete req.headers['x-toolsmith-conn'];
+        let client: string | undefined;
+        if (clientTokens.length === 0) client = 'local';
+        else
+          client = clientTokens.find((c) => tokenMatches(req.headers.authorization, c.token))?.name;
+        if (!client) {
           res.setHeader('www-authenticate', 'Bearer');
           return json(res, 401, { error: 'Missing or invalid bearer token for /mcp' });
         }
+        req.headers['x-toolsmith-client'] = client;
+        // The TCP connection groups a keep-alive client's calls for workflow
+        // discovery when it sends no session header (2025-era HTTP is stateless).
+        req.headers['x-toolsmith-conn'] =
+          `${req.socket.remoteAddress ?? ''}:${req.socket.remotePort ?? ''}`;
         // Browsers must not be able to drive the gateway cross-site.
         const origin = req.headers.origin;
         if (origin && !sameOrigin(origin, req))

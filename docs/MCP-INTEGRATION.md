@@ -45,19 +45,30 @@ Run `toolsmith-mcp start` and point the client at the endpoint:
 }
 ```
 
-### Session grouping
+### Client identity and session grouping
 
-The 2026-07-28 protocol has no sessions. To keep one agent's calls
-together for workflow discovery, send a stable header:
+**Who is calling** is decided by the bearer token. `server.mcpToken` is the
+client named `default`. Give each agent its own token in `server.clients`
+([CONFIGURATION.md](CONFIGURATION.md#server)) and approvals are bound to that
+agent: one agent cannot spend an approval granted to another. Over stdio,
+each process is its own client.
+
+**Which calls belong together** matters for workflow discovery. The
+2026-07-28 protocol has no sessions, so within a client, calls are grouped
+in this order of preference:
+
+1. the `X-Toolsmith-Session` header (`Mcp-Session-Id` also works);
+2. otherwise, the client's reported name plus its TCP connection.
+
+Send the header with something stable per agent run:
 
 ```text
 X-Toolsmith-Session: <anything stable per agent run>
 ```
 
-Without the header, calls are grouped by the OAuth client id or the
-client's reported name. When several agents end up behind one key, the
-miner separates them by data flow; the benchmark measures how well. Legacy
-`Mcp-Session-Id` headers are also accepted.
+The header is self-reported, so it only groups traces and never changes
+what a client is allowed to do. When several agents still end up in one
+group, the miner separates them by data flow.
 
 ## What the agent sees
 
@@ -84,12 +95,13 @@ Results come back as `structuredContent` plus a JSON text block.
 2. The agent should ask its user to approve it. The user does that in the
    dashboard under **Approvals**, or in their own terminal with
    `toolsmith-mcp approve-call 3f2a9c1e`. The command asks for a typed
-   confirmation and refuses to run without an interactive terminal, so an
-   agent cannot approve its own request.
-3. The agent then retries the same call with the same arguments, from the
-   same session.
+   confirmation and refuses to run without an interactive terminal. That
+   stops an agent approving by accident, but it is not a security boundary
+   (see [SECURITY.md](SECURITY.md)).
+3. The agent then retries the same call with the same arguments and the
+   same token.
 
-An approval works once, for those exact arguments and that session. This
+An approval works once, for those exact arguments and that client. This
 applies to destructive tools of connected MCP servers too (see
 [CONFIGURATION.md](CONFIGURATION.md#upstreams)).
 

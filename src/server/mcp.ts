@@ -81,14 +81,21 @@ export function createServerFactory(app: Toolsmith, opts: ServerFactoryOptions =
       { name: 'toolsmith-mcp', version: VERSION },
       { capabilities: { tools: { listChanged: true } }, instructions: INSTRUCTIONS },
     );
-    const sessionFor = (envelopeClient?: string): string => {
-      if (opts.sessionId) return opts.sessionId;
+    /**
+     * principal: who is calling, authenticated by token (HTTP) or by being
+     * this process (stdio). Per-call approvals bind to it.
+     * session: a finer grouping of calls for workflow discovery, from the
+     * session header, the client's name and connection. It is self-reported,
+     * so it never widens what a principal may do.
+     */
+    const identify = (envelopeClient?: string): { principal: string; session: string } => {
+      if (opts.sessionId) return { principal: opts.sessionId, session: opts.sessionId };
       const headers = rctx?.requestInfo?.headers;
+      const principal = `http:${headers?.get('x-toolsmith-client') ?? 'local'}`;
       const explicit = headers?.get('x-toolsmith-session') ?? headers?.get('mcp-session-id');
-      if (explicit) return `http:${explicit.slice(0, 80)}`;
-      const principal = rctx?.authInfo?.clientId;
-      if (principal) return `http:${principal}`;
-      return `http:${envelopeClient ?? 'anonymous'}`;
+      const conn = headers?.get('x-toolsmith-conn') ?? '';
+      const sub = explicit ? explicit.slice(0, 80) : `${envelopeClient ?? 'client'}@${conn}`;
+      return { principal, session: `${principal}/${sub}` };
     };
 
     server.setRequestHandler(
@@ -102,10 +109,13 @@ export function createServerFactory(app: Toolsmith, opts: ServerFactoryOptions =
     server.setRequestHandler('tools/call', async (request, ctx) => {
       const params = (request as { params: { name: string; arguments?: JsonObject } }).params;
       const envelope = ctx.mcpReq.envelope as { clientInfo?: { name?: string } } | undefined;
-      const sessionId = sessionFor(envelope?.clientInfo?.name ?? server.getClientVersion()?.name);
+      const { principal, session } = identify(
+        envelope?.clientInfo?.name ?? server.getClientVersion()?.name,
+      );
       const entry = app.catalog.get(params.name);
       const result = await app.call(params.name, params.arguments ?? {}, {
-        sessionId,
+        sessionId: session,
+        principal,
         signal: ctx.mcpReq.signal,
       });
       const wrapped = entry?.exec.type === 'openapi' ? entry.exec.op.outputWrapped : false;

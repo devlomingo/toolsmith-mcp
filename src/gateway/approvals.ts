@@ -87,12 +87,6 @@ export class CallApprovals {
     return this.get(id)!;
   }
 
-  /** Record a decision made in-band (e.g. MCP elicitation) as already approved. */
-  grantNow(tool: string, args: JsonObject, sessionId: string, actor: string): CallApproval {
-    const a = this.request(tool, args, sessionId);
-    return this.decide(a.id, true, actor);
-  }
-
   decide(id: string, approve: boolean, actor: string): CallApproval {
     const res = this.db
       .prepare(

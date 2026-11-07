@@ -19,7 +19,7 @@ MCP servers, need a human per call.
 · Website: <https://devlomingo.github.io/toolsmith-mcp/> · MIT licensed
 
 ```sh
-npm install -g github:devlomingo/toolsmith-mcp
+npm install -g https://github.com/devlomingo/toolsmith-mcp/releases/download/v0.1.0/toolsmith-mcp-0.1.0.tgz
 toolsmith-mcp demo
 ```
 
@@ -39,7 +39,7 @@ leaves the gateway and dashboard running for you to explore.
 | **Composite tools** | Mined workflows become declarative DAG plans: parallel stages, `forEach` fan-out, partial results. They are executed by fixed code; nothing generated runs as code. Each one tells the agent what it replaces ("Use this instead of calling … one by one"), and the reviewer can rewrite that description at approval. |
 | **Evaluation** | Composites are run against the original tools one by one and must return identical results. Plans that write data are never executed automatically. |
 | **Missing capabilities** | Agents call `toolsmith__request_capability`. The answer is `available`, `composable` (and a composite is proposed), `needs_approval`, or `unsupported`. |
-| **Human approval** | A lifecycle state machine. Write and destructive tools stay hidden until granted, including composites that write. Every destructive call is approved individually, by a person in the dashboard or an interactive terminal, bound to its exact arguments and session. Versions can be rolled back. |
+| **Human approval** | A lifecycle state machine. Generated write and destructive tools stay hidden until granted, including composites that write. Connected MCP servers are trusted by configuration, except that their destructive tools need per-call approval. Every destructive call is approved individually, in the dashboard or an interactive terminal (never through MCP), bound to its exact arguments and to the calling client's token. Versions can be rolled back. |
 | **Dashboard** | Approvals, integrations, tools, workflows and usage, capability requests, traces (p50/p95), benchmarks, audit log. English and Arabic, with right-to-left layout. |
 | **Protocol** | MCP 2025-11-25 and 2026-07-28 over stdio and Streamable HTTP, through the official v2 TypeScript SDK. Not tied to any client. |
 

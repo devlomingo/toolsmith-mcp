@@ -88,8 +88,16 @@ export const ConfigSchema = z.object({
       mcpToken: z.string().optional(),
       /** Token for the dashboard and admin API. `${env:...}` allowed. */
       adminToken: z.string().optional(),
+      /**
+       * Separate tokens per agent. The token identifies the client, and
+       * per-call approvals are bound to that identity. `mcpToken` is the
+       * client named "default".
+       */
+      clients: z
+        .array(z.object({ name: z.string().regex(/^[A-Za-z0-9_.-]{1,40}$/), token: z.string() }))
+        .default([]),
     })
-    .default({ host: '127.0.0.1', port: 7420 }),
+    .default({ host: '127.0.0.1', port: 7420, clients: [] }),
   dataDir: z.string().default('.toolsmith'),
   integrations: z.array(IntegrationSchema).default([]),
   upstreams: z.array(UpstreamSchema).default([]),

@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 import { randomBytes } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, appendFileSync, mkdtempSync } from 'node:fs';
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  appendFileSync,
+  mkdtempSync,
+  rmSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -163,8 +170,11 @@ async function main(argv: string[]): Promise<number> {
           !values['no-publish'],
         );
         app.refresh();
-        say(`${c.green('✓')} ${rest[0]} v${v.version} is ${statusColor(v.status)}.`);
         const name = app.registry.getArtifact(v.artifactId)!.name;
+        say(`${c.green('✓')} ${name} v${v.version} is ${statusColor(v.status)}.`);
+        // Published is not the same as visible: say so when the catalog hides it.
+        for (const p of app.catalog.problems.filter((x) => x.artifact === name))
+          say(c.yellow(`  ! Not visible to agents: ${p.problem}`));
         const exposed = app.catalog.list().filter((t) => t.artifactId === v.artifactId);
         if (exposed.length)
           say(
@@ -261,7 +271,7 @@ async function confirmHuman(question: string): Promise<void> {
     throw new ToolsmithError(
       'This action grants access and needs a person at an interactive terminal.',
       'policy',
-      'Run it yourself in a terminal, or use the dashboard (Approvals). Agents cannot approve their own requests.',
+      'Run it yourself in a terminal, or use the dashboard (Approvals). This guards against an agent approving by accident; it is not a security boundary against software running as your user (docs/SECURITY.md).',
     );
   }
   const { createInterface } = await import('node:readline/promises');
@@ -287,7 +297,17 @@ function describeGrant(
     [perms.allowWrite && 'WRITE', perms.allowDestructive && 'DESTRUCTIVE']
       .filter(Boolean)
       .join(' + ') || 'read-only';
-  return `Approve and publish ${artifact.name}${v ? ` v${v.version}` : ''} (${artifact.kind}, ${grant} access)?`;
+  let warning = '';
+  if (artifact.kind === 'composite' && v) {
+    const steps = (v.definition as unknown as { steps?: Array<{ tool: string }> }).steps ?? [];
+    const levels = steps.map((st) => app.catalog.get(st.tool)?.def.access);
+    if (levels.includes('destructive') && !perms.allowDestructive)
+      warning =
+        '\n  ! It has destructive steps: without --allow-destructive it will stay hidden from agents.';
+    else if (levels.includes('write') && !perms.allowWrite)
+      warning = '\n  ! It changes data: without --allow-writes it will stay hidden from agents.';
+  }
+  return `Approve and publish ${artifact.name}${v ? ` v${v.version}` : ''} (${artifact.kind}, ${grant} access)?${warning}\n`;
 }
 
 function need(v: string | undefined, usage: string): string {
@@ -900,6 +920,7 @@ async function demo(port?: number): Promise<number> {
     await http.close();
     await app.close();
     await shop.stop();
+    rmSync(dir, { recursive: true, force: true }); // the demo promised to leave nothing behind
     process.exit(0);
   };
   process.on('SIGINT', () => void stop());

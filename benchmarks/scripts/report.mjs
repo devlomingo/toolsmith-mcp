@@ -229,9 +229,15 @@ if (scale) {
   charts.push('throughput.svg');
   md.push('## Scalability', '');
   for (const n of scale.notes) md.push(`- ${n}`);
-  md.push('', '![Throughput](../charts/throughput.svg)', '');
   md.push(
-    '| Concurrent clients | Calls | Errors | Calls/s | p50 ms | p95 ms | p99 ms | RSS MB |',
+    '',
+    '![Throughput](../charts/throughput.svg)',
+    '',
+    'RSS is the resident memory of the single benchmark process, which hosts the MCP clients, the gateway and the demo API together. It is an upper bound for the gateway alone.',
+    '',
+  );
+  md.push(
+    '| Concurrent clients | Calls | Errors | Calls/s | p50 ms | p95 ms | p99 ms | RSS MB (whole process) |',
     '|---|---|---|---|---|---|---|---|',
   );
   for (const t of scale.throughput)

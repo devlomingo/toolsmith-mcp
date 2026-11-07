@@ -82,8 +82,16 @@ Fixed before release, after independent validation (see
   Opt-outs: `approval: "none"`, `trustedTools`.
 - Composites that write need their own write grant, and run in recorded
   order.
-- Per-call approvals are bound to the requesting session.
-- CLI granting commands need an interactive terminal and confirmation.
+- Per-call approvals are bound to the calling client, identified by its MCP
+  token (`server.clients` gives each agent its own).
+- CLI granting commands need an interactive terminal and confirmation. This
+  guards against accidents and is not a boundary.
+- Basic-auth credentials, including the encoded header, are scrubbed from
+  responses. Trace paths are redacted.
+- Spec downloads use the same SSRF rules as tool calls. IPv4-translated IPv6
+  is blocked.
+- Install from the release tarball: a global install from git cannot build
+  the package.
 - The admin token is no longer printed to non-interactive output.
 - Timeouts are no longer retried.
 

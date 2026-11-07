@@ -185,9 +185,16 @@ export class HttpIntegrationClient {
       case 'bearer':
         headers.authorization = `Bearer ${this.secret(auth.token)}`;
         return;
-      case 'basic':
-        headers.authorization = `Basic ${Buffer.from(`${this.secret(auth.username)}:${this.secret(auth.password)}`).toString('base64')}`;
+      case 'basic': {
+        const encoded = Buffer.from(
+          `${this.secret(auth.username)}:${this.secret(auth.password)}`,
+        ).toString('base64');
+        // The encoded pair is as sensitive as the password: register it so an
+        // API that echoes the Authorization header cannot leak it.
+        this.redactor.registerSecret(encoded);
+        headers.authorization = `Basic ${encoded}`;
         return;
+      }
       case 'apiKey':
         if (auth.in === 'query') url.searchParams.set(auth.name, this.secret(auth.value));
         else headers[auth.name.toLowerCase()] = this.secret(auth.value);

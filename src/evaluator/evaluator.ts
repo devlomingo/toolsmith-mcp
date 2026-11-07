@@ -243,7 +243,7 @@ export async function evaluateComposite(
   checks.push({
     name: 'authorization preserved',
     passed: true,
-    detail: `every step calls an already-exposed tool through the gateway; composite access = ${writes ? 'write' : 'read'} (${writes} writing steps)`,
+    detail: `every step calls an already-exposed tool through the gateway; composite access = ${accesses.includes('destructive') ? 'destructive' : writes ? 'write' : 'read'} (${writes} writing steps); approval must grant that level`,
     severity: writes ? 'warning' : 'info',
   });
 
