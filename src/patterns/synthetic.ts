@@ -43,12 +43,16 @@ export interface SyntheticOptions {
   smallIdRange?: number;
   /** Probability that a session is merged into the previous one (two agents sharing a session key, calls interleaved). */
   mergeRate?: number;
+  /** Probability that the agent runs the first two independent reads in swapped order. */
+  swapReadsRate?: number;
 }
 
 export interface SyntheticResult {
   traces: TraceRecord[];
-  /** Expected mined signatures, one per planted workflow. */
+  /** Expected mined signatures (canonical form), one per planted workflow. */
   truth: string[];
+  /** Acceptable signatures per workflow: canonical and as-recorded order. */
+  truthVariants: string[][];
   runsPerWorkflow: Record<string, number>;
 }
 
@@ -63,7 +67,32 @@ function rng(seed: number): () => number {
 }
 
 /** The signature the miner should produce for a planted workflow. */
-export function expectedSignature(w: PlantedWorkflow): string {
+export function expectedSignature(w: PlantedWorkflow, canonical = true): string {
+  // Mirror the miner's canonical form: adjacent reads that do not consume
+  // each other's output are ordered by tool name.
+  const steps = [...w.steps];
+  const idx = steps.map((_, i) => i);
+  for (let pass = 0; canonical && pass < steps.length * steps.length; pass++) {
+    let swapped = false;
+    for (let i = 0; i + 1 < steps.length; i++) {
+      const a = steps[i]!;
+      const b = steps[i + 1]!;
+      const loop = (s: PlantedStep) => typeof s.source.from === 'number' && s.source.each;
+      if (loop(a) || loop(b) || a.tool <= b.tool || b.source.from === idx[i]) continue;
+      [steps[i], steps[i + 1]] = [b, a];
+      [idx[i], idx[i + 1]] = [idx[i + 1]!, idx[i]!];
+      swapped = true;
+    }
+    if (!swapped) break;
+  }
+  w = {
+    ...w,
+    steps: steps.map((s) =>
+      typeof s.source.from === 'number'
+        ? { ...s, source: { ...s.source, from: idx.indexOf(s.source.from) } }
+        : s,
+    ),
+  };
   const tokens: string[] = [];
   let i = 0;
   while (i < w.steps.length) {
@@ -152,6 +181,7 @@ export function generateTraces(opts: SyntheticOptions): SyntheticResult {
         opts.truncateRate && rand() < opts.truncateRate
           ? 1 + Math.floor(rand() * (w.steps.length - 1))
           : w.steps.length;
+      const stepTrace: number[] = [];
       let i = 0;
       while (i < stopAt) {
         const step = w.steps[i]!;
@@ -195,10 +225,28 @@ export function generateTraces(opts: SyntheticOptions): SyntheticResult {
               ref: value,
               name: `x${Math.floor(rand() * 1000)}`,
             };
+        stepTrace[i] = traces.length;
         record(sessionId, step.tool, { [step.arg]: value }, result);
         outputs[i] = result;
         i++;
         if (i < stopAt) inner(sessionId);
+      }
+      // Agents do not always run independent reads in the same order.
+      const s0 = w.steps[0];
+      const s1 = w.steps[1];
+      if (
+        opts.swapReadsRate &&
+        s0?.source.from === 'input' &&
+        s1?.source.from === 'input' &&
+        stepTrace[0] !== undefined &&
+        stepTrace[1] !== undefined &&
+        rand() < opts.swapReadsRate
+      ) {
+        const a = traces[stepTrace[0]]!;
+        const b = traces[stepTrace[1]]!;
+        [a.startedAt, b.startedAt] = [b.startedAt, a.startedAt];
+        traces[stepTrace[0]] = b;
+        traces[stepTrace[1]] = a;
       }
       if (rand() < opts.noiseRate) noise(sessionId);
     } else {
@@ -227,7 +275,14 @@ export function generateTraces(opts: SyntheticOptions): SyntheticResult {
     }
     traces.sort((a, b) => a.startedAt - b.startedAt);
   }
-  return { traces, truth: opts.workflows.map(expectedSignature), runsPerWorkflow: runs };
+  return {
+    traces,
+    truth: opts.workflows.map((w) => expectedSignature(w)),
+    truthVariants: opts.workflows.map((w) => [
+      ...new Set([expectedSignature(w), expectedSignature(w, false)]),
+    ]),
+    runsPerWorkflow: runs,
+  };
 }
 
 /** Workflows used by tests and the pattern benchmark. */

@@ -33,6 +33,18 @@ export interface MinerOptions {
    * this share of P's support (P is then mostly a prefix of abandoned runs).
    */
   closedRatio?: number;
+  /**
+   * AWO-style majority rule: each step of a pattern must take more than this
+   * share of the sessions that continue past its prefix. Stops long tails
+   * that only some sessions follow. 0 disables.
+   */
+  minStepShare?: number;
+  /**
+   * Treat adjacent independent reads as commutative (AWO's set of GETs):
+   * order them canonically so getUser→getOrders and getOrders→getUser count
+   * as one workflow.
+   */
+  commutativeReads?: boolean;
 }
 
 export type Binding =
@@ -68,6 +80,8 @@ export interface Pattern {
   occurrences: number;
   confidence: number;
   connectivity: number;
+  /** For each step after the first: share of continuing sessions that take it. */
+  stepShares: number[];
   stats: {
     medianMcpCalls: number;
     medianUpstreamRequests: number;
@@ -261,6 +275,7 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
   const segmentation = opts.segmentation ?? 'dataflow';
   const episodes: EpisodeModel[] = segmentEpisodes(traces, opts.episodeGapMs)
     .flatMap((ep) => (segmentation === 'dataflow' ? dataflowComponents(ep) : [ep]))
+    .map((ep) => (opts.commutativeReads === false ? ep : canonicalizeReads(ep)))
     .map((ep) => {
       const calls = bindCalls(ep);
       return { calls, ...toElements(calls) };
@@ -268,6 +283,8 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
 
   const grams = new Map<string, Occurrence[]>();
   const firstTokenEpisodes = new Map<string, Set<number>>();
+  // prefix signature -> next token -> episodes (the weighted edges of AWO's state graph)
+  const successors = new Map<string, Map<string, number>>();
   episodes.forEach((ep, e) => {
     const tokens = ep.elements.map((x) => x.token);
     tokens.forEach((t) =>
@@ -281,6 +298,9 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
         if (seenInEpisode.has(key)) continue; // count once per episode
         seenInEpisode.add(key);
         (grams.get(sig) ?? grams.set(sig, []).get(sig)!).push({ episode: e, start: s });
+        const prefix = tokens.slice(s, s + n - 1).join(' > ');
+        const next = successors.get(prefix) ?? successors.set(prefix, new Map()).get(prefix)!;
+        next.set(tokens[s + n - 1]!, (next.get(tokens[s + n - 1]!) ?? 0) + 1);
       }
     }
   });
@@ -293,11 +313,31 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
     const connected = occs.filter((o) => isConnected(episodes[o.episode]!, o.start, n));
     const connectivity = connected.length / occs.length;
     if (connectivity < opts.minConfidence || connected.length < opts.minSupport) continue;
-    const firstToken = sig.split(' > ')[0]!;
+    const tokensOf = sig.split(' > ');
+    const firstToken = tokensOf[0]!;
     const confidence = support / (firstTokenEpisodes.get(firstToken)?.size ?? support);
-    candidates.push(
-      buildPattern(sig, n, connected, episodes, support, confidence, connectivity, opts),
+    const stepShares: number[] = [];
+    for (let k = 1; k < tokensOf.length; k++) {
+      const next = successors.get(tokensOf.slice(0, k).join(' > '));
+      const total = next ? [...next.values()].reduce((a, b) => a + b, 0) : 0;
+      stepShares.push(
+        total ? Math.round(((next!.get(tokensOf[k]!) ?? 0) / total) * 1000) / 1000 : 0,
+      );
+    }
+    const minShare = opts.minStepShare ?? 0.5;
+    if (minShare > 0 && stepShares.some((x) => x <= minShare)) continue;
+    const pattern = buildPattern(
+      sig,
+      n,
+      connected,
+      episodes,
+      support,
+      confidence,
+      connectivity,
+      opts,
     );
+    pattern.stepShares = stepShares;
+    candidates.push(pattern);
   }
 
   // Keep closed patterns: drop P when a longer Q containing it occurs
@@ -320,6 +360,39 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
  * argument bindings). Each group keeps time order; singletons are dropped
  * because a one-call "workflow" has nothing to compose.
  */
+/**
+ * Reorder adjacent reads that do not depend on each other into a canonical
+ * (tool name) order. Only output-to-argument links count as dependencies; a
+ * shared input (both calls take the same userId) does not.
+ */
+export function canonicalizeReads(episode: TraceRecord[]): TraceRecord[] {
+  const out = [...episode];
+  if (out.length > 60) return out; // quadratic; long components are left as recorded
+  for (let pass = 0; pass < out.length * out.length; pass++) {
+    let swapped = false;
+    const calls = bindCalls(out);
+    for (let i = 0; i + 1 < out.length; i++) {
+      const a = out[i]!;
+      const b = out[i + 1]!;
+      if (a.access !== 'read' || b.access !== 'read' || a.tool <= b.tool) continue;
+      const bDependsOnA = [...calls[i + 1]!.bindings.values()].some(
+        (x) => x.type === 'output' && x.from === i,
+      );
+      if (bDependsOnA) continue;
+      // Loop iterations are barriers: reads never move across them.
+      const iterates = (k: number) =>
+        [...calls[k]!.bindings.values()].some((x) => x.type === 'output' && x.path.includes('[*]'));
+      if (iterates(i) || iterates(i + 1)) continue;
+      out[i] = b;
+      out[i + 1] = a;
+      swapped = true;
+      break; // indices changed: recompute bindings
+    }
+    if (!swapped) break;
+  }
+  return out;
+}
+
 export function dataflowComponents(episode: TraceRecord[]): TraceRecord[][] {
   const calls = bindCalls(episode);
   const parent = calls.map((_, i) => i);
@@ -484,15 +557,59 @@ function buildPattern(
     }
   }
 
+  // Counting uses the canonical order; present the steps in the order the
+  // agent actually ran them (reference occurrence), which reads naturally and
+  // keeps every data source before its consumer.
+  const window = ref.elements.slice(occs[0]!.start, occs[0]!.start + n);
+  const firstStart = window.map((e) =>
+    Math.min(...e.members.map((m) => ref.calls[m]!.trace.startedAt)),
+  );
+  const order = elements.map((_, i) => i).sort((a, b) => firstStart[a]! - firstStart[b]!);
+  const pos = new Map(order.map((oldIdx, newIdx) => [oldIdx, newIdx]));
+  const naturalElements = order.map((i) => {
+    const e = elements[i]!;
+    return e.kind === 'loop'
+      ? { ...e, sourceElement: pos.get(e.sourceElement) ?? e.sourceElement }
+      : e;
+  });
+  const naturalArgs = order.map((i) => {
+    const out: ElementArgs = {};
+    for (const [tool, byArg] of Object.entries(args[i]!)) {
+      out[tool] = {};
+      for (const [arg, src] of Object.entries(byArg)) {
+        out[tool]![arg] =
+          src.type === 'output' || src.type === 'shared'
+            ? { ...src, element: pos.get(src.element)! }
+            : src;
+      }
+    }
+    return out;
+  });
+
+  // A shared input must point back to the earliest step that takes it.
+  naturalArgs.forEach((byTool, k) => {
+    for (const [tool, byArg] of Object.entries(byTool)) {
+      for (const [arg, src] of Object.entries(byArg)) {
+        if (src.type !== 'shared' || src.element < k) continue;
+        const target = naturalArgs[src.element]?.[src.tool];
+        if (target && target[src.arg]?.type === 'input') {
+          target[src.arg] = { type: 'shared', element: k, tool, arg };
+          byArg[arg] = { type: 'input' };
+        } else byArg[arg] = { type: 'input' };
+      }
+    }
+  });
+
   return {
     id: createHash('sha256').update(sig).digest('hex').slice(0, 12),
     signature: sig,
-    elements,
-    args,
+    elements: naturalElements,
+    args: naturalArgs,
     support,
     occurrences: occs.length,
     confidence: round(confidence),
     connectivity: round(connectivity),
+    stepShares: [],
     stats: {
       medianMcpCalls: median(callsPer),
       medianUpstreamRequests: median(upstreamPer),

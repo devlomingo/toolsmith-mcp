@@ -12,7 +12,14 @@ const MINER = { minSupport: 3, minConfidence: 0.6, maxLength: 6, episodeGapMs: 1
 // Ablation: the shipped defaults vs the first version (contiguous order, 0.9 closed-pattern ratio).
 const VARIANTS = {
   default: { ...MINER },
-  'contiguous (v0 baseline)': { ...MINER, segmentation: 'contiguous', closedRatio: 0.9 },
+  'no AWO rules': { ...MINER, minStepShare: 0, commutativeReads: false },
+  'contiguous (v0 baseline)': {
+    ...MINER,
+    segmentation: 'contiguous',
+    closedRatio: 0.9,
+    minStepShare: 0,
+    commutativeReads: false,
+  },
 };
 
 // Each condition adds one realistic difficulty on top of a common base
@@ -29,6 +36,7 @@ const grid = [
   { condition: 'colliding small ids (1..50)', ...BASE, smallIdRange: 50 },
   { condition: 'colliding small ids (1..10)', ...BASE, smallIdRange: 10 },
   { condition: 'two agents share a session key 30%', ...BASE, mergeRate: 0.3 },
+  { condition: 'independent reads in random order 50%', ...BASE, swapReadsRate: 0.5 },
   {
     condition: 'all of the above (moderate)',
     ...BASE,
@@ -49,7 +57,7 @@ for (const cell of grid) {
     const ms = [];
     for (const seed of SEEDS) {
       const { condition: _c, ...gen } = cell;
-      const { traces, truth } = generateTraces({
+      const { traces, truthVariants } = generateTraces({
         workflows: STANDARD_WORKFLOWS,
         noiseTools: NOISE_TOOLS,
         seed,
@@ -58,11 +66,19 @@ for (const cell of grid) {
       const t0 = performance.now();
       const mined = minePatterns(traces, minerOpts).map((x) => x.signature);
       ms.push(performance.now() - t0);
-      const tp = mined.filter((m) => truth.includes(m)).length;
+      // A workflow counts once: its first matching signature (canonical or
+      // as-recorded order) is a true positive, any further match is a duplicate (FP).
+      const found = new Set();
+      let tp = 0;
+      for (const m of mined) {
+        const w = truthVariants.findIndex((v) => v.includes(m));
+        if (w >= 0 && !found.has(w)) {
+          found.add(w);
+          tp++;
+        }
+      }
       const precision = mined.length ? tp / mined.length : 1;
-      const recall = truth.length
-        ? new Set(mined.filter((m) => truth.includes(m))).size / truth.length
-        : 1;
+      const recall = found.size / truthVariants.length;
       p.push(precision);
       r.push(recall);
       f.push(precision + recall ? (2 * precision * recall) / (precision + recall) : 0);

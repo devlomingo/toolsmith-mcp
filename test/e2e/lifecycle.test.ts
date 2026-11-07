@@ -60,7 +60,7 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
     const patterns = h.app.mine();
     const p = patterns[0]!;
     expect(p.signature).toBe(
-      'shop__getUser > shop__getOrders > loop(shop__getOrderItems+shop__getPayments)',
+      'shop__getOrders > shop__getUser > loop(shop__getOrderItems+shop__getPayments)',
     );
     expect(p.support).toBe(4);
     expect(p.elements[2]).toMatchObject({ kind: 'loop', sourceElement: 1, arrayPath: '[*]' });
