@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { COMPOSITE_NAMESPACE, COMPOSITE_OUTPUT_SCHEMA, compositeArtifactName } from '../composite/generator.js';
+import {
+  COMPOSITE_NAMESPACE,
+  COMPOSITE_OUTPUT_SCHEMA,
+  compositeArtifactName,
+} from '../composite/generator.js';
 import type { CompositeDef, PlanStep } from '../composite/plan.js';
 import { camelCase, toolName } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
@@ -30,17 +34,61 @@ const SYNONYMS: Record<string, string[]> = {
 };
 
 const VERBS: Record<string, AccessLevel> = {
-  get: 'read', show: 'read', find: 'read', fetch: 'read', retrieve: 'read', view: 'read', display: 'read',
-  lookup: 'read', read: 'read', see: 'read', list: 'read', check: 'read', search: 'read', what: 'read', which: 'read',
-  create: 'write', add: 'write', new: 'write', make: 'write', post: 'write', insert: 'write', place: 'write',
-  update: 'write', change: 'write', modify: 'write', edit: 'write', set: 'write', rename: 'write',
-  delete: 'destructive', remove: 'destructive', cancel: 'destructive', destroy: 'destructive', refund: 'destructive',
+  get: 'read',
+  show: 'read',
+  find: 'read',
+  fetch: 'read',
+  retrieve: 'read',
+  view: 'read',
+  display: 'read',
+  lookup: 'read',
+  read: 'read',
+  see: 'read',
+  list: 'read',
+  check: 'read',
+  search: 'read',
+  what: 'read',
+  which: 'read',
+  create: 'write',
+  add: 'write',
+  new: 'write',
+  make: 'write',
+  post: 'write',
+  insert: 'write',
+  place: 'write',
+  update: 'write',
+  change: 'write',
+  modify: 'write',
+  edit: 'write',
+  set: 'write',
+  rename: 'write',
+  delete: 'destructive',
+  remove: 'destructive',
+  cancel: 'destructive',
+  destroy: 'destructive',
+  refund: 'destructive',
 };
 
-const MODIFIERS = new Set(['latest', 'recent', 'last', 'newest', 'first', 'oldest', 'all', 'every', 'top', 'most', 'least', 'today', 'yesterday']);
+const MODIFIERS = new Set([
+  'latest',
+  'recent',
+  'last',
+  'newest',
+  'first',
+  'oldest',
+  'all',
+  'every',
+  'top',
+  'most',
+  'least',
+  'today',
+  'yesterday',
+]);
 
 const STOP = new Set(
-  'a an the of for to in on and or with by from me my our your their its is are was be it this that these those please can could would you i we some any how do does whose there'.split(' '),
+  'a an the of for to in on and or with by from me my our your their its is are was be it this that these those please can could would you i we some any how do does whose there'.split(
+    ' ',
+  ),
 );
 
 const CANON = new Map<string, string>();
@@ -49,7 +97,8 @@ for (const [canon, words] of Object.entries(SYNONYMS)) for (const w of words) CA
 function stem(w: string): string {
   if (w.length > 4 && w.endsWith('ies')) return `${w.slice(0, -3)}y`;
   if (w.length > 4 && /(ses|xes|ches|shes)$/.test(w)) return w.slice(0, -2);
-  if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') && !w.endsWith('us')) return w.slice(0, -1);
+  if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') && !w.endsWith('us'))
+    return w.slice(0, -1);
   if (w.length > 5 && w.endsWith('ing')) return w.slice(0, -3);
   if (w.length > 4 && w.endsWith('ed')) return w.slice(0, -2);
   return w;
@@ -87,7 +136,14 @@ export interface CapabilityAnalysis {
   concepts: string[];
   uncovered: string[];
   modifiers: string[];
-  matches: Array<{ tool: string; score: number; published: boolean; status: string; access: AccessLevel; reason?: string }>;
+  matches: Array<{
+    tool: string;
+    score: number;
+    published: boolean;
+    status: string;
+    access: AccessLevel;
+    reason?: string;
+  }>;
   chain?: Array<{ tool: string; published: boolean; access: AccessLevel; feeds?: string }>;
   proposal?: { artifact: string; toolName: string; status: string };
 }
@@ -105,7 +161,9 @@ export class DiscoveryEngine {
     const out: Op[] = [];
     for (const artifact of this.registry.listArtifacts('openapi')) {
       const versions = this.registry.listVersions(artifact.id);
-      const v = versions.find((x) => x.version === artifact.publishedVersion) ?? versions.find((x) => !['rejected', 'failed'].includes(x.status));
+      const v =
+        versions.find((x) => x.version === artifact.publishedVersion) ??
+        versions.find((x) => !['rejected', 'failed'].includes(x.status));
       if (!v) continue;
       const def = v.definition as unknown as OpenApiIntegrationDef;
       for (const op of def.operations) {
@@ -119,7 +177,11 @@ export class DiscoveryEngine {
           op,
           published: v.status === 'published',
           granted: exposed.has(tool),
-          status: exposed.has(tool) ? 'published' : v.status === 'published' ? `published (needs ${op.access} permission)` : v.status,
+          status: exposed.has(tool)
+            ? 'published'
+            : v.status === 'published'
+              ? `published (needs ${op.access} permission)`
+              : v.status,
           terms: new Set([
             ...terms(op.name),
             ...terms(op.summary),
@@ -139,10 +201,15 @@ export class DiscoveryEngine {
 
   analyze(request: string, sessionId?: string): CapabilityAnalysis {
     const words = terms(request);
-    const intent = words.reduce<AccessLevel>((acc, w) => (rank(VERBS[w]) > rank(acc) ? VERBS[w]! : acc), 'read');
+    const intent = words.reduce<AccessLevel>(
+      (acc, w) => (rank(VERBS[w]) > rank(acc) ? VERBS[w]! : acc),
+      'read',
+    );
     const modifiers = [...new Set(words.filter((w) => MODIFIERS.has(w)))];
     const concepts = [...new Set(words.filter((w) => !VERBS[w] && !MODIFIERS.has(w)))];
-    const ops = this.operations().filter((o) => rank(o.op.access) <= rank(intent) || o.op.access === intent);
+    const ops = this.operations().filter(
+      (o) => rank(o.op.access) <= rank(intent) || o.op.access === intent,
+    );
 
     const id = randomUUID().slice(0, 8);
     const base = { id, request, intent, concepts, modifiers };
@@ -151,7 +218,8 @@ export class DiscoveryEngine {
       return this.persist(sessionId, {
         ...base,
         verdict: 'unsupported',
-        explanation: 'The request names no resource or attribute to look for. Describe what data or action you need.',
+        explanation:
+          'The request names no resource or attribute to look for. Describe what data or action you need.',
         uncovered: [],
         matches: [],
       });
@@ -161,7 +229,11 @@ export class DiscoveryEngine {
       .map((o) => {
         const hit = concepts.filter((c) => o.terms.has(c));
         const resourceBonus = concepts.includes(o.resource) ? 0.5 : 0;
-        return { o, hit, score: hit.length / concepts.length + resourceBonus * (hit.length > 0 ? 1 : 0) };
+        return {
+          o,
+          hit,
+          score: hit.length / concepts.length + resourceBonus * (hit.length > 0 ? 1 : 0),
+        };
       })
       .filter((x) => x.hit.length > 0)
       .sort((a, b) => b.score - a.score || Number(b.o.granted) - Number(a.o.granted));
@@ -187,7 +259,11 @@ export class DiscoveryEngine {
     }
 
     const best = scored[0]!;
-    if (best.hit.length === concepts.length && best.o.granted && rank(best.o.op.access) >= rank(intent)) {
+    if (
+      best.hit.length === concepts.length &&
+      best.o.granted &&
+      rank(best.o.op.access) >= rank(intent)
+    ) {
       return this.persist(sessionId, {
         ...base,
         verdict: 'available',
@@ -197,10 +273,20 @@ export class DiscoveryEngine {
       });
     }
 
-    const chain = buildChain(concepts, scored.map((x) => x.o));
-    const chainCovers = new Set(chain.flatMap((c) => [...c.op.terms].filter((t) => concepts.includes(t))));
+    const chain = buildChain(
+      concepts,
+      scored.map((x) => x.o),
+    );
+    const chainCovers = new Set(
+      chain.flatMap((c) => [...c.op.terms].filter((t) => concepts.includes(t))),
+    );
     const chainUncovered = concepts.filter((c) => !chainCovers.has(c));
-    const chainView = chain.map((c) => ({ tool: c.op.tool, published: c.op.granted, access: c.op.op.access, feeds: c.feeds }));
+    const chainView = chain.map((c) => ({
+      tool: c.op.tool,
+      published: c.op.granted,
+      access: c.op.op.access,
+      feeds: c.feeds,
+    }));
 
     if (chain.length >= 2 && chainUncovered.length === 0) {
       const blocked = chain.filter((c) => !c.op.granted);
@@ -216,7 +302,13 @@ export class DiscoveryEngine {
       }
       const def = chainToComposite(request, chain, modifiers);
       const artifact = this.registry.ensureArtifact('composite', def.name);
-      const { version } = this.registry.addVersion(artifact.id, def as unknown as JsonValue, `capability:${id}`, 'proposed', 'discovery');
+      const { version } = this.registry.addVersion(
+        artifact.id,
+        def as unknown as JsonValue,
+        `capability:${id}`,
+        'proposed',
+        'discovery',
+      );
       return this.persist(sessionId, {
         ...base,
         verdict: 'composable',
@@ -228,10 +320,13 @@ export class DiscoveryEngine {
       });
     }
 
-    const partialHint = best.o.granted ? `Closest available tool: ${best.o.tool}.` : `Closest operation: ${best.o.tool} (${best.o.status}).`;
+    const partialHint = best.o.granted
+      ? `Closest available tool: ${best.o.tool}.`
+      : `Closest operation: ${best.o.tool} (${best.o.status}).`;
     return this.persist(sessionId, {
       ...base,
-      verdict: chainUncovered.length === 0 || uncovered.length === 0 ? 'needs_approval' : 'unsupported',
+      verdict:
+        chainUncovered.length === 0 || uncovered.length === 0 ? 'needs_approval' : 'unsupported',
       explanation:
         uncovered.length > 0
           ? `Only part of this is supported. Nothing documents ${uncovered.map((u) => `"${u}"`).join(', ')}. ${partialHint}`
@@ -244,15 +339,26 @@ export class DiscoveryEngine {
 
   private persist(sessionId: string | undefined, a: CapabilityAnalysis): CapabilityAnalysis {
     this.db
-      .prepare('INSERT INTO capability_requests (id, session_id, request, verdict, analysis, at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(a.id, sessionId ?? null, a.request.slice(0, 2000), a.verdict, JSON.stringify(a), nowIso());
+      .prepare(
+        'INSERT INTO capability_requests (id, session_id, request, verdict, analysis, at) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        a.id,
+        sessionId ?? null,
+        a.request.slice(0, 2000),
+        a.verdict,
+        JSON.stringify(a),
+        nowIso(),
+      );
     return a;
   }
 
   list(limit = 100): CapabilityAnalysis[] {
-    return (this.db.prepare('SELECT analysis FROM capability_requests ORDER BY at DESC LIMIT ?').all(limit) as Array<{ analysis: string }>).map(
-      (r) => JSON.parse(r.analysis) as CapabilityAnalysis,
-    );
+    return (
+      this.db
+        .prepare('SELECT analysis FROM capability_requests ORDER BY at DESC LIMIT ?')
+        .all(limit) as Array<{ analysis: string }>
+    ).map((r) => JSON.parse(r.analysis) as CapabilityAnalysis);
   }
 }
 
@@ -277,7 +383,8 @@ function collectFields(schema: JsonSchema | undefined, out: Set<string>, depth: 
   }
   if (schema.items) collectFields(schema.items as JsonSchema, out, depth + 1);
   for (const key of ['allOf', 'anyOf', 'oneOf'] as const) {
-    if (Array.isArray(schema[key])) for (const s of schema[key] as JsonSchema[]) collectFields(s, out, depth + 1);
+    if (Array.isArray(schema[key]))
+      for (const s of schema[key] as JsonSchema[]) collectFields(s, out, depth + 1);
   }
 }
 
@@ -356,7 +463,9 @@ function chainToComposite(request: string, chain: ChainLink[], modifiers: string
     for (const p of link.op.op.params) {
       if (link.binding && p.name === link.binding.param) {
         const src = steps[link.binding.fromIndex]!.id;
-        args[p.name] = link.binding.forEach ? { $ref: `item.${link.binding.field}` } : { $ref: `steps.${src}.result.${link.binding.field}` };
+        args[p.name] = link.binding.forEach
+          ? { $ref: `item.${link.binding.field}` }
+          : { $ref: `steps.${src}.result.${link.binding.field}` };
         continue;
       }
       if (!p.required && i > 0) continue;
@@ -365,16 +474,27 @@ function chainToComposite(request: string, chain: ChainLink[], modifiers: string
       args[p.name] = { $ref: `input.${p.name}` };
     }
     const step: PlanStep = { id: link.op.op.name, tool: link.op.tool, args };
-    if (link.binding?.forEach) step.forEach = `steps.${steps[link.binding.fromIndex]!.id}.result[*]`;
+    if (link.binding?.forEach)
+      step.forEach = `steps.${steps[link.binding.fromIndex]!.id}.result[*]`;
     steps.push(step);
   });
-  const base = camelCase(`get ${chain.map((c) => c.op.resource).filter((v, i, a) => a.indexOf(v) === i).join(' ')} details`).slice(0, 50);
+  const base = camelCase(
+    `get ${chain
+      .map((c) => c.op.resource)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .join(' ')} details`,
+  ).slice(0, 50);
   return {
     kind: 'composite',
     name: compositeArtifactName(base),
     toolName: toolName(COMPOSITE_NAMESPACE, base),
     description: `Answers requests like "${request.slice(0, 160)}" by running ${steps.map((s) => s.id + (s.forEach ? ' (for each)' : '')).join(' → ')} in one call.${modifiers.length ? ` Does not apply "${modifiers.join(', ')}"; filter the result.` : ''} Returns each step's result under "results".`,
-    inputSchema: { type: 'object', properties: inputProps, ...(required.length ? { required } : {}), additionalProperties: false },
+    inputSchema: {
+      type: 'object',
+      properties: inputProps,
+      ...(required.length ? { required } : {}),
+      additionalProperties: false,
+    },
     outputSchema: COMPOSITE_OUTPUT_SCHEMA,
     steps,
     provenance: { type: 'capability', ref: request.slice(0, 200) },

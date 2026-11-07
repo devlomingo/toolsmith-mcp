@@ -1,8 +1,18 @@
-import type { CallContext, ErrorCode, JsonObject, JsonValue, ToolCallResult } from '../core/types.js';
+import type {
+  CallContext,
+  ErrorCode,
+  JsonObject,
+  JsonValue,
+  ToolCallResult,
+} from '../core/types.js';
 import { stepDependencies, type CompositeDef, type PlanStep } from './plan.js';
 import { materialize, resolveRef, type Scope } from './refs.js';
 
-export type StepCaller = (tool: string, args: JsonObject, ctx: CallContext) => Promise<ToolCallResult>;
+export type StepCaller = (
+  tool: string,
+  args: JsonObject,
+  ctx: CallContext,
+) => Promise<ToolCallResult>;
 
 export interface CompositeLimits {
   maxFanOut: number;
@@ -46,13 +56,25 @@ export class CompositeExecutor {
     let retries = 0;
     let calls = 0;
 
-    const status = new Map<string, 'pending' | 'running' | 'done' | 'failed' | 'skipped'>(def.steps.map((s) => [s.id, 'pending']));
+    const status = new Map<string, 'pending' | 'running' | 'done' | 'failed' | 'skipped'>(
+      def.steps.map((s) => [s.id, 'pending']),
+    );
     const deps = new Map(def.steps.map((s) => [s.id, stepDependencies(s)]));
     const limiter = new Semaphore(this.limits.concurrency);
 
-    const callOnce = async (step: PlanStep, args: JsonObject, iteration?: number): Promise<JsonValue | undefined> => {
+    const callOnce = async (
+      step: PlanStep,
+      args: JsonObject,
+      iteration?: number,
+    ): Promise<JsonValue | undefined> => {
       if (signal.aborted) {
-        errors.push({ step: step.id, tool: step.tool, iteration, code: 'timeout', error: 'Composite timed out before this step ran' });
+        errors.push({
+          step: step.id,
+          tool: step.tool,
+          iteration,
+          code: 'timeout',
+          error: 'Composite timed out before this step ran',
+        });
         return undefined;
       }
       await limiter.acquire();
@@ -62,7 +84,13 @@ export class CompositeExecutor {
         upstreamRequests += r.upstreamRequests;
         retries += r.retries;
         if (!r.ok) {
-          errors.push({ step: step.id, tool: step.tool, iteration, code: r.errorCode ?? 'upstream', error: r.error ?? 'failed' });
+          errors.push({
+            step: step.id,
+            tool: step.tool,
+            iteration,
+            code: r.errorCode ?? 'upstream',
+            error: r.error ?? 'failed',
+          });
           return undefined;
         }
         return r.data ?? null;
@@ -80,13 +108,19 @@ export class CompositeExecutor {
         return true;
       }
       const source = resolveRef(step.forEach, scope);
-      let items: JsonValue[] = Array.isArray(source) ? source : source === undefined || source === null ? [] : [source];
+      let items: JsonValue[] = Array.isArray(source)
+        ? source
+        : source === undefined || source === null
+          ? []
+          : [source];
       if (items.length > this.limits.maxFanOut) {
         truncated.push(`${step.id}: ${items.length} items, ran first ${this.limits.maxFanOut}`);
         items = items.slice(0, this.limits.maxFanOut);
       }
       const results = await Promise.all(
-        items.map((item, i) => callOnce(step, materialize(step.args, { ...scope, item }) as JsonObject, i)),
+        items.map((item, i) =>
+          callOnce(step, materialize(step.args, { ...scope, item }) as JsonObject, i),
+        ),
       );
       const failed = results.filter((r) => r === undefined).length;
       scope.steps[step.id] = { result: results.map((r) => (r === undefined ? null : r)) };
@@ -111,7 +145,12 @@ export class CompositeExecutor {
           const p = runStep(step)
             .then((ok) => void status.set(step.id, ok ? 'done' : 'failed'))
             .catch((err: unknown) => {
-              errors.push({ step: step.id, tool: step.tool, code: 'internal', error: (err as Error)?.message ?? String(err) });
+              errors.push({
+                step: step.id,
+                tool: step.tool,
+                code: 'internal',
+                error: (err as Error)?.message ?? String(err),
+              });
               status.set(step.id, 'failed');
             })
             .finally(() => {
@@ -122,7 +161,9 @@ export class CompositeExecutor {
         }
         // Re-scan after marking skips, since a skip can cascade.
         const changed = def.steps.some(
-          (s) => status.get(s.id) === 'pending' && deps.get(s.id)!.some((x) => status.get(x) === 'failed' || status.get(x) === 'skipped'),
+          (s) =>
+            status.get(s.id) === 'pending' &&
+            deps.get(s.id)!.some((x) => status.get(x) === 'failed' || status.get(x) === 'skipped'),
         );
         if (changed) return schedule();
         if (inFlight.size === 0) resolve();
@@ -131,7 +172,8 @@ export class CompositeExecutor {
     });
 
     const results: Record<string, JsonValue> = {};
-    for (const step of def.steps) if (scope.steps[step.id]) results[step.id] = scope.steps[step.id]!.result;
+    for (const step of def.steps)
+      if (scope.steps[step.id]) results[step.id] = scope.steps[step.id]!.result;
     const requiredFailed = def.steps.filter((s) => !s.optional && status.get(s.id) !== 'done');
     const partial = errors.length > 0 || skipped.length > 0 || truncated.length > 0;
     const data: CompositeOutput = {
@@ -146,7 +188,11 @@ export class CompositeExecutor {
     return {
       ok: !nothing,
       data,
-      error: nothing ? `All steps failed: ${errors.map((e) => `${e.step}: ${e.error}`).join('; ')}` : requiredFailed.length ? `Partial result: ${requiredFailed.map((s) => s.id).join(', ')} did not complete` : undefined,
+      error: nothing
+        ? `All steps failed: ${errors.map((e) => `${e.step}: ${e.error}`).join('; ')}`
+        : requiredFailed.length
+          ? `Partial result: ${requiredFailed.map((s) => s.id).join(', ')} did not complete`
+          : undefined,
       errorCode: nothing ? (errors[0]?.code ?? 'upstream') : undefined,
       upstreamRequests,
       retries,

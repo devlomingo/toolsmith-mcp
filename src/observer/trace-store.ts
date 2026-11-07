@@ -70,11 +70,15 @@ export class TraceStore {
   query(q: TraceQuery = {}): TraceRecord[] {
     const where: string[] = [];
     const params: Array<string | number> = [];
-    if (q.sessionId) (where.push('session_id = ?'), params.push(q.sessionId));
-    if (q.tool) (where.push('tool = ?'), params.push(q.tool));
-    if (q.since !== undefined) (where.push('started_at >= ?'), params.push(q.since));
-    if (q.until !== undefined) (where.push('started_at < ?'), params.push(q.until));
-    if (q.ok !== undefined) (where.push('ok = ?'), params.push(q.ok ? 1 : 0));
+    const add = (clause: string, value: string | number): void => {
+      where.push(clause);
+      params.push(value);
+    };
+    if (q.sessionId) add('session_id = ?', q.sessionId);
+    if (q.tool) add('tool = ?', q.tool);
+    if (q.since !== undefined) add('started_at >= ?', q.since);
+    if (q.until !== undefined) add('started_at < ?', q.until);
+    if (q.ok !== undefined) add('ok = ?', q.ok ? 1 : 0);
     if (q.topLevelOnly) where.push('parent_id IS NULL');
     const sql = `SELECT * FROM traces ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY started_at DESC, rowid DESC LIMIT ? OFFSET ?`;
     params.push(q.limit ?? 200, q.offset ?? 0);
@@ -92,7 +96,11 @@ export class TraceStore {
   }
 
   children(parentId: string): TraceRecord[] {
-    return (this.db.prepare('SELECT * FROM traces WHERE parent_id = ? ORDER BY started_at').all(parentId) as Record<string, unknown>[]).map(toTrace);
+    return (
+      this.db
+        .prepare('SELECT * FROM traces WHERE parent_id = ? ORDER BY started_at')
+        .all(parentId) as Record<string, unknown>[]
+    ).map(toTrace);
   }
 
   /** Delete traces older than the retention window. Returns rows removed. */
@@ -112,8 +120,15 @@ export class TraceStore {
     upstreamRequests: number;
   }> {
     const rows = this.db
-      .prepare(`SELECT tool, duration_ms, ok, upstream_requests FROM traces WHERE parent_id IS NULL ${since ? 'AND started_at >= ?' : ''}`)
-      .all(...(since ? [since] : [])) as Array<{ tool: string; duration_ms: number; ok: number; upstream_requests: number }>;
+      .prepare(
+        `SELECT tool, duration_ms, ok, upstream_requests FROM traces WHERE parent_id IS NULL ${since ? 'AND started_at >= ?' : ''}`,
+      )
+      .all(...(since ? [since] : [])) as Array<{
+      tool: string;
+      duration_ms: number;
+      ok: number;
+      upstream_requests: number;
+    }>;
     const byTool = new Map<string, { d: number[]; errors: number; up: number }>();
     for (const r of rows) {
       const e = byTool.get(r.tool) ?? { d: [], errors: 0, up: 0 };

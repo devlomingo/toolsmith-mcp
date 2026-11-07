@@ -47,7 +47,12 @@ export interface Permissions {
 export interface Evaluation {
   passed: boolean;
   ranAt: string;
-  checks: Array<{ name: string; passed: boolean; detail?: string; severity?: 'info' | 'warning' | 'error' }>;
+  checks: Array<{
+    name: string;
+    passed: boolean;
+    detail?: string;
+    severity?: 'info' | 'warning' | 'error';
+  }>;
   metrics?: Record<string, number>;
 }
 
@@ -102,8 +107,7 @@ export class Registry {
   /** Monotonic counter other processes poll to notice catalog changes. */
   revision(): number {
     const row = this.db.prepare("SELECT value FROM settings WHERE key = 'catalog_rev'").get() as
-      | { value: string }
-      | undefined;
+      { value: string } | undefined;
     return row ? Number(row.value) : 0;
   }
 
@@ -120,25 +124,32 @@ export class Registry {
     const existing = this.getArtifactByName(name);
     if (existing) {
       if (existing.kind !== kind) {
-        throw new ToolsmithError(`"${name}" already exists as a ${existing.kind} artifact`, 'validation');
+        throw new ToolsmithError(
+          `"${name}" already exists as a ${existing.kind} artifact`,
+          'validation',
+        );
       }
       return existing;
     }
     const now = nowIso();
     const id = randomUUID();
     this.db
-      .prepare('INSERT INTO artifacts (id, kind, name, published_version, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)')
+      .prepare(
+        'INSERT INTO artifacts (id, kind, name, published_version, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)',
+      )
       .run(id, kind, name, now, now);
     return this.getArtifact(id)!;
   }
 
   getArtifact(id: string): ArtifactRow | undefined {
-    const r = this.db.prepare('SELECT * FROM artifacts WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    const r = this.db.prepare('SELECT * FROM artifacts WHERE id = ?').get(id) as
+      Record<string, unknown> | undefined;
     return r ? toArtifact(r) : undefined;
   }
 
   getArtifactByName(name: string): ArtifactRow | undefined {
-    const r = this.db.prepare('SELECT * FROM artifacts WHERE name = ?').get(name) as Record<string, unknown> | undefined;
+    const r = this.db.prepare('SELECT * FROM artifacts WHERE name = ?').get(name) as
+      Record<string, unknown> | undefined;
     return r ? toArtifact(r) : undefined;
   }
 
@@ -147,15 +158,21 @@ export class Registry {
     const [name, v] = ref.split('@');
     const artifact = this.getArtifactByName(name!) ?? this.getArtifact(name!);
     if (!artifact) {
-      throw new ToolsmithError(`No integration or tool named "${name}"`, 'not_found', 'Run `toolsmith-mcp list` to see what exists.');
+      throw new ToolsmithError(
+        `No integration or tool named "${name}"`,
+        'not_found',
+        'Run `toolsmith-mcp list` to see what exists.',
+      );
     }
     return { artifact, version: v ? Number(v) : undefined };
   }
 
   listArtifacts(kind?: ArtifactKind): ArtifactRow[] {
-    const rows = (kind
-      ? this.db.prepare('SELECT * FROM artifacts WHERE kind = ? ORDER BY name').all(kind)
-      : this.db.prepare('SELECT * FROM artifacts ORDER BY kind, name').all()) as Record<string, unknown>[];
+    const rows = (
+      kind
+        ? this.db.prepare('SELECT * FROM artifacts WHERE kind = ? ORDER BY name').all(kind)
+        : this.db.prepare('SELECT * FROM artifacts ORDER BY kind, name').all()
+    ) as Record<string, unknown>[];
     return rows.map(toArtifact);
   }
 
@@ -173,7 +190,12 @@ export class Registry {
     const hash = contentHash(definition);
     return transaction(this.db, () => {
       const latest = this.latestVersion(artifactId);
-      if (latest && latest.contentHash === hash && latest.status !== 'rejected' && latest.status !== 'failed') {
+      if (
+        latest &&
+        latest.contentHash === hash &&
+        latest.status !== 'rejected' &&
+        latest.status !== 'failed'
+      ) {
         return { version: latest, created: false };
       }
       const version = (latest?.version ?? 0) + 1;
@@ -182,7 +204,16 @@ export class Registry {
         .prepare(
           'INSERT INTO artifact_versions (artifact_id, version, status, definition, content_hash, permissions, evaluation, origin, created_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)',
         )
-        .run(artifactId, version, status, JSON.stringify(definition), hash, JSON.stringify({ allowWrite: false, allowDestructive: false }), origin, now);
+        .run(
+          artifactId,
+          version,
+          status,
+          JSON.stringify(definition),
+          hash,
+          JSON.stringify({ allowWrite: false, allowDestructive: false }),
+          origin,
+          now,
+        );
       this.recordEvent(artifactId, version, null, status, actor, `created (${origin})`);
       this.touch(artifactId);
       return { version: this.getVersion(artifactId, version)!, created: true };
@@ -198,42 +229,62 @@ export class Registry {
 
   latestVersion(artifactId: string): VersionRow | undefined {
     const r = this.db
-      .prepare('SELECT * FROM artifact_versions WHERE artifact_id = ? ORDER BY version DESC LIMIT 1')
+      .prepare(
+        'SELECT * FROM artifact_versions WHERE artifact_id = ? ORDER BY version DESC LIMIT 1',
+      )
       .get(artifactId) as Record<string, unknown> | undefined;
     return r ? toVersion(r) : undefined;
   }
 
   listVersions(artifactId: string): VersionRow[] {
-    return (this.db
-      .prepare('SELECT * FROM artifact_versions WHERE artifact_id = ? ORDER BY version DESC')
-      .all(artifactId) as Record<string, unknown>[]).map(toVersion);
+    return (
+      this.db
+        .prepare('SELECT * FROM artifact_versions WHERE artifact_id = ? ORDER BY version DESC')
+        .all(artifactId) as Record<string, unknown>[]
+    ).map(toVersion);
   }
 
   /** All versions in a given status across artifacts (e.g. the approval queue). */
   versionsByStatus(status: Status): Array<VersionRow & { name: string; kind: ArtifactKind }> {
-    return (this.db
-      .prepare(
-        'SELECT v.*, a.name AS name, a.kind AS kind FROM artifact_versions v JOIN artifacts a ON a.id = v.artifact_id WHERE v.status = ? ORDER BY v.created_at',
-      )
-      .all(status) as Record<string, unknown>[]).map((r) => ({ ...toVersion(r), name: String(r.name), kind: r.kind as ArtifactKind }));
+    return (
+      this.db
+        .prepare(
+          'SELECT v.*, a.name AS name, a.kind AS kind FROM artifact_versions v JOIN artifacts a ON a.id = v.artifact_id WHERE v.status = ? ORDER BY v.created_at',
+        )
+        .all(status) as Record<string, unknown>[]
+    ).map((r) => ({ ...toVersion(r), name: String(r.name), kind: r.kind as ArtifactKind }));
   }
 
   publishedVersions(): Array<{ artifact: ArtifactRow; version: VersionRow }> {
-    return (this.db
-      .prepare(
-        "SELECT a.id AS a_id FROM artifacts a JOIN artifact_versions v ON v.artifact_id = a.id AND v.version = a.published_version WHERE v.status = 'published'",
-      )
-      .all() as Array<{ a_id: string }>).map(({ a_id }) => {
+    return (
+      this.db
+        .prepare(
+          "SELECT a.id AS a_id FROM artifacts a JOIN artifact_versions v ON v.artifact_id = a.id AND v.version = a.published_version WHERE v.status = 'published'",
+        )
+        .all() as Array<{ a_id: string }>
+    ).map(({ a_id }) => {
       const artifact = this.getArtifact(a_id)!;
       return { artifact, version: this.getVersion(a_id, artifact.publishedVersion!)! };
     });
   }
 
-  transition(artifactId: string, version: number, to: Status, actor: string, reason?: string): VersionRow {
+  transition(
+    artifactId: string,
+    version: number,
+    to: Status,
+    actor: string,
+    reason?: string,
+  ): VersionRow {
     return transaction(this.db, () => this.transitionInTx(artifactId, version, to, actor, reason));
   }
 
-  private transitionInTx(artifactId: string, version: number, to: Status, actor: string, reason?: string): VersionRow {
+  private transitionInTx(
+    artifactId: string,
+    version: number,
+    to: Status,
+    actor: string,
+    reason?: string,
+  ): VersionRow {
     const v = this.getVersion(artifactId, version);
     if (!v) throw new ToolsmithError(`Version ${version} does not exist`, 'not_found');
     if (!TRANSITIONS[v.status].includes(to)) {
@@ -246,7 +297,9 @@ export class Registry {
     if (HUMAN_ONLY.includes(to) && !isHumanActor(actor)) {
       throw new ToolsmithError(`Only a human can move a version to "${to}"`, 'policy');
     }
-    this.db.prepare('UPDATE artifact_versions SET status = ? WHERE artifact_id = ? AND version = ?').run(to, artifactId, version);
+    this.db
+      .prepare('UPDATE artifact_versions SET status = ? WHERE artifact_id = ? AND version = ?')
+      .run(to, artifactId, version);
     this.recordEvent(artifactId, version, v.status, to, actor, reason ?? null);
     this.touch(artifactId);
     return this.getVersion(artifactId, version)!;
@@ -259,7 +312,13 @@ export class Registry {
   }
 
   /** Human approval. Write/destructive access must be granted explicitly. */
-  approve(artifactId: string, version: number, permissions: Permissions, actor: string, reason?: string): VersionRow {
+  approve(
+    artifactId: string,
+    version: number,
+    permissions: Permissions,
+    actor: string,
+    reason?: string,
+  ): VersionRow {
     if (!isHumanActor(actor)) throw new ToolsmithError('Approval must come from a human', 'policy');
     return transaction(this.db, () => {
       const v = this.getVersion(artifactId, version);
@@ -272,10 +331,21 @@ export class Registry {
         );
       }
       this.db
-        .prepare('UPDATE artifact_versions SET permissions = ? WHERE artifact_id = ? AND version = ?')
+        .prepare(
+          'UPDATE artifact_versions SET permissions = ? WHERE artifact_id = ? AND version = ?',
+        )
         .run(JSON.stringify(permissions), artifactId, version);
-      const grant = [permissions.allowWrite && 'write', permissions.allowDestructive && 'destructive'].filter(Boolean).join('+') || 'read-only';
-      return this.transitionInTx(artifactId, version, 'approved', actor, reason ?? `approved (${grant})`);
+      const grant =
+        [permissions.allowWrite && 'write', permissions.allowDestructive && 'destructive']
+          .filter(Boolean)
+          .join('+') || 'read-only';
+      return this.transitionInTx(
+        artifactId,
+        version,
+        'approved',
+        actor,
+        reason ?? `approved (${grant})`,
+      );
     });
   }
 
@@ -285,11 +355,19 @@ export class Registry {
       if (artifact.publishedVersion && artifact.publishedVersion !== version) {
         const prev = this.getVersion(artifactId, artifact.publishedVersion);
         if (prev?.status === 'published') {
-          this.transitionInTx(artifactId, prev.version, 'approved', actor, `superseded by v${version}`);
+          this.transitionInTx(
+            artifactId,
+            prev.version,
+            'approved',
+            actor,
+            `superseded by v${version}`,
+          );
         }
       }
       const v = this.transitionInTx(artifactId, version, 'published', actor);
-      this.db.prepare('UPDATE artifacts SET published_version = ? WHERE id = ?').run(version, artifactId);
+      this.db
+        .prepare('UPDATE artifacts SET published_version = ? WHERE id = ?')
+        .run(version, artifactId);
       return v;
     });
     this.bump();
@@ -299,8 +377,15 @@ export class Registry {
   disable(artifactId: string, actor: string, reason?: string): VersionRow {
     const out = transaction(this.db, () => {
       const artifact = this.getArtifact(artifactId)!;
-      if (!artifact.publishedVersion) throw new ToolsmithError(`"${artifact.name}" is not published`, 'validation');
-      const v = this.transitionInTx(artifactId, artifact.publishedVersion, 'disabled', actor, reason);
+      if (!artifact.publishedVersion)
+        throw new ToolsmithError(`"${artifact.name}" is not published`, 'validation');
+      const v = this.transitionInTx(
+        artifactId,
+        artifact.publishedVersion,
+        'disabled',
+        actor,
+        reason,
+      );
       this.db.prepare('UPDATE artifacts SET published_version = NULL WHERE id = ?').run(artifactId);
       return v;
     });
@@ -323,7 +408,10 @@ export class Registry {
     const artifact = this.getArtifact(artifactId)!;
     const current = artifact.publishedVersion;
     const candidates = this.listVersions(artifactId).filter(
-      (v) => (v.status === 'approved' || v.status === 'disabled') && v.version !== current && (toVersion ? v.version === toVersion : current ? v.version < current : true),
+      (v) =>
+        (v.status === 'approved' || v.status === 'disabled') &&
+        v.version !== current &&
+        (toVersion ? v.version === toVersion : current ? v.version < current : true),
     );
     const target = candidates[0];
     if (!target) {
@@ -337,9 +425,15 @@ export class Registry {
   }
 
   events(artifactId?: string, limit = 200): LifecycleEvent[] {
-    const rows = (artifactId
-      ? this.db.prepare('SELECT * FROM lifecycle_events WHERE artifact_id = ? ORDER BY id DESC LIMIT ?').all(artifactId, limit)
-      : this.db.prepare('SELECT * FROM lifecycle_events ORDER BY id DESC LIMIT ?').all(limit)) as Record<string, unknown>[];
+    const rows = (
+      artifactId
+        ? this.db
+            .prepare(
+              'SELECT * FROM lifecycle_events WHERE artifact_id = ? ORDER BY id DESC LIMIT ?',
+            )
+            .all(artifactId, limit)
+        : this.db.prepare('SELECT * FROM lifecycle_events ORDER BY id DESC LIMIT ?').all(limit)
+    ) as Record<string, unknown>[];
     return rows.map((r) => ({
       artifactId: String(r.artifact_id),
       version: Number(r.version),
@@ -351,9 +445,18 @@ export class Registry {
     }));
   }
 
-  private recordEvent(artifactId: string, version: number, from: Status | null, to: Status, actor: string, reason: string | null): void {
+  private recordEvent(
+    artifactId: string,
+    version: number,
+    from: Status | null,
+    to: Status,
+    actor: string,
+    reason: string | null,
+  ): void {
     this.db
-      .prepare('INSERT INTO lifecycle_events (artifact_id, version, from_status, to_status, actor, reason, at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .prepare(
+        'INSERT INTO lifecycle_events (artifact_id, version, from_status, to_status, actor, reason, at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      )
       .run(artifactId, version, from, to, actor, reason, nowIso());
   }
 

@@ -40,10 +40,16 @@ export function parseEndpointText(text: string, baseUrl: string, title?: string)
       method: method!.toUpperCase(),
       path: path!,
       description: description?.trim() || undefined,
-      query: query ? query.split('&').map((q) => q.split('=')[0]!).filter(Boolean) : undefined,
+      query: query
+        ? query
+            .split('&')
+            .map((q) => q.split('=')[0]!)
+            .filter(Boolean)
+        : undefined,
     });
   }
-  if (endpoints.length === 0) throw new ToolsmithError('No endpoints found in the definition', 'validation');
+  if (endpoints.length === 0)
+    throw new ToolsmithError('No endpoints found in the definition', 'validation');
   return { title, baseUrl, endpoints };
 }
 
@@ -55,8 +61,18 @@ export function endpointsToOpenApi(list: EndpointList): Record<string, unknown> 
   for (const ep of list.endpoints) {
     const pathParams = [...ep.path.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]!);
     const parameters = [
-      ...pathParams.map((name) => ({ name, in: 'path', required: true, schema: { type: 'string' } })),
-      ...(ep.query ?? []).map((name) => ({ name, in: 'query', required: false, schema: { type: 'string' } })),
+      ...pathParams.map((name) => ({
+        name,
+        in: 'path',
+        required: true,
+        schema: { type: 'string' },
+      })),
+      ...(ep.query ?? []).map((name) => ({
+        name,
+        in: 'query',
+        required: false,
+        schema: { type: 'string' },
+      })),
     ];
     const method = ep.method.toLowerCase();
     (paths[ep.path] ??= {})[method] = {
@@ -66,7 +82,9 @@ export function endpointsToOpenApi(list: EndpointList): Record<string, unknown> 
         ? {
             requestBody: {
               required: true,
-              content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+              content: {
+                'application/json': { schema: { type: 'object', additionalProperties: true } },
+              },
             },
           }
         : {}),

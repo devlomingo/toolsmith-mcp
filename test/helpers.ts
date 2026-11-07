@@ -15,7 +15,14 @@ export interface Harness {
 }
 
 /** A shop API plus a Toolsmith instance with the shop imported (not yet approved). */
-export async function makeHarness(opts: { shop?: ShopOptions; integration?: Record<string, unknown>; config?: Record<string, unknown>; importNow?: boolean } = {}): Promise<Harness> {
+export async function makeHarness(
+  opts: {
+    shop?: ShopOptions;
+    integration?: Record<string, unknown>;
+    config?: Record<string, unknown>;
+    importNow?: boolean;
+  } = {},
+): Promise<Harness> {
   const shop = new ShopApi({ token: SHOP_TOKEN, ...opts.shop });
   await shop.start();
   process.env.TEST_SHOP_TOKEN = SHOP_TOKEN;
@@ -47,20 +54,37 @@ export async function makeHarness(opts: { shop?: ShopOptions; integration?: Reco
   };
 }
 
-export async function approveShop(app: Toolsmith, perms = { allowWrite: false, allowDestructive: false }): Promise<void> {
+export async function approveShop(
+  app: Toolsmith,
+  perms = { allowWrite: false, allowDestructive: false },
+): Promise<void> {
   app.approve('shop', perms, 'human:test');
 }
 
-export async function connectClient(url: string, mode: 'legacy' | 'auto', headers: Record<string, string> = {}): Promise<Client> {
-  const client = new Client({ name: `test-${mode}`, version: '1.0.0' }, { capabilities: {}, versionNegotiation: { mode } });
+export async function connectClient(
+  url: string,
+  mode: 'legacy' | 'auto',
+  headers: Record<string, string> = {},
+): Promise<Client> {
+  const client = new Client(
+    { name: `test-${mode}`, version: '1.0.0' },
+    { capabilities: {}, versionNegotiation: { mode } },
+  );
   await client.connect(
-    new StreamableHTTPClientTransport(new URL(`${url}/mcp`), { requestInit: { headers: { authorization: `Bearer ${MCP_TOKEN}`, ...headers } } }),
+    new StreamableHTTPClientTransport(new URL(`${url}/mcp`), {
+      requestInit: { headers: { authorization: `Bearer ${MCP_TOKEN}`, ...headers } },
+    }),
   );
   return client;
 }
 
 export async function startGateway(app: Toolsmith) {
-  return startHttpServer(app, { host: '127.0.0.1', port: 0, mcpToken: MCP_TOKEN, adminToken: ADMIN_TOKEN });
+  return startHttpServer(app, {
+    host: '127.0.0.1',
+    port: 0,
+    mcpToken: MCP_TOKEN,
+    adminToken: ADMIN_TOKEN,
+  });
 }
 
 export { shopOpenApi };

@@ -26,7 +26,12 @@ async function body(req: IncomingMessage): Promise<Record<string, unknown>> {
 }
 
 /** Admin REST API backing the dashboard. Every mutating call is audited. */
-export async function handleAdminApi(app: Toolsmith, req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
+export async function handleAdminApi(
+  app: Toolsmith,
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+): Promise<void> {
   const method = req.method ?? 'GET';
   const parts = url.pathname.split('/').filter(Boolean).slice(1); // drop "api"
   const q = url.searchParams;
@@ -60,34 +65,72 @@ export async function handleAdminApi(app: Toolsmith, req: IncomingMessage, res: 
     if (method === 'GET' && parts[0] === 'tools') return json(res, 200, app.catalog.list());
     if (parts[0] === 'artifacts') {
       if (method === 'GET' && parts.length === 1) {
-        return json(res, 200, app.registry.listArtifacts().map((a) => {
-          const latest = app.registry.latestVersion(a.id);
-          return { ...a, latestVersion: latest?.version, latestStatus: latest?.status, origin: latest?.origin, evaluationPassed: latest?.evaluation?.passed ?? null };
-        }));
+        return json(
+          res,
+          200,
+          app.registry.listArtifacts().map((a) => {
+            const latest = app.registry.latestVersion(a.id);
+            return {
+              ...a,
+              latestVersion: latest?.version,
+              latestStatus: latest?.status,
+              origin: latest?.origin,
+              evaluationPassed: latest?.evaluation?.passed ?? null,
+            };
+          }),
+        );
       }
       const name = decodeURIComponent(parts[1] ?? '');
       if (method === 'GET' && parts.length === 2) {
         const { artifact } = app.registry.resolve(name);
-        return json(res, 200, { artifact, versions: app.registry.listVersions(artifact.id), events: app.registry.events(artifact.id) });
+        return json(res, 200, {
+          artifact,
+          versions: app.registry.listVersions(artifact.id),
+          events: app.registry.events(artifact.id),
+        });
       }
       if (method === 'POST' && parts.length === 3) {
         const b = await body(req);
         const ref = b.version ? `${name}@${Number(b.version)}` : name;
         switch (parts[2]) {
           case 'approve':
-            return json(res, 200, app.approve(ref, { allowWrite: b.allowWrite === true, allowDestructive: b.allowDestructive === true }, ACTOR, b.publish !== false));
+            return json(
+              res,
+              200,
+              app.approve(
+                ref,
+                {
+                  allowWrite: b.allowWrite === true,
+                  allowDestructive: b.allowDestructive === true,
+                },
+                ACTOR,
+                b.publish !== false,
+              ),
+            );
           case 'reject':
-            return json(res, 200, app.reject(ref, ACTOR, typeof b.reason === 'string' ? b.reason : undefined));
+            return json(
+              res,
+              200,
+              app.reject(ref, ACTOR, typeof b.reason === 'string' ? b.reason : undefined),
+            );
           case 'publish':
             return json(res, 200, app.publish(ref, ACTOR));
           case 'disable':
-            return json(res, 200, app.disable(name, ACTOR, typeof b.reason === 'string' ? b.reason : undefined));
+            return json(
+              res,
+              200,
+              app.disable(name, ACTOR, typeof b.reason === 'string' ? b.reason : undefined),
+            );
           case 'enable':
             return json(res, 200, app.enable(name, ACTOR));
           case 'rollback':
             return json(res, 200, app.rollback(ref, ACTOR));
           case 'evaluate': {
-            const inputs = Array.isArray(b.inputs) ? (b.inputs as JsonObject[]) : b.input && typeof b.input === 'object' ? [b.input as JsonObject] : [];
+            const inputs = Array.isArray(b.inputs)
+              ? (b.inputs as JsonObject[])
+              : b.input && typeof b.input === 'object'
+                ? [b.input as JsonObject]
+                : [];
             return json(res, 200, await app.evaluateLatest(name, inputs, ACTOR, b.live !== false));
           }
         }
@@ -97,34 +140,54 @@ export async function handleAdminApi(app: Toolsmith, req: IncomingMessage, res: 
       return json(res, 200, await app.importIntegration(decodeURIComponent(parts[1]!), ACTOR));
     }
     if (method === 'GET' && parts[0] === 'traces') {
-      if (parts[1] === 'stats') return json(res, 200, app.traces.stats(q.get('since') ? Number(q.get('since')) : undefined));
+      if (parts[1] === 'stats')
+        return json(
+          res,
+          200,
+          app.traces.stats(q.get('since') ? Number(q.get('since')) : undefined),
+        );
       if (parts[1]) return json(res, 200, { children: app.traces.children(parts[1]) });
-      return json(res, 200, app.traces.query({
-        tool: q.get('tool') ?? undefined,
-        sessionId: q.get('session') ?? undefined,
-        ok: q.get('ok') === null ? undefined : q.get('ok') === 'true',
-        topLevelOnly: q.get('all') !== 'true',
-        limit: Math.min(Number(q.get('limit') ?? 100), 500),
-        offset: Number(q.get('offset') ?? 0),
-      }));
+      return json(
+        res,
+        200,
+        app.traces.query({
+          tool: q.get('tool') ?? undefined,
+          sessionId: q.get('session') ?? undefined,
+          ok: q.get('ok') === null ? undefined : q.get('ok') === 'true',
+          topLevelOnly: q.get('all') !== 'true',
+          limit: Math.min(Number(q.get('limit') ?? 100), 500),
+          offset: Number(q.get('offset') ?? 0),
+        }),
+      );
     }
     if (parts[0] === 'patterns') {
       if (method === 'GET') return json(res, 200, app.mine());
       if (method === 'POST' && parts[1] === 'propose') {
         const out = await app.proposeComposites(ACTOR);
-        return json(res, 200, out.map((o) => ({ pattern: o.pattern.signature, composite: o.def?.name, status: o.version?.status, error: o.error })));
+        return json(
+          res,
+          200,
+          out.map((o) => ({
+            pattern: o.pattern.signature,
+            composite: o.def?.name,
+            status: o.version?.status,
+            error: o.error,
+          })),
+        );
       }
     }
     if (parts[0] === 'capabilities') {
       if (method === 'GET') return json(res, 200, app.discovery.list());
       if (method === 'POST') {
         const b = await body(req);
-        if (typeof b.request !== 'string' || b.request.length < 3) throw new ToolsmithError('"request" is required', 'validation');
+        if (typeof b.request !== 'string' || b.request.length < 3)
+          throw new ToolsmithError('"request" is required', 'validation');
         return json(res, 200, app.discovery.analyze(b.request, 'dashboard'));
       }
     }
     if (parts[0] === 'call-approvals') {
-      if (method === 'GET') return json(res, 200, app.approvals.list((q.get('status') as never) ?? undefined));
+      if (method === 'GET')
+        return json(res, 200, app.approvals.list((q.get('status') as never) ?? undefined));
       if (method === 'POST' && parts[1]) {
         const b = await body(req);
         app.audit.write(ACTOR, b.approve === true ? 'approve-call' : 'reject-call', parts[1]);
@@ -132,7 +195,8 @@ export async function handleAdminApi(app: Toolsmith, req: IncomingMessage, res: 
       }
     }
     if (method === 'GET' && parts[0] === 'audit') return json(res, 200, app.audit.list());
-    if (method === 'GET' && parts[0] === 'events') return json(res, 200, app.registry.events(undefined, 200));
+    if (method === 'GET' && parts[0] === 'events')
+      return json(res, 200, app.registry.events(undefined, 200));
     if (method === 'GET' && parts[0] === 'benchmarks') {
       const file = resolve(app.loaded.baseDir, 'benchmarks/results/latest.json');
       return json(res, 200, existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null);

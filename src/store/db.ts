@@ -104,8 +104,7 @@ export function openDb(path: string): Db {
 function migrate(db: Db): void {
   db.exec('CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)');
   const row = db.prepare('SELECT version FROM schema_version').get() as
-    | { version: number }
-    | undefined;
+    { version: number } | undefined;
   let current = row?.version ?? 0;
   if (!row) db.prepare('INSERT INTO schema_version (version) VALUES (0)').run();
   while (current < MIGRATIONS.length) {

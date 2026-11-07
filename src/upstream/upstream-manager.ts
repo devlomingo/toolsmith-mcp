@@ -72,13 +72,17 @@ class UpstreamConnection {
             cwd: this.cfg.cwd,
             env: {
               ...(process.env as Record<string, string>),
-              ...Object.fromEntries(Object.entries(this.cfg.env).map(([k, v]) => [k, resolveEnvRefs(v)])),
+              ...Object.fromEntries(
+                Object.entries(this.cfg.env).map(([k, v]) => [k, resolveEnvRefs(v)]),
+              ),
             },
             stderr: 'pipe',
           })
         : new StreamableHTTPClientTransport(new URL(this.cfg.url), {
             requestInit: {
-              headers: Object.fromEntries(Object.entries(this.cfg.headers).map(([k, v]) => [k, resolveEnvRefs(v)])),
+              headers: Object.fromEntries(
+                Object.entries(this.cfg.headers).map(([k, v]) => [k, resolveEnvRefs(v)]),
+              ),
             },
           });
     try {
@@ -125,7 +129,9 @@ export class UpstreamManager {
         try {
           await conn.connect();
         } catch (err) {
-          process.stderr.write(`[toolsmith] upstream "${cfg.name}" failed to connect: ${errorMessage(err)}\n`);
+          process.stderr.write(
+            `[toolsmith] upstream "${cfg.name}" failed to connect: ${errorMessage(err)}\n`,
+          );
         }
       }),
     );
@@ -148,7 +154,12 @@ export class UpstreamManager {
     );
   }
 
-  async call(upstream: string, toolName: string, args: JsonObject, signal?: AbortSignal): Promise<ToolCallResult> {
+  async call(
+    upstream: string,
+    toolName: string,
+    args: JsonObject,
+    signal?: AbortSignal,
+  ): Promise<ToolCallResult> {
     const conn = this.conns.get(upstream);
     if (!conn?.client) {
       return {
@@ -164,11 +175,24 @@ export class UpstreamManager {
       const content = (res.content as unknown[]) ?? [];
       const data = (res.structuredContent as JsonValue | undefined) ?? contentToData(content);
       if (res.isError) {
-        return { ok: false, errorCode: 'upstream', error: textOf(content) || 'Upstream tool reported an error', content, upstreamRequests: 1, retries: 0 };
+        return {
+          ok: false,
+          errorCode: 'upstream',
+          error: textOf(content) || 'Upstream tool reported an error',
+          content,
+          upstreamRequests: 1,
+          retries: 0,
+        };
       }
       return { ok: true, data, content, upstreamRequests: 1, retries: 0 };
     } catch (err) {
-      return { ok: false, errorCode: 'upstream', error: `Upstream call failed: ${errorMessage(err)}`, upstreamRequests: 1, retries: 0 };
+      return {
+        ok: false,
+        errorCode: 'upstream',
+        error: `Upstream call failed: ${errorMessage(err)}`,
+        upstreamRequests: 1,
+        retries: 0,
+      };
     }
   }
 

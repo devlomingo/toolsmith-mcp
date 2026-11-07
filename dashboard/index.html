@@ -1,46 +1,60 @@
 <!doctype html>
 <html lang="en" dir="ltr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Toolsmith dashboard</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
-  <header class="top">
-    <div class="brand"><span class="logo" aria-hidden="true">⚒</span> <strong>Toolsmith</strong> <span class="muted" id="version"></span></div>
-    <nav aria-label="Sections" id="nav">
-      <a href="#overview" data-i18n="nav.overview">Overview</a>
-      <a href="#approvals" data-i18n="nav.approvals">Approvals <span class="badge" id="approvals-badge" hidden></span></a>
-      <a href="#integrations" data-i18n="nav.integrations">Integrations</a>
-      <a href="#tools" data-i18n="nav.tools">Tools</a>
-      <a href="#workflows" data-i18n="nav.workflows">Workflows</a>
-      <a href="#capabilities" data-i18n="nav.capabilities">Capability requests</a>
-      <a href="#traces" data-i18n="nav.traces">Traces</a>
-      <a href="#benchmarks" data-i18n="nav.benchmarks">Benchmarks</a>
-      <a href="#audit" data-i18n="nav.audit">Audit log</a>
-    </nav>
-    <div class="actions">
-      <button type="button" id="lang" class="ghost" aria-label="Switch language">العربية</button>
-      <button type="button" id="logout" class="ghost" data-i18n="logout">Sign out</button>
-    </div>
-  </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Toolsmith dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+    <header class="top">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">⚒</span> <strong>Toolsmith</strong>
+        <span class="muted" id="version"></span>
+      </div>
+      <nav aria-label="Sections" id="nav">
+        <a href="#overview" data-i18n="nav.overview">Overview</a>
+        <a href="#approvals" data-i18n="nav.approvals"
+          >Approvals <span class="badge" id="approvals-badge" hidden></span
+        ></a>
+        <a href="#integrations" data-i18n="nav.integrations">Integrations</a>
+        <a href="#tools" data-i18n="nav.tools">Tools</a>
+        <a href="#workflows" data-i18n="nav.workflows">Workflows</a>
+        <a href="#capabilities" data-i18n="nav.capabilities">Capability requests</a>
+        <a href="#traces" data-i18n="nav.traces">Traces</a>
+        <a href="#benchmarks" data-i18n="nav.benchmarks">Benchmarks</a>
+        <a href="#audit" data-i18n="nav.audit">Audit log</a>
+      </nav>
+      <div class="actions">
+        <button type="button" id="lang" class="ghost" aria-label="Switch language">العربية</button>
+        <button type="button" id="logout" class="ghost" data-i18n="logout">Sign out</button>
+      </div>
+    </header>
 
-  <main id="main" tabindex="-1">
-    <section id="login" hidden>
-      <h1 data-i18n="login.title">Sign in</h1>
-      <p data-i18n="login.help">Paste the admin token (TOOLSMITH_ADMIN_TOKEN in your .env). `toolsmith-mcp start` prints a link that signs you in directly.</p>
-      <form id="login-form" class="row">
-        <label for="token" class="sr-only" data-i18n="login.token">Admin token</label>
-        <input id="token" type="password" autocomplete="off" required placeholder="TOOLSMITH_ADMIN_TOKEN">
-        <button type="submit" data-i18n="login.submit">Sign in</button>
-      </form>
-      <p id="login-error" class="error" role="alert"></p>
-    </section>
-    <div id="view" aria-live="polite"></div>
-  </main>
-  <div id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js"></script>
-</body>
+    <main id="main" tabindex="-1">
+      <section id="login" hidden>
+        <h1 data-i18n="login.title">Sign in</h1>
+        <p data-i18n="login.help">
+          Paste the admin token (TOOLSMITH_ADMIN_TOKEN in your .env). `toolsmith-mcp start` prints a
+          link that signs you in directly.
+        </p>
+        <form id="login-form" class="row">
+          <label for="token" class="sr-only" data-i18n="login.token">Admin token</label>
+          <input
+            id="token"
+            type="password"
+            autocomplete="off"
+            required
+            placeholder="TOOLSMITH_ADMIN_TOKEN"
+          />
+          <button type="submit" data-i18n="login.submit">Sign in</button>
+        </form>
+        <p id="login-error" class="error" role="alert"></p>
+      </section>
+      <div id="view" aria-live="polite"></div>
+    </main>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="app.js"></script>
+  </body>
 </html>

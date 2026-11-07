@@ -51,7 +51,8 @@ export async function loadSpecDocument(source: string | Doc): Promise<Doc> {
       );
     }
   }
-  if (text.length > MAX_SPEC_BYTES) throw new ToolsmithError('API spec is larger than 10 MB', 'validation');
+  if (text.length > MAX_SPEC_BYTES)
+    throw new ToolsmithError('API spec is larger than 10 MB', 'validation');
   try {
     const parsed = text.trimStart().startsWith('{') ? JSON.parse(text) : parseYaml(text);
     if (!parsed || typeof parsed !== 'object') throw new Error('not an object');
@@ -112,7 +113,11 @@ export async function importOpenApi(
     );
   }
 
-  const baseUrl = resolveBaseUrl(doc, opts.baseUrl, typeof source === 'string' ? source : undefined);
+  const baseUrl = resolveBaseUrl(
+    doc,
+    opts.baseUrl,
+    typeof source === 'string' ? source : undefined,
+  );
   const paths = (doc.paths ?? {}) as Record<string, Record<string, unknown>>;
   if (Object.keys(paths).length === 0) {
     throw new ToolsmithError(
@@ -229,10 +234,19 @@ function resolveBaseUrl(doc: Doc, override: string | undefined, source?: string)
   if (override) return override.replace(/\/+$/, '');
   let candidate: string | undefined;
   if (Array.isArray(doc.servers) && doc.servers.length > 0) {
-    const server = doc.servers[0] as { url?: string; variables?: Record<string, { default?: string }> };
-    candidate = server.url?.replace(/\{([^}]+)\}/g, (_m, v: string) => server.variables?.[v]?.default ?? `{${v}}`);
+    const server = doc.servers[0] as {
+      url?: string;
+      variables?: Record<string, { default?: string }>;
+    };
+    candidate = server.url?.replace(
+      /\{([^}]+)\}/g,
+      (_m, v: string) => server.variables?.[v]?.default ?? `{${v}}`,
+    );
   } else if (typeof doc.host === 'string') {
-    const scheme = Array.isArray(doc.schemes) && doc.schemes.includes('https') ? 'https' : (doc.schemes as string[] | undefined)?.[0] ?? 'https';
+    const scheme =
+      Array.isArray(doc.schemes) && doc.schemes.includes('https')
+        ? 'https'
+        : ((doc.schemes as string[] | undefined)?.[0] ?? 'https');
     candidate = `${scheme}://${doc.host}${String(doc.basePath ?? '')}`;
   }
   if (candidate && candidate.startsWith('/') && source && /^https?:\/\//.test(source)) {
@@ -280,13 +294,16 @@ export function synthesizeName(method: string, path: string): string {
     method === 'get'
       ? 'get'
       : method === 'post'
-        ? endsWithParam ? 'post' : 'create'
+        ? endsWithParam
+          ? 'post'
+          : 'create'
         : method === 'put' || method === 'patch'
           ? 'update'
           : method === 'delete'
             ? 'delete'
             : method;
-  if (verb === 'create' && words.length > 0) words[words.length - 1] = singular(words[words.length - 1]!);
+  if (verb === 'create' && words.length > 0)
+    words[words.length - 1] = singular(words[words.length - 1]!);
   return camelCase([verb, ...words].join(' ')) || `${method}Root`;
 }
 
@@ -340,7 +357,11 @@ function extractBody(op: Doc, findings: SpecFinding[], name: string): OperationD
       }
       return undefined;
     }
-    return { required: Boolean(rb.required), contentType: type, schema: toJsonSchema(content[type]?.schema) };
+    return {
+      required: Boolean(rb.required),
+      contentType: type,
+      schema: toJsonSchema(content[type]?.schema),
+    };
   }
   const bodyParam = ((op.parameters as Doc[]) ?? []).find((p) => p?.in === 'body');
   if (bodyParam) {
@@ -355,7 +376,8 @@ function extractBody(op: Doc, findings: SpecFinding[], name: string): OperationD
 
 function extractResponseSchema(op: Doc): JsonSchema | undefined {
   const responses = (op.responses ?? {}) as Record<string, Doc>;
-  const code = Object.keys(responses).find((c) => /^2\d\d$/.test(c)) ?? (responses['2XX'] ? '2XX' : undefined);
+  const code =
+    Object.keys(responses).find((c) => /^2\d\d$/.test(c)) ?? (responses['2XX'] ? '2XX' : undefined);
   if (!code) return undefined;
   const res = responses[code]!;
   if (res.content && typeof res.content === 'object') {
@@ -375,10 +397,18 @@ function buildInputSchema(params: OperationParam[], body: OperationDef['body']):
     if (p.required) required.push(key);
   }
   if (body) {
-    properties.body = { ...body.schema, description: body.schema.description ?? 'Request body (JSON)' };
+    properties.body = {
+      ...body.schema,
+      description: body.schema.description ?? 'Request body (JSON)',
+    };
     if (body.required) required.push('body');
   }
-  return { type: 'object', properties, ...(required.length ? { required } : {}), additionalProperties: false };
+  return {
+    type: 'object',
+    properties,
+    ...(required.length ? { required } : {}),
+    additionalProperties: false,
+  };
 }
 
 function collectSecurityParamNames(doc: Doc): Set<string> {

@@ -146,7 +146,10 @@ export function loadConfig(path?: string): LoadedConfig {
   const file = path ? resolve(path) : findConfig();
   if (!file) return parseConfig({}, process.cwd());
   if (!existsSync(file)) {
-    throw new ConfigError(`Config file not found: ${file}`, 'Run `toolsmith-mcp init` to create one.');
+    throw new ConfigError(
+      `Config file not found: ${file}`,
+      'Run `toolsmith-mcp init` to create one.',
+    );
   }
   loadDotEnv(dirname(file));
   let raw: unknown;

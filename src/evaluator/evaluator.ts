@@ -1,8 +1,19 @@
 import type { IntegrationConfig } from '../config/config.js';
-import { validatePlan, stepDependencies, planStages, type CompositeDef } from '../composite/plan.js';
+import {
+  validatePlan,
+  stepDependencies,
+  planStages,
+  type CompositeDef,
+} from '../composite/plan.js';
 import { materialize, resolveRef, type Scope } from '../composite/refs.js';
 import { errorMessage } from '../core/errors.js';
-import { TOOL_NAME_PATTERN, type CallContext, type JsonObject, type JsonValue, type ToolCallResult } from '../core/types.js';
+import {
+  TOOL_NAME_PATTERN,
+  type CallContext,
+  type JsonObject,
+  type JsonValue,
+  type ToolCallResult,
+} from '../core/types.js';
 import { toolName } from '../core/naming.js';
 import { HttpIntegrationClient } from '../openapi/http-executor.js';
 import type { OpenApiIntegrationDef } from '../openapi/types.js';
@@ -36,22 +47,41 @@ export async function evaluateIntegration(
   const metrics: Record<string, number> = {};
   const names = def.operations.map((o) => toolName(def.name, o.name));
   const bad = names.filter((n) => !TOOL_NAME_PATTERN.test(n));
-  checks.push({ name: 'tool names valid', passed: bad.length === 0, detail: bad.length ? bad.join(', ') : `${names.length} tools`, severity: 'error' });
+  checks.push({
+    name: 'tool names valid',
+    passed: bad.length === 0,
+    detail: bad.length ? bad.join(', ') : `${names.length} tools`,
+    severity: 'error',
+  });
   const dupes = names.filter((n, i) => names.indexOf(n) !== i);
-  checks.push({ name: 'tool names unique', passed: dupes.length === 0, detail: dupes.join(', ') || undefined, severity: 'error' });
+  checks.push({
+    name: 'tool names unique',
+    passed: dupes.length === 0,
+    detail: dupes.join(', ') || undefined,
+    severity: 'error',
+  });
 
   const schemaErrors: string[] = [];
   for (const op of def.operations) {
-    if (op.inputSchema.type !== 'object') schemaErrors.push(`${op.name}: input schema is not an object`);
-    if (op.outputSchema && op.outputSchema.type !== 'object') schemaErrors.push(`${op.name}: output schema is not an object`);
+    if (op.inputSchema.type !== 'object')
+      schemaErrors.push(`${op.name}: input schema is not an object`);
+    if (op.outputSchema && op.outputSchema.type !== 'object')
+      schemaErrors.push(`${op.name}: output schema is not an object`);
   }
-  checks.push({ name: 'schemas are MCP-compatible', passed: schemaErrors.length === 0, detail: schemaErrors.join('; ') || undefined, severity: 'error' });
+  checks.push({
+    name: 'schemas are MCP-compatible',
+    passed: schemaErrors.length === 0,
+    detail: schemaErrors.join('; ') || undefined,
+    severity: 'error',
+  });
 
   const injection = def.findings.filter((f) => f.code === 'suspicious_description');
   checks.push({
     name: 'no instruction-like text in descriptions',
     passed: injection.length === 0,
-    detail: injection.length ? `${injection.map((f) => f.message).join(' | ')} — exclude these operations or fix the spec` : undefined,
+    detail: injection.length
+      ? `${injection.map((f) => f.message).join(' | ')} — exclude these operations or fix the spec`
+      : undefined,
     severity: 'error',
   });
 
@@ -71,7 +101,10 @@ export async function evaluateIntegration(
   checks.push({
     name: 'transport security',
     passed: true,
-    detail: base.protocol === 'https:' ? 'https' : 'plain http: credentials and data are not encrypted in transit',
+    detail:
+      base.protocol === 'https:'
+        ? 'https'
+        : 'plain http: credentials and data are not encrypted in transit',
     severity: base.protocol === 'https:' ? 'info' : 'warning',
   });
 
@@ -80,7 +113,11 @@ export async function evaluateIntegration(
   checks.push({
     name: 'credentials configured',
     passed: missing.length === 0,
-    detail: missing.length ? `missing environment variables: ${missing.join(', ')}` : refs.length ? `from ${refs.join(', ')}` : 'no authentication configured',
+    detail: missing.length
+      ? `missing environment variables: ${missing.join(', ')}`
+      : refs.length
+        ? `from ${refs.join(', ')}`
+        : 'no authentication configured',
     severity: 'error',
   });
 
@@ -102,7 +139,9 @@ export async function evaluateIntegration(
 
   if (opts.live && missing.length === 0 && (!privateHost || cfg.allowPrivateNetwork)) {
     const client = new HttpIntegrationClient(cfg, cfg.baseUrl ?? def.baseUrl, redactor);
-    const probes = def.operations.filter((o) => o.method === 'GET' && !o.params.some((p) => p.required)).slice(0, 5);
+    const probes = def.operations
+      .filter((o) => o.method === 'GET' && !o.params.some((p) => p.required))
+      .slice(0, 5);
     const latencies: number[] = [];
     for (const op of probes) {
       const t0 = performance.now();
@@ -122,7 +161,10 @@ export async function evaluateIntegration(
         let severity: Check['severity'] = 'info';
         if (op.outputSchema && cfg.validateOutput) {
           const data = out.data ?? null;
-          const shaped = op.outputWrapped || !data || typeof data !== 'object' || Array.isArray(data) ? { result: data } : data;
+          const shaped =
+            op.outputWrapped || !data || typeof data !== 'object' || Array.isArray(data)
+              ? { result: data }
+              : data;
           const v = validateAgainst(op.outputSchema, shaped);
           if (!v.valid) {
             detail += `; response does not match documented schema (${v.message}). Fix the spec or set "validateOutput": false.`;
@@ -131,13 +173,32 @@ export async function evaluateIntegration(
         }
         checks.push({ name: `live: ${op.name}`, passed: severity !== 'error', detail, severity });
       } catch (err) {
-        checks.push({ name: `live: ${op.name}`, passed: false, detail: errorMessage(err), severity: 'warning' });
+        checks.push({
+          name: `live: ${op.name}`,
+          passed: false,
+          detail: errorMessage(err),
+          severity: 'warning',
+        });
       }
     }
-    if (probes.length === 0) checks.push({ name: 'live smoke test', passed: true, detail: 'no parameter-free GET operations to probe', severity: 'info' });
-    if (latencies.length) metrics.liveMedianMs = Math.round(latencies.sort((a, b) => a - b)[Math.floor(latencies.length / 2)]!);
+    if (probes.length === 0)
+      checks.push({
+        name: 'live smoke test',
+        passed: true,
+        detail: 'no parameter-free GET operations to probe',
+        severity: 'info',
+      });
+    if (latencies.length)
+      metrics.liveMedianMs = Math.round(
+        latencies.sort((a, b) => a - b)[Math.floor(latencies.length / 2)]!,
+      );
   } else if (!opts.live) {
-    checks.push({ name: 'live smoke test', passed: true, detail: 'skipped (--no-live)', severity: 'info' });
+    checks.push({
+      name: 'live smoke test',
+      passed: true,
+      detail: 'skipped (--no-live)',
+      severity: 'info',
+    });
   }
 
   return finish(checks, metrics);
@@ -145,7 +206,14 @@ export async function evaluateIntegration(
 
 function authRefs(cfg: IntegrationConfig): string[] {
   const a = cfg.auth;
-  const vals = a.type === 'bearer' ? [a.token] : a.type === 'apiKey' ? [a.value] : a.type === 'basic' ? [a.username, a.password] : [];
+  const vals =
+    a.type === 'bearer'
+      ? [a.token]
+      : a.type === 'apiKey'
+        ? [a.value]
+        : a.type === 'basic'
+          ? [a.username, a.password]
+          : [];
   return [...vals, ...Object.values(cfg.headers)].flatMap(envRefNames);
 }
 
@@ -164,11 +232,20 @@ export interface CompositeEvalDeps {
  * way an agent would, and the composite, and require identical step results.
  * Plans that write are never executed by the evaluator.
  */
-export async function evaluateComposite(def: CompositeDef, inputs: JsonObject[], deps: CompositeEvalDeps): Promise<Evaluation> {
+export async function evaluateComposite(
+  def: CompositeDef,
+  inputs: JsonObject[],
+  deps: CompositeEvalDeps,
+): Promise<Evaluation> {
   const checks: Check[] = [];
   const metrics: Record<string, number> = {};
   const problems = validatePlan(def, (t) => deps.toolAccess(t) !== undefined, deps.limits);
-  checks.push({ name: 'plan is valid', passed: problems.length === 0, detail: problems.join('; ') || `${def.steps.length} steps`, severity: 'error' });
+  checks.push({
+    name: 'plan is valid',
+    passed: problems.length === 0,
+    detail: problems.join('; ') || `${def.steps.length} steps`,
+    severity: 'error',
+  });
   if (problems.length) return finish(checks, metrics);
 
   const stages = planStages(def.steps);
@@ -188,7 +265,8 @@ export async function evaluateComposite(def: CompositeDef, inputs: JsonObject[],
     checks.push({
       name: 'equivalence test',
       passed: true,
-      detail: 'skipped: the plan writes data, so the evaluator will not execute it. Review the plan by hand before approving.',
+      detail:
+        'skipped: the plan writes data, so the evaluator will not execute it. Review the plan by hand before approving.',
       severity: 'warning',
     });
     return finish(checks, metrics);
@@ -198,7 +276,8 @@ export async function evaluateComposite(def: CompositeDef, inputs: JsonObject[],
     checks.push({
       name: 'equivalence test',
       passed: false,
-      detail: 'no example input. Run `toolsmith-mcp evaluate <name> --input \'{"…": …}\'` with a real input.',
+      detail:
+        'no example input. Run `toolsmith-mcp evaluate <name> --input \'{"…": …}\'` with a real input.',
       severity: 'error',
     });
     return finish(checks, metrics);
@@ -210,13 +289,16 @@ export async function evaluateComposite(def: CompositeDef, inputs: JsonObject[],
   for (const [i, input] of cases.slice(0, 5).entries()) {
     const ctx: CallContext = { sessionId: `evaluator:${def.name}` };
     const t0 = performance.now();
-    const baseline = await sequentialReference(def, input, (tool, args) => deps.call(tool, args, ctx));
+    const baseline = await sequentialReference(def, input, (tool, args) =>
+      deps.call(tool, args, ctx),
+    );
     baseMs.push(performance.now() - t0);
     baselineCalls += baseline.calls;
     const t1 = performance.now();
     const composite = await deps.runComposite(def, input, ctx);
     compMs.push(performance.now() - t1);
-    const compResults = ((composite.data as Record<string, JsonValue> | undefined)?.results ?? {}) as Record<string, JsonValue>;
+    const compResults = ((composite.data as Record<string, JsonValue> | undefined)?.results ??
+      {}) as Record<string, JsonValue>;
     const same = stableStringify(baseline.results) === stableStringify(compResults);
     const baseErr = baseline.errors.length > 0;
     checks.push({
@@ -230,7 +312,8 @@ export async function evaluateComposite(def: CompositeDef, inputs: JsonObject[],
       severity: 'error',
     });
   }
-  const med = (xs: number[]): number => Math.round([...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]! * 10) / 10;
+  const med = (xs: number[]): number =>
+    Math.round([...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]! * 10) / 10;
   metrics.baselineMedianMs = med(baseMs);
   metrics.compositeMedianMs = med(compMs);
   metrics.baselineMcpCalls = Math.round(baselineCalls / Math.min(cases.length, 5));

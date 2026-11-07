@@ -76,7 +76,12 @@ export class HttpIntegrationClient {
         res = await this.send(op.method, url, headers, body, signal);
       } catch (err) {
         const out = this.networkError(err);
-        if (retryable && attempt < this.cfg.maxRetries && out.errorCode !== 'policy' && !signal?.aborted) {
+        if (
+          retryable &&
+          attempt < this.cfg.maxRetries &&
+          out.errorCode !== 'policy' &&
+          !signal?.aborted
+        ) {
           retries++;
           await sleep(backoff(attempt), signal);
           continue;
@@ -86,7 +91,8 @@ export class HttpIntegrationClient {
       if (res.status >= 200 && res.status < 300) {
         return { ok: true, status: res.status, data: parseBody(res), requests, retries };
       }
-      const transient = res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504;
+      const transient =
+        res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504;
       if (transient && retryable && attempt < this.cfg.maxRetries) {
         const retryAfter = parseRetryAfter(res.headers['retry-after']);
         const wait = retryAfter ?? backoff(attempt);
@@ -100,7 +106,10 @@ export class HttpIntegrationClient {
     }
   }
 
-  buildRequest(op: OperationDef, args: JsonObject): { url: URL; headers: Record<string, string>; body?: string } {
+  buildRequest(
+    op: OperationDef,
+    args: JsonObject,
+  ): { url: URL; headers: Record<string, string>; body?: string } {
     let path = op.path;
     for (const p of op.params.filter((x) => x.in === 'path')) {
       const v = args[p.name];
@@ -119,8 +128,12 @@ export class HttpIntegrationClient {
     if (url.origin !== new URL(this.baseUrl).origin) {
       throw new ToolsmithError('Request URL escaped the integration base URL', 'policy');
     }
-    const headers: Record<string, string> = { accept: 'application/json', 'user-agent': 'toolsmith-mcp' };
-    for (const [k, v] of Object.entries(this.cfg.headers)) headers[k.toLowerCase()] = this.secret(v);
+    const headers: Record<string, string> = {
+      accept: 'application/json',
+      'user-agent': 'toolsmith-mcp',
+    };
+    for (const [k, v] of Object.entries(this.cfg.headers))
+      headers[k.toLowerCase()] = this.secret(v);
     for (const p of op.params) {
       const v = args[p.name];
       if (v === undefined || v === null) continue;
@@ -129,17 +142,22 @@ export class HttpIntegrationClient {
         else url.searchParams.set(p.name, scalar(v));
       } else if (p.in === 'header') {
         const value = scalar(v);
-        if (/[\r\n]/.test(value)) throw new ToolsmithError(`Invalid header value for "${p.name}"`, 'validation');
+        if (/[\r\n]/.test(value))
+          throw new ToolsmithError(`Invalid header value for "${p.name}"`, 'validation');
         headers[p.name.toLowerCase()] = value;
       } else if (p.in === 'cookie') {
-        headers.cookie = [headers.cookie, `${p.name}=${encodeURIComponent(scalar(v))}`].filter(Boolean).join('; ');
+        headers.cookie = [headers.cookie, `${p.name}=${encodeURIComponent(scalar(v))}`]
+          .filter(Boolean)
+          .join('; ');
       }
     }
     this.applyAuth(this.cfg.auth, headers, url);
     let body: string | undefined;
     if (op.body && args.body !== undefined) {
       body = JSON.stringify(args.body);
-      headers['content-type'] = op.body.contentType.includes('json') ? op.body.contentType : 'application/json';
+      headers['content-type'] = op.body.contentType.includes('json')
+        ? op.body.contentType
+        : 'application/json';
     }
     return { url, headers, body };
   }
@@ -182,7 +200,9 @@ export class HttpIntegrationClient {
         url,
         {
           method,
-          headers: body ? { ...headers, 'content-length': Buffer.byteLength(body).toString() } : headers,
+          headers: body
+            ? { ...headers, 'content-length': Buffer.byteLength(body).toString() }
+            : headers,
           lookup: guardedLookup(this.policy) as never,
           signal: combined,
         },
@@ -198,12 +218,18 @@ export class HttpIntegrationClient {
             chunks.push(c);
           });
           res.on('end', () =>
-            resolve({ status: res.statusCode ?? 0, headers: res.headers, body: Buffer.concat(chunks).toString('utf8') }),
+            resolve({
+              status: res.statusCode ?? 0,
+              headers: res.headers,
+              body: Buffer.concat(chunks).toString('utf8'),
+            }),
           );
           res.on('error', reject);
         },
       );
-      req.on('error', (err) => reject(timeout.aborted ? new ToolsmithError('timeout', 'timeout') : err));
+      req.on('error', (err) =>
+        reject(timeout.aborted ? new ToolsmithError('timeout', 'timeout') : err),
+      );
       if (body) req.write(body);
       req.end();
     });
@@ -212,13 +238,24 @@ export class HttpIntegrationClient {
   private networkError(err: unknown): Omit<HttpOutcome, 'requests' | 'retries'> {
     if (err instanceof ToolsmithError) {
       if (err.code === 'timeout') {
-        return { ok: false, status: 0, errorCode: 'timeout', error: `The API did not respond within ${this.cfg.timeoutMs} ms` };
+        return {
+          ok: false,
+          status: 0,
+          errorCode: 'timeout',
+          error: `The API did not respond within ${this.cfg.timeoutMs} ms`,
+        };
       }
       return { ok: false, status: 0, errorCode: err.code, error: err.message };
     }
     const e = err as NodeJS.ErrnoException;
     if (e?.code === 'ESSRF') return { ok: false, status: 0, errorCode: 'policy', error: e.message };
-    if (e?.name === 'AbortError') return { ok: false, status: 0, errorCode: 'timeout', error: 'Request was cancelled or timed out' };
+    if (e?.name === 'AbortError')
+      return {
+        ok: false,
+        status: 0,
+        errorCode: 'timeout',
+        error: 'Request was cancelled or timed out',
+      };
     return {
       ok: false,
       status: 0,
@@ -240,12 +277,42 @@ export class HttpIntegrationClient {
         error: `The API rejected the credentials (401). They may be missing, invalid or expired${envs.length ? `; check ${envs.join(', ')}` : ''}.`,
       };
     }
-    if (s === 403) return { ok: false, status: s, errorCode: 'forbidden', error: `The API denied access to ${op.method} ${op.path} (403). The credentials lack permission for this operation.` };
-    if (s === 404) return { ok: false, status: s, errorCode: 'not_found', error: `Not found (404).${detail}` };
-    if (s === 429) return { ok: false, status: s, errorCode: 'rate_limited', error: 'The API rate limit was hit (429). Wait before retrying.' };
-    if (s === 400 || s === 422) return { ok: false, status: s, errorCode: 'validation', error: `The API rejected the request (${s}).${detail}` };
-    if (s >= 300 && s < 400) return { ok: false, status: s, errorCode: 'policy', error: `The API answered with a redirect (${s}); redirects are not followed.` };
-    return { ok: false, status: s, errorCode: 'upstream', error: `The API returned an error (${s}).${detail}` };
+    if (s === 403)
+      return {
+        ok: false,
+        status: s,
+        errorCode: 'forbidden',
+        error: `The API denied access to ${op.method} ${op.path} (403). The credentials lack permission for this operation.`,
+      };
+    if (s === 404)
+      return { ok: false, status: s, errorCode: 'not_found', error: `Not found (404).${detail}` };
+    if (s === 429)
+      return {
+        ok: false,
+        status: s,
+        errorCode: 'rate_limited',
+        error: 'The API rate limit was hit (429). Wait before retrying.',
+      };
+    if (s === 400 || s === 422)
+      return {
+        ok: false,
+        status: s,
+        errorCode: 'validation',
+        error: `The API rejected the request (${s}).${detail}`,
+      };
+    if (s >= 300 && s < 400)
+      return {
+        ok: false,
+        status: s,
+        errorCode: 'policy',
+        error: `The API answered with a redirect (${s}); redirects are not followed.`,
+      };
+    return {
+      ok: false,
+      status: s,
+      errorCode: 'upstream',
+      error: `The API returned an error (${s}).${detail}`,
+    };
   }
 }
 

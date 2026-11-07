@@ -27,7 +27,11 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
   let gw: Awaited<ReturnType<typeof startGateway>>;
 
   beforeAll(async () => {
-    h = await makeHarness({ config: { patterns: { minSupport: 3, minConfidence: 0.6, maxLength: 6, episodeGapMs: 60_000 } } });
+    h = await makeHarness({
+      config: {
+        patterns: { minSupport: 3, minConfidence: 0.6, maxLength: 6, episodeGapMs: 60_000 },
+      },
+    });
     await approveShop(h.app);
     gw = await startGateway(h.app);
   });
@@ -38,7 +42,9 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
 
   it('records traces for agent calls, with redaction and no raw results', async () => {
     for (const userId of [1, 2, 3, 4]) {
-      const client = await connectClient(gw.url, 'auto', { 'x-toolsmith-session': `agent-${userId}` });
+      const client = await connectClient(gw.url, 'auto', {
+        'x-toolsmith-session': `agent-${userId}`,
+      });
       await agentWorkflow(client, userId);
       await client.close();
     }
@@ -53,7 +59,9 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
   it('discovers the repeated workflow with its data dependencies and loop', () => {
     const patterns = h.app.mine();
     const p = patterns[0]!;
-    expect(p.signature).toBe('shop__getUser > shop__getOrders > loop(shop__getOrderItems+shop__getPayments)');
+    expect(p.signature).toBe(
+      'shop__getUser > shop__getOrders > loop(shop__getOrderItems+shop__getPayments)',
+    );
     expect(p.support).toBe(4);
     expect(p.elements[2]).toMatchObject({ kind: 'loop', sourceElement: 1, arrayPath: '[*]' });
     expect(p.args[2]!['shop__getOrderItems']).toEqual({ orderId: { type: 'item', path: 'id' } });
@@ -65,34 +73,54 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
     const prop = out.find((o) => o.def?.steps.length === 4)!;
     expect(prop.error).toBeUndefined();
     expect(prop.def!.toolName).toBe('flow__getUserOrdersDetails');
-    expect(prop.def!.inputSchema).toMatchObject({ properties: { userId: expect.any(Object) }, required: ['userId'] });
+    expect(prop.def!.inputSchema).toMatchObject({
+      properties: { userId: expect.any(Object) },
+      required: ['userId'],
+    });
     expect(prop.version!.status).toBe('awaiting_approval');
     const ev = prop.version!.evaluation!;
     expect(ev.passed).toBe(true);
-    expect(ev.checks.filter((c) => c.name.startsWith('equivalence')).every((c) => c.passed)).toBe(true);
+    expect(ev.checks.filter((c) => c.name.startsWith('equivalence')).every((c) => c.passed)).toBe(
+      true,
+    );
     expect(ev.metrics!.compositeMcpCalls).toBe(1);
     // not exposed before a human approves
     expect(h.app.catalog.has('flow__getUserOrdersDetails')).toBe(false);
   });
 
   it('refuses approval by a non-human actor', () => {
-    expect(() => h.app.approve('flow-get-user-orders-details', { allowWrite: false, allowDestructive: false }, 'system')).toThrow(/human/);
+    expect(() =>
+      h.app.approve(
+        'flow-get-user-orders-details',
+        { allowWrite: false, allowDestructive: false },
+        'system',
+      ),
+    ).toThrow(/human/);
   });
 
   it('after approval the agent gets the same data in one MCP call', async () => {
-    h.app.approve('flow-get-user-orders-details', { allowWrite: false, allowDestructive: false }, 'human:test');
+    h.app.approve(
+      'flow-get-user-orders-details',
+      { allowWrite: false, allowDestructive: false },
+      'human:test',
+    );
     const client = await connectClient(gw.url, 'legacy');
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name)).toContain('flow__getUserOrdersDetails');
     const before = h.shop.requestCount;
-    const r = await client.callTool({ name: 'flow__getUserOrdersDetails', arguments: { userId: 2 } });
+    const r = await client.callTool({
+      name: 'flow__getUserOrdersDetails',
+      arguments: { userId: 2 },
+    });
     expect(r.isError).toBeFalsy();
     const sc = r.structuredContent as { results: Record<string, unknown>; partial: boolean };
     expect(sc.partial).toBe(false);
     expect((sc.results.getUser as Row).id).toBe(2);
     expect((sc.results.getOrders as Row[]).length).toBe(3);
     expect((sc.results.getOrderItems as unknown[]).length).toBe(3);
-    expect((sc.results.getPayments as unknown[][]).flat().every((p) => (p as Row).orderId !== undefined)).toBe(true);
+    expect(
+      (sc.results.getPayments as unknown[][]).flat().every((p) => (p as Row).orderId !== undefined),
+    ).toBe(true);
     // same underlying API requests as the manual workflow: 1 + 1 + 3 + 3
     expect(h.shop.requestCount - before).toBe(8);
     // the composite's own steps are traced as children

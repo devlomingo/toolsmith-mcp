@@ -75,7 +75,13 @@ const EXCLUDED_SOURCES = new Set(['builtin', 'composite']);
 export function segmentEpisodes(traces: TraceRecord[], gapMs: number): TraceRecord[][] {
   const bySession = new Map<string, TraceRecord[]>();
   for (const t of traces) {
-    if (!t.ok || EXCLUDED_SOURCES.has(t.source) || t.parentId || t.sessionId.startsWith('evaluator:')) continue;
+    if (
+      !t.ok ||
+      EXCLUDED_SOURCES.has(t.source) ||
+      t.parentId ||
+      t.sessionId.startsWith('evaluator:')
+    )
+      continue;
     (bySession.get(t.sessionId) ?? bySession.set(t.sessionId, []).get(t.sessionId)!).push(t);
   }
   const episodes: TraceRecord[][] = [];
@@ -112,13 +118,13 @@ export function bindCalls(episode: TraceRecord[]): EpisodeCall[] {
         const ci = calls[i]!.trace;
         const fromArg = Object.keys(ci.argFingerprints).find((k) => ci.argFingerprints[k] === hash);
         if (fromArg) {
-          const rank = (nameAffinity(argPath, fromArg, ci.tool) >= 3 ? 1000 : 0) - i * 2;
+          const rank = tier(nameAffinity(argPath, fromArg, ci.tool)) * 1000 - i * 2;
           if (!best || rank > best.rank) best = { b: { type: 'shared', from: i, fromArg }, rank };
         }
         const paths = ci.resultFingerprints[hash];
         if (paths?.length) {
           const path = pickPath(paths, argPath);
-          const rank = (nameAffinity(argPath, path, ci.tool) >= 3 ? 1000 : 0) - i * 2 - 1;
+          const rank = tier(nameAffinity(argPath, path, ci.tool)) * 1000 - i * 2 - 1;
           if (!best || rank > best.rank) best = { b: { type: 'output', from: i, path }, rank };
         }
       }
@@ -126,6 +132,11 @@ export function bindCalls(episode: TraceRecord[]): EpisodeCall[] {
     }
   }
   return calls;
+}
+
+/** Strong (exact name or entity+id), weak (any xId <- id), or no name evidence. */
+function tier(affinity: number): number {
+  return affinity >= 3 ? 2 : affinity >= 1 ? 1 : 0;
 }
 
 function lastSegment(path: string): string {
@@ -184,7 +195,12 @@ export function toElements(calls: EpisodeCall[]): { elements: Element[]; callEle
   for (let j = 0; j < calls.length; j++) {
     const key = loopKey(calls[j]!);
     const prev = elements[elements.length - 1];
-    if (key && prev && prev.element.kind === 'loop' && `${prev.sourceCall}|${prev.element.arrayPath}` === key) {
+    if (
+      key &&
+      prev &&
+      prev.element.kind === 'loop' &&
+      `${prev.sourceCall}|${prev.element.arrayPath}` === key
+    ) {
       prev.members.push(j);
       const tool = calls[j]!.trace.tool;
       if (!prev.element.tools.includes(tool)) prev.element.tools.push(tool);
@@ -208,7 +224,8 @@ export function toElements(calls: EpisodeCall[]): { elements: Element[]; callEle
     callElement[j] = elements.length - 1;
   }
   for (const el of elements) {
-    if (el.element.kind === 'loop' && el.sourceCall !== undefined) el.element.sourceElement = callElement[el.sourceCall]!;
+    if (el.element.kind === 'loop' && el.sourceCall !== undefined)
+      el.element.sourceElement = callElement[el.sourceCall]!;
   }
   return { elements, callElement };
 }
@@ -234,7 +251,9 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
   const firstTokenEpisodes = new Map<string, Set<number>>();
   episodes.forEach((ep, e) => {
     const tokens = ep.elements.map((x) => x.token);
-    tokens.forEach((t) => (firstTokenEpisodes.get(t) ?? firstTokenEpisodes.set(t, new Set()).get(t)!).add(e));
+    tokens.forEach((t) =>
+      (firstTokenEpisodes.get(t) ?? firstTokenEpisodes.set(t, new Set()).get(t)!).add(e),
+    );
     const seenInEpisode = new Set<string>();
     for (let n = 2; n <= opts.maxLength; n++) {
       for (let s = 0; s + n <= tokens.length; s++) {
@@ -257,7 +276,9 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
     if (connectivity < opts.minConfidence || connected.length < opts.minSupport) continue;
     const firstToken = sig.split(' > ')[0]!;
     const confidence = support / (firstTokenEpisodes.get(firstToken)?.size ?? support);
-    candidates.push(buildPattern(sig, n, connected, episodes, support, confidence, connectivity, opts));
+    candidates.push(
+      buildPattern(sig, n, connected, episodes, support, confidence, connectivity, opts),
+    );
   }
 
   // Keep closed patterns: drop P when a longer Q containing it occurs
@@ -265,7 +286,11 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
   const kept = candidates.filter(
     (p) =>
       !candidates.some(
-        (q) => q !== p && q.elements.length > p.elements.length && containsContiguous(q.signature, p.signature) && q.support >= 0.9 * p.support,
+        (q) =>
+          q !== p &&
+          q.elements.length > p.elements.length &&
+          containsContiguous(q.signature, p.signature) &&
+          q.support >= 0.9 * p.support,
       ),
   );
   return kept.sort((a, b) => b.support * b.elements.length - a.support * a.elements.length);
@@ -278,7 +303,11 @@ function containsContiguous(longer: string, shorter: string): boolean {
 function isConnected(ep: EpisodeModel, start: number, n: number): boolean {
   for (let k = 1; k < n; k++) {
     const el = ep.elements[start + k]!;
-    if (el.element.kind === 'loop' && (el.element.sourceElement < start || el.element.sourceElement >= start + k)) return false;
+    if (
+      el.element.kind === 'loop' &&
+      (el.element.sourceElement < start || el.element.sourceElement >= start + k)
+    )
+      return false;
     const linked = el.members.some((m) =>
       [...ep.calls[m]!.bindings.values()].some((b) => {
         const srcEl = ep.callElement[b.from]!;
@@ -301,13 +330,22 @@ function buildPattern(
   opts: MinerOptions,
 ): Pattern {
   const ref = episodes[occs[0]!.episode]!;
-  const elements: PatternElement[] = ref.elements.slice(occs[0]!.start, occs[0]!.start + n).map((e) => {
-    if (e.element.kind === 'loop') return { ...e.element, tools: [...e.element.tools], sourceElement: e.element.sourceElement - occs[0]!.start };
-    return { ...e.element };
-  });
+  const elements: PatternElement[] = ref.elements
+    .slice(occs[0]!.start, occs[0]!.start + n)
+    .map((e) => {
+      if (e.element.kind === 'loop')
+        return {
+          ...e.element,
+          tools: [...e.element.tools],
+          sourceElement: e.element.sourceElement - occs[0]!.start,
+        };
+      return { ...e.element };
+    });
 
   // Tally argument sources per element/tool/arg across occurrences.
-  const tallies: Array<Record<string, Record<string, Map<string, { src: ArgSource; count: number }>>>> = elements.map(() => ({}));
+  const tallies: Array<
+    Record<string, Record<string, Map<string, { src: ArgSource; count: number }>>>
+  > = elements.map(() => ({}));
   const seenCount: Array<Record<string, Record<string, number>>> = elements.map(() => ({}));
   for (const o of occs) {
     const ep = episodes[o.episode]!;
@@ -328,13 +366,23 @@ function buildPattern(
               if (b.type === 'output') {
                 const prefix = arrayPrefix(b.path);
                 const loopEl = elements[k]!;
-                if (loopEl.kind === 'loop' && prefix && prefix === loopEl.arrayPath && srcEl === loopEl.sourceElement) {
+                if (
+                  loopEl.kind === 'loop' &&
+                  prefix &&
+                  prefix === loopEl.arrayPath &&
+                  srcEl === loopEl.sourceElement
+                ) {
                   src = { type: 'item', path: b.path.slice(prefix.length).replace(/^\./, '') };
                 } else if (!prefix && elements[srcEl]!.kind === 'call') {
                   src = { type: 'output', element: srcEl, path: b.path };
                 }
               } else {
-                src = { type: 'shared', element: srcEl, tool: ep.calls[b.from]!.trace.tool, arg: b.fromArg };
+                src = {
+                  type: 'shared',
+                  element: srcEl,
+                  tool: ep.calls[b.from]!.trace.tool,
+                  arg: b.fromArg,
+                };
               }
             }
           }
@@ -355,7 +403,10 @@ function buildPattern(
       for (const [argPath, map] of Object.entries(byArg)) {
         const best = [...map.values()].sort((a, b) => b.count - a.count)[0]!;
         const total = [...map.values()].reduce((s, x) => s + x.count, 0);
-        out[tool]![argPath] = best.src.type !== 'input' && best.count / total >= opts.minConfidence ? best.src : { type: 'input' };
+        out[tool]![argPath] =
+          best.src.type !== 'input' && best.count / total >= opts.minConfidence
+            ? best.src
+            : { type: 'input' };
       }
     }
     return out;
@@ -369,7 +420,10 @@ function buildPattern(
   const exampleArgs: Array<Record<string, unknown>> = [];
   for (const o of occs) {
     const ep = episodes[o.episode]!;
-    const members = ep.elements.slice(o.start, o.start + n).flatMap((e) => e.members).map((m) => ep.calls[m]!.trace);
+    const members = ep.elements
+      .slice(o.start, o.start + n)
+      .flatMap((e) => e.members)
+      .map((m) => ep.calls[m]!.trace);
     callsPer.push(members.length);
     upstreamPer.push(members.reduce((s, t) => s + t.upstreamRequests, 0));
     toolTime.push(members.reduce((s, t) => s + t.durationMs, 0));
@@ -378,8 +432,14 @@ function buildPattern(
     spans.push(last - first);
     if (examples.length < 5) examples.push(members.map((t) => t.id));
     const firstArgs = members[0]?.args;
-    if (exampleArgs.length < 3 && firstArgs && typeof firstArgs === 'object' && !Array.isArray(firstArgs)) {
-      if (!JSON.stringify(firstArgs).includes('[REDACTED')) exampleArgs.push(firstArgs as Record<string, unknown>);
+    if (
+      exampleArgs.length < 3 &&
+      firstArgs &&
+      typeof firstArgs === 'object' &&
+      !Array.isArray(firstArgs)
+    ) {
+      if (!JSON.stringify(firstArgs).includes('[REDACTED'))
+        exampleArgs.push(firstArgs as Record<string, unknown>);
     }
   }
 

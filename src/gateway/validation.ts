@@ -4,7 +4,8 @@ import type { JsonSchema } from '../core/types.js';
 
 // ajv and ajv-formats are CommonJS; under NodeNext the default import is the
 // module object, so unwrap `.default` when present.
-const Ajv = ((AjvModule as unknown as { default?: unknown }).default ?? AjvModule) as typeof AjvModule.default;
+const Ajv = ((AjvModule as unknown as { default?: unknown }).default ??
+  AjvModule) as typeof AjvModule.default;
 const addFormats = ((addFormatsModule as unknown as { default?: unknown }).default ??
   addFormatsModule) as typeof addFormatsModule.default;
 
@@ -28,7 +29,10 @@ function compile(schema: JsonSchema): ValidateFunction {
   return fn;
 }
 
-export function validateAgainst(schema: JsonSchema, value: unknown): { valid: true } | { valid: false; message: string } {
+export function validateAgainst(
+  schema: JsonSchema,
+  value: unknown,
+): { valid: true } | { valid: false; message: string } {
   const fn = compile(schema);
   if (fn(value)) return { valid: true };
   const message = (fn.errors ?? [])
@@ -36,7 +40,8 @@ export function validateAgainst(schema: JsonSchema, value: unknown): { valid: tr
     .map((e) => {
       const where = e.instancePath ? e.instancePath.slice(1).replace(/\//g, '.') : 'arguments';
       if (e.keyword === 'required') return `missing required "${String(e.params.missingProperty)}"`;
-      if (e.keyword === 'additionalProperties') return `unknown argument "${String(e.params.additionalProperty)}"`;
+      if (e.keyword === 'additionalProperties')
+        return `unknown argument "${String(e.params.additionalProperty)}"`;
       return `${where} ${e.message ?? 'is invalid'}`;
     })
     .join('; ');

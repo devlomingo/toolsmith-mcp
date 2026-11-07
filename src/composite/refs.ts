@@ -38,12 +38,16 @@ export function resolvePath(root: unknown, path: string): JsonValue | undefined 
 
 export function resolveRef(ref: string, scope: Scope): JsonValue | undefined {
   if (ref === 'item') return scope.item;
-  if (ref.startsWith('item.') || ref.startsWith('item[')) return resolvePath(scope.item, ref.slice(4).replace(/^\./, ''));
+  if (ref.startsWith('item.') || ref.startsWith('item['))
+    return resolvePath(scope.item, ref.slice(4).replace(/^\./, ''));
   return resolvePath(scope, ref);
 }
 
 /** Substitute refs inside an args template. Undefined refs drop the key. */
-export function materialize(template: Record<string, ValueExpr>, scope: Scope): Record<string, JsonValue> {
+export function materialize(
+  template: Record<string, ValueExpr>,
+  scope: Scope,
+): Record<string, JsonValue> {
   const walk = (v: ValueExpr): JsonValue | undefined => {
     if (isRef(v)) return resolveRef(v.$ref, scope);
     if (Array.isArray(v)) return v.map((x) => walk(x as ValueExpr) ?? null);

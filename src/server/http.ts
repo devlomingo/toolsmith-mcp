@@ -43,17 +43,31 @@ export function isLoopback(host: string): boolean {
  * /dashboard (static UI), /healthz. Binds to loopback by default; binding
  * elsewhere requires an MCP token so the gateway is never open by accident.
  */
-export async function startHttpServer(app: Toolsmith, opts: HttpServerOptions = {}): Promise<{ server: Server; url: string; close: () => Promise<void> }> {
+export async function startHttpServer(
+  app: Toolsmith,
+  opts: HttpServerOptions = {},
+): Promise<{ server: Server; url: string; close: () => Promise<void> }> {
   const host = opts.host ?? app.config.server.host;
   const port = opts.port ?? app.config.server.port;
-  const mcpToken = opts.mcpToken ?? (app.config.server.mcpToken ? resolveEnvRefs(app.config.server.mcpToken) : undefined);
-  const adminToken = opts.adminToken ?? (app.config.server.adminToken ? resolveEnvRefs(app.config.server.adminToken) : undefined);
+  const mcpToken =
+    opts.mcpToken ??
+    (app.config.server.mcpToken ? resolveEnvRefs(app.config.server.mcpToken) : undefined);
+  const adminToken =
+    opts.adminToken ??
+    (app.config.server.adminToken ? resolveEnvRefs(app.config.server.adminToken) : undefined);
   if (!isLoopback(host) && !mcpToken) {
-    throw new Error(`Refusing to listen on ${host} without server.mcpToken. Set one, or bind to 127.0.0.1.`);
+    throw new Error(
+      `Refusing to listen on ${host} without server.mcpToken. Set one, or bind to 127.0.0.1.`,
+    );
   }
-  if (!adminToken) throw new Error('server.adminToken is required for the dashboard and admin API. `toolsmith-mcp init` generates one.');
+  if (!adminToken)
+    throw new Error(
+      'server.adminToken is required for the dashboard and admin API. `toolsmith-mcp init` generates one.',
+    );
 
-  const mcp = createMcpHandler(createServerFactory(app), { onerror: (e) => process.stderr.write(`[toolsmith] mcp: ${e.message}\n`) });
+  const mcp = createMcpHandler(createServerFactory(app), {
+    onerror: (e) => process.stderr.write(`[toolsmith] mcp: ${e.message}\n`),
+  });
   const mcpNode = toNodeHandler(mcp);
   const hostGuard = isLoopback(host) ? localhostHostValidation() : undefined;
   const unsubscribe = app.onToolsChanged(() => mcp.notify.toolsChanged());
@@ -73,20 +87,24 @@ export async function startHttpServer(app: Toolsmith, opts: HttpServerOptions = 
         }
         // Browsers must not be able to drive the gateway cross-site.
         const origin = req.headers.origin;
-        if (origin && !sameOrigin(origin, req)) return json(res, 403, { error: 'Cross-origin requests are not allowed' });
+        if (origin && !sameOrigin(origin, req))
+          return json(res, 403, { error: 'Cross-origin requests are not allowed' });
         return void (await mcpNode(req, res));
       }
       if (url.pathname.startsWith('/api/')) {
-        if (!tokenMatches(req.headers.authorization, adminToken)) return json(res, 401, { error: 'Admin token required' });
+        if (!tokenMatches(req.headers.authorization, adminToken))
+          return json(res, 401, { error: 'Admin token required' });
         const origin = req.headers.origin;
-        if (origin && !sameOrigin(origin, req)) return json(res, 403, { error: 'Cross-origin requests are not allowed' });
+        if (origin && !sameOrigin(origin, req))
+          return json(res, 403, { error: 'Cross-origin requests are not allowed' });
         return void (await handleAdminApi(app, req, res, url));
       }
-      if (url.pathname === '/' ) {
+      if (url.pathname === '/') {
         res.writeHead(302, { location: '/dashboard/' });
         return void res.end();
       }
-      if (url.pathname.startsWith('/dashboard')) return serveStatic(url.pathname.slice('/dashboard'.length) || '/', res);
+      if (url.pathname.startsWith('/dashboard'))
+        return serveStatic(url.pathname.slice('/dashboard'.length) || '/', res);
       json(res, 404, { error: 'Not found' });
     } catch (err) {
       process.stderr.write(`[toolsmith] http: ${(err as Error).stack ?? err}\n`);
@@ -124,11 +142,13 @@ function sameOrigin(origin: string, req: IncomingMessage): boolean {
 function serveStatic(path: string, res: ServerResponse): void {
   const rel = normalize(path === '/' ? '/index.html' : path).replace(/^(\.\.[/\\])+/, '');
   const file = join(DASHBOARD_DIR, rel);
-  if (!file.startsWith(DASHBOARD_DIR) || !existsSync(file)) return json(res, 404, { error: 'Not found' });
+  if (!file.startsWith(DASHBOARD_DIR) || !existsSync(file))
+    return json(res, 404, { error: 'Not found' });
   res.writeHead(200, {
     'content-type': TYPES[extname(file)] ?? 'application/octet-stream',
     'cache-control': 'no-store',
-    'content-security-policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'",
+    'content-security-policy':
+      "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'",
     'referrer-policy': 'no-referrer',
   });
   res.end(readFileSync(file));
@@ -136,6 +156,9 @@ function serveStatic(path: string, res: ServerResponse): void {
 
 export function json(res: ServerResponse, status: number, body: unknown): void {
   const text = JSON.stringify(body);
-  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  });
   res.end(text);
 }

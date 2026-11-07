@@ -8,8 +8,15 @@ export const COMPOSITE_NAMESPACE = 'flow';
 const OUTPUT_SCHEMA: JsonSchema = {
   type: 'object',
   properties: {
-    results: { type: 'object', description: 'Each step result keyed by step id; forEach steps give an array aligned with their input items.' },
-    partial: { type: 'boolean', description: 'True when some step failed, was skipped or truncated.' },
+    results: {
+      type: 'object',
+      description:
+        'Each step result keyed by step id; forEach steps give an array aligned with their input items.',
+    },
+    partial: {
+      type: 'boolean',
+      description: 'True when some step failed, was skipped or truncated.',
+    },
     errors: { type: 'array', items: { type: 'object' } },
     skippedSteps: { type: 'array', items: { type: 'string' } },
     truncated: { type: 'array', items: { type: 'string' } },
@@ -26,7 +33,9 @@ function shortName(tool: string): string {
 /** "getUser", "getOrders", "getOrderItems" -> "getUserOrdersDetails". */
 export function compositeName(tools: string[]): string {
   const nouns = tools
-    .map((t) => shortName(t).replace(/^(get|list|fetch|find|read|search|create|update|delete)/i, ''))
+    .map((t) =>
+      shortName(t).replace(/^(get|list|fetch|find|read|search|create|update|delete)/i, ''),
+    )
     .filter(Boolean);
   const unique = [...new Set(nouns)];
   const verb = /^(get|list|fetch|find|read|search)/i.test(shortName(tools[0]!)) ? 'get' : 'run';
@@ -36,7 +45,9 @@ export function compositeName(tools: string[]): string {
 
 /** Kebab-case registry name for a composite. */
 export function compositeArtifactName(base: string): string {
-  return `flow-${base.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`.slice(0, 31).replace(/-+$/, '');
+  return `flow-${base.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`
+    .slice(0, 31)
+    .replace(/-+$/, '');
 }
 
 /**
@@ -68,7 +79,8 @@ export function patternToComposite(
   const allocInput = (arg: string, schema: JsonSchema | undefined, isRequired: boolean): string => {
     let name = arg;
     let i = 2;
-    while (inputProps[name] && JSON.stringify(inputProps[name]) !== JSON.stringify(schema ?? {})) name = `${arg}${i++}`;
+    while (inputProps[name] && JSON.stringify(inputProps[name]) !== JSON.stringify(schema ?? {}))
+      name = `${arg}${i++}`;
     inputProps[name] = schema ?? {};
     if (isRequired) required.add(name);
     return name;
@@ -82,7 +94,7 @@ export function patternToComposite(
       if (!def) throw new Error(`Pattern uses tool "${tool}" which is not currently available`);
       const id = idFor(tool);
       stepIds[k]!.push(id);
-      const props = ((def.inputSchema.properties ?? {}) as Record<string, JsonSchema>);
+      const props = (def.inputSchema.properties ?? {}) as Record<string, JsonSchema>;
       const req = new Set((def.inputSchema.required as string[] | undefined) ?? []);
       const observed = pattern.args[k]?.[tool] ?? {};
       const args: Record<string, ValueExpr> = {};
@@ -90,7 +102,9 @@ export function patternToComposite(
       const topLevel = new Map<string, ArgSource[]>();
       for (const [path, src] of Object.entries(observed)) {
         const top = path.split(/[.[]/)[0]!;
-        (topLevel.get(top) ?? topLevel.set(top, []).get(top)!).push(path === top ? src : { type: 'input' });
+        (topLevel.get(top) ?? topLevel.set(top, []).get(top)!).push(
+          path === top ? src : { type: 'input' },
+        );
       }
       for (const [arg, sources] of topLevel) {
         const src = sources.length === 1 ? sources[0]! : { type: 'input' as const };
@@ -149,10 +163,10 @@ export function patternToComposite(
   const tools = pattern.elements.flatMap((e) => (e.kind === 'call' ? [e.tool] : e.tools));
   const base = nameOverride ?? compositeName(tools);
   const stages = planStages(steps);
-  const flow = steps
-    .map((st) => `${st.id}${st.forEach ? ' (for each item)' : ''}`)
-    .join(' → ');
-  const parallel = stages.some((st) => st.length > 1) ? ` Independent steps run in parallel (${stages.length} stages for ${steps.length} steps).` : '';
+  const flow = steps.map((st) => `${st.id}${st.forEach ? ' (for each item)' : ''}`).join(' → ');
+  const parallel = stages.some((st) => st.length > 1)
+    ? ` Independent steps run in parallel (${stages.length} stages for ${steps.length} steps).`
+    : '';
   const description = `Runs ${flow} in one call.${parallel} Discovered from ${pattern.support} observed sessions (confidence ${pattern.confidence}). Returns each step's result under "results"; "partial" is true if any step failed.`;
 
   const examples = pattern.exampleArgs
@@ -176,7 +190,12 @@ export function patternToComposite(
     },
     outputSchema: OUTPUT_SCHEMA,
     steps,
-    provenance: { type: 'pattern', ref: pattern.id, support: pattern.support, confidence: pattern.confidence },
+    provenance: {
+      type: 'pattern',
+      ref: pattern.id,
+      support: pattern.support,
+      confidence: pattern.confidence,
+    },
     examples,
   };
 }

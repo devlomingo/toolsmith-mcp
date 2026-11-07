@@ -1,5 +1,8 @@
 const tty = process.stdout.isTTY && !process.env.NO_COLOR;
-const wrap = (code: string) => (s: string | number): string => (tty ? `\x1b[${code}m${s}\x1b[0m` : String(s));
+const wrap =
+  (code: string) =>
+  (s: string | number): string =>
+    tty ? `\x1b[${code}m${s}\x1b[0m` : String(s);
 
 export const c = {
   bold: wrap('1'),
@@ -23,7 +26,8 @@ export function say(...lines: string[]): void {
 export function table(rows: Array<Record<string, string | number | null | undefined>>): void {
   if (rows.length === 0) return say(c.dim('  (none)'));
   const cols = Object.keys(rows[0]!);
-  const width = (col: string) => Math.max(col.length, ...rows.map((r) => stripAnsi(String(r[col] ?? '')).length));
+  const width = (col: string) =>
+    Math.max(col.length, ...rows.map((r) => stripAnsi(String(r[col] ?? '')).length));
   const widths = cols.map(width);
   say(`  ${cols.map((col, i) => c.dim(col.padEnd(widths[i]!))).join('  ')}`);
   for (const r of rows) {
@@ -42,7 +46,13 @@ function pad(s: string, w: number): string {
 
 export function statusColor(status: string): string {
   if (status === 'published' || status === 'approved') return c.green(status);
-  if (status === 'awaiting_approval' || status === 'proposed' || status === 'testing' || status === 'generating') return c.yellow(status);
+  if (
+    status === 'awaiting_approval' ||
+    status === 'proposed' ||
+    status === 'testing' ||
+    status === 'generating'
+  )
+    return c.yellow(status);
   if (status === 'failed' || status === 'rejected' || status === 'disabled') return c.red(status);
   return status;
 }

@@ -30,7 +30,11 @@ export function toJsonSchema(schema: unknown, depth = 0, seen = new WeakSet<obje
         props[pk] = toJsonSchema(pv, depth + 1, seen);
       }
       out.properties = props;
-    } else if ((k === 'items' || k === 'additionalProperties' || k === 'not') && v && typeof v === 'object') {
+    } else if (
+      (k === 'items' || k === 'additionalProperties' || k === 'not') &&
+      v &&
+      typeof v === 'object'
+    ) {
       out[k] = toJsonSchema(v, depth + 1, seen);
     } else if ((k === 'allOf' || k === 'anyOf' || k === 'oneOf') && Array.isArray(v)) {
       out[k] = v.map((s) => toJsonSchema(s, depth + 1, seen));

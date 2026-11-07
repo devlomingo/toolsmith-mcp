@@ -23,7 +23,12 @@ import { validateAgainst } from './validation.js';
 
 type Exec =
   | { type: 'openapi'; integration: string; op: OperationDef }
-  | { type: 'upstream'; upstream: string; remoteName: string; annotations?: Record<string, unknown> }
+  | {
+      type: 'upstream';
+      upstream: string;
+      remoteName: string;
+      annotations?: Record<string, unknown>;
+    }
   | { type: 'composite'; def: CompositeDef }
   | { type: 'builtin'; handler: (args: JsonObject, ctx: CallContext) => Promise<ToolCallResult> };
 
@@ -67,7 +72,10 @@ export class Catalog {
     const problems: CatalogProblem[] = [];
     const add = (entry: CatalogEntry): void => {
       if (next.has(entry.def.name)) {
-        problems.push({ artifact: entry.def.artifactId, problem: `duplicate tool name ${entry.def.name}; later one ignored` });
+        problems.push({
+          artifact: entry.def.artifactId,
+          problem: `duplicate tool name ${entry.def.name}; later one ignored`,
+        });
         return;
       }
       next.set(entry.def.name, entry);
@@ -75,7 +83,15 @@ export class Catalog {
 
     for (const b of this.builtins) {
       add({
-        def: { name: b.name, description: b.description, inputSchema: b.inputSchema, access: 'read', source: 'builtin', artifactId: 'builtin', artifactVersion: 1 },
+        def: {
+          name: b.name,
+          description: b.description,
+          inputSchema: b.inputSchema,
+          access: 'read',
+          source: 'builtin',
+          artifactId: 'builtin',
+          artifactVersion: 1,
+        },
         exec: { type: 'builtin', handler: b.handler },
       });
     }
@@ -88,7 +104,10 @@ export class Catalog {
         const def = version.definition as unknown as OpenApiIntegrationDef;
         const cfg = integrationCfg.get(artifact.name);
         if (!cfg) {
-          problems.push({ artifact: artifact.name, problem: 'published but missing from toolsmith.config.json; its tools are hidden' });
+          problems.push({
+            artifact: artifact.name,
+            problem: 'published but missing from toolsmith.config.json; its tools are hidden',
+          });
           continue;
         }
         try {
@@ -116,7 +135,11 @@ export class Catalog {
           });
         }
       } else if (artifact.kind === 'composite') {
-        composites.push({ def: version.definition as unknown as CompositeDef, artifactId: artifact.id, version: version.version });
+        composites.push({
+          def: version.definition as unknown as CompositeDef,
+          artifactId: artifact.id,
+          version: version.version,
+        });
       }
     }
 
@@ -133,16 +156,26 @@ export class Catalog {
           artifactId: `upstream:${ut.upstream}`,
           artifactVersion: 1,
         },
-        exec: { type: 'upstream', upstream: ut.upstream, remoteName: ut.tool.name, annotations: ut.tool.annotations as Record<string, unknown> | undefined },
+        exec: {
+          type: 'upstream',
+          upstream: ut.upstream,
+          remoteName: ut.tool.name,
+          annotations: ut.tool.annotations as Record<string, unknown> | undefined,
+        },
       });
     }
 
     // Composites last: they are only exposed when every tool they call is
     // itself exposed, so revoking a step's permission also hides the composite.
     for (const c of composites) {
-      const missing = c.def.steps.filter((s) => !next.has(s.tool) || next.get(s.tool)!.exec.type === 'composite');
+      const missing = c.def.steps.filter(
+        (s) => !next.has(s.tool) || next.get(s.tool)!.exec.type === 'composite',
+      );
       if (missing.length) {
-        problems.push({ artifact: c.def.name, problem: `hidden: depends on unavailable tools ${missing.map((s) => s.tool).join(', ')}` });
+        problems.push({
+          artifact: c.def.name,
+          problem: `hidden: depends on unavailable tools ${missing.map((s) => s.tool).join(', ')}`,
+        });
         continue;
       }
       add({
@@ -195,7 +228,12 @@ export class Catalog {
 function describeOperation(def: OpenApiIntegrationDef, op: OperationDef): string {
   const text = [op.summary, op.description].filter(Boolean).join('. ').replace(/\s+/g, ' ').trim();
   const base = text || `${op.method} ${op.path}`;
-  const access = op.access === 'read' ? '' : op.access === 'write' ? ' [modifies data]' : ' [destructive: needs per-call approval]';
+  const access =
+    op.access === 'read'
+      ? ''
+      : op.access === 'write'
+        ? ' [modifies data]'
+        : ' [destructive: needs per-call approval]';
   const full = `${base} (${def.title}: ${op.method} ${op.path})${access}`;
   return full.length > 1024 ? `${full.slice(0, 1021)}...` : full;
 }
@@ -218,13 +256,19 @@ export class Dispatcher {
     private readonly upstreams: UpstreamManager,
     opts: DispatchOptions,
   ) {
-    this.composite = new CompositeExecutor((tool, args, ctx) => this.call(tool, args, ctx), opts.limits);
+    this.composite = new CompositeExecutor(
+      (tool, args, ctx) => this.call(tool, args, ctx),
+      opts.limits,
+    );
   }
 
   async call(name: string, args: JsonObject, ctx: CallContext): Promise<ToolCallResult> {
     const entry = this.catalog.get(name);
     if (!entry) {
-      return fail('not_found', `Unknown tool "${name}". It may be unpublished or disabled. Call toolsmith__request_capability to describe what you need.`);
+      return fail(
+        'not_found',
+        `Unknown tool "${name}". It may be unpublished or disabled. Call toolsmith__request_capability to describe what you need.`,
+      );
     }
     const { def } = entry;
     const check = validateAgainst(def.inputSchema, args);
@@ -254,17 +298,33 @@ export class Dispatcher {
           return this.composite.run(entry.exec.def, args, inner);
         case 'openapi': {
           const client = this.catalog.client(entry.exec.integration);
-          if (!client) return fail('internal', `Integration ${entry.exec.integration} is not configured`);
+          if (!client)
+            return fail('internal', `Integration ${entry.exec.integration} is not configured`);
           let out;
           try {
             out = await client.call(entry.exec.op, args, ctx.signal);
           } catch (err) {
             return fail('validation', errorMessage(err));
           }
-          if (!out.ok) return { ok: false, error: out.error, errorCode: out.errorCode, upstreamRequests: out.requests, retries: out.retries };
-          const result: ToolCallResult = { ok: true, data: out.data, upstreamRequests: out.requests, retries: out.retries };
+          if (!out.ok)
+            return {
+              ok: false,
+              error: out.error,
+              errorCode: out.errorCode,
+              upstreamRequests: out.requests,
+              retries: out.retries,
+            };
+          const result: ToolCallResult = {
+            ok: true,
+            data: out.data,
+            upstreamRequests: out.requests,
+            retries: out.retries,
+          };
           if (def.outputSchema) {
-            const v = validateAgainst(def.outputSchema, structured(out.data ?? null, entry.exec.op.outputWrapped));
+            const v = validateAgainst(
+              def.outputSchema,
+              structured(out.data ?? null, entry.exec.op.outputWrapped),
+            );
             if (!v.valid) {
               return {
                 ...result,
@@ -283,7 +343,8 @@ export class Dispatcher {
 
 /** Shape data as MCP structuredContent (must be an object). */
 export function structured(data: JsonValue, wrapped: boolean): Record<string, JsonValue> {
-  if (!wrapped && data && typeof data === 'object' && !Array.isArray(data)) return data as Record<string, JsonValue>;
+  if (!wrapped && data && typeof data === 'object' && !Array.isArray(data))
+    return data as Record<string, JsonValue>;
   return { result: data };
 }
 
@@ -293,5 +354,7 @@ export function fail(code: ToolCallResult['errorCode'], error: string): ToolCall
 
 export function splitToolName(name: string): { namespace: string; tool: string } {
   const i = name.indexOf(NAMESPACE_SEP);
-  return i < 0 ? { namespace: '', tool: name } : { namespace: name.slice(0, i), tool: name.slice(i + NAMESPACE_SEP.length) };
+  return i < 0
+    ? { namespace: '', tool: name }
+    : { namespace: name.slice(0, i), tool: name.slice(i + NAMESPACE_SEP.length) };
 }

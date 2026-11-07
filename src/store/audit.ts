@@ -17,11 +17,22 @@ export class AuditLog {
   write(actor: string, action: string, target?: string, detail?: JsonValue): void {
     this.db
       .prepare('INSERT INTO audit_log (at, actor, action, target, detail) VALUES (?, ?, ?, ?, ?)')
-      .run(nowIso(), actor, action, target ?? null, detail === undefined ? null : JSON.stringify(detail));
+      .run(
+        nowIso(),
+        actor,
+        action,
+        target ?? null,
+        detail === undefined ? null : JSON.stringify(detail),
+      );
   }
 
   list(limit = 200): AuditEntry[] {
-    return (this.db.prepare('SELECT * FROM audit_log ORDER BY id DESC LIMIT ?').all(limit) as Record<string, unknown>[]).map((r) => ({
+    return (
+      this.db.prepare('SELECT * FROM audit_log ORDER BY id DESC LIMIT ?').all(limit) as Record<
+        string,
+        unknown
+      >[]
+    ).map((r) => ({
       id: Number(r.id),
       at: String(r.at),
       actor: String(r.actor),
