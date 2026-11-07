@@ -27,6 +27,7 @@ export async function makeHarness(opts: { shop?: ShopOptions; integration?: Reco
           spec: `${shop.baseUrl}/openapi.json`,
           auth: { type: 'bearer', token: '${env:TEST_SHOP_TOKEN}' },
           allowPrivateNetwork: true,
+          rateLimit: { requestsPerSecond: 10_000, burst: 10_000 },
           ...opts.integration,
         },
       ],

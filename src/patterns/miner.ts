@@ -101,27 +101,58 @@ export function bindCalls(episode: TraceRecord[]): EpisodeCall[] {
   for (let j = 0; j < calls.length; j++) {
     const cj = calls[j]!;
     for (const [argPath, hash] of Object.entries(cj.trace.argFingerprints)) {
-      let bound: Binding | undefined;
-      for (let i = j - 1; i >= 0 && !bound; i--) {
-        const paths = calls[i]!.trace.resultFingerprints[hash];
-        if (paths?.length) bound = { type: 'output', from: i, path: pickPath(paths) };
+      // Bind to the value's origin: the earliest place it appeared (an
+      // earlier argument means the caller supplied it; an earlier result
+      // means a tool produced it). Later echoes of the same id, such as
+      // items carrying their orderId, are not origins. Equal values can be
+      // coincidences, so a name match (orderId <- orders[*].id) outranks
+      // an unrelated field, and voting across episodes removes the rest.
+      let best: { b: Binding; rank: number } | undefined;
+      for (let i = 0; i < j; i++) {
+        const ci = calls[i]!.trace;
+        const fromArg = Object.keys(ci.argFingerprints).find((k) => ci.argFingerprints[k] === hash);
+        if (fromArg) {
+          const rank = (nameAffinity(argPath, fromArg, ci.tool) >= 3 ? 1000 : 0) - i * 2;
+          if (!best || rank > best.rank) best = { b: { type: 'shared', from: i, fromArg }, rank };
+        }
+        const paths = ci.resultFingerprints[hash];
+        if (paths?.length) {
+          const path = pickPath(paths, argPath);
+          const rank = (nameAffinity(argPath, path, ci.tool) >= 3 ? 1000 : 0) - i * 2 - 1;
+          if (!best || rank > best.rank) best = { b: { type: 'output', from: i, path }, rank };
+        }
       }
-      for (let i = j - 1; i >= 0 && !bound; i--) {
-        const prior = calls[i]!.trace.argFingerprints;
-        const fromArg = Object.keys(prior).find((k) => prior[k] === hash);
-        if (fromArg) bound = { type: 'shared', from: i, fromArg };
-      }
-      if (bound) cj.bindings.set(argPath, bound);
+      if (best) cj.bindings.set(argPath, best.b);
     }
   }
   return calls;
 }
 
-/** Prefer the shortest, most "id-like" path when a value appears in several places. */
-function pickPath(paths: string[]): string {
-  return [...paths].sort((a, b) => score(a) - score(b))[0]!;
+function lastSegment(path: string): string {
+  const seg = path.split(/[.[\]*]+/).filter(Boolean);
+  return (seg[seg.length - 1] ?? '').toLowerCase();
+}
+
+/** orderId <- orders[*].id or order.id or orderId; userId <- user.id, etc. */
+function nameAffinity(argPath: string, sourcePath: string, sourceTool: string): number {
+  const arg = lastSegment(argPath);
+  const field = lastSegment(sourcePath);
+  if (arg === field) return 4;
+  if (field === 'id' && arg.endsWith('id')) {
+    const entity = arg.slice(0, -2);
+    if (entity && sourceTool.toLowerCase().includes(entity)) return 3;
+    return 1;
+  }
+  return 0;
+}
+
+/** When a value appears at several paths, prefer the one named like the argument. */
+function pickPath(paths: string[], argPath: string): string {
+  const arg = lastSegment(argPath);
+  return [...paths].sort((a, b) => score(b) - score(a))[0]!;
   function score(p: string): number {
-    return p.length - (/(^|\.)id$/i.test(p) ? 100 : 0);
+    const f = lastSegment(p);
+    return (f === arg ? 100 : 0) + (f === 'id' ? 50 : 0) - p.length;
   }
 }
 
