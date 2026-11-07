@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { CallContext, JsonObject, ToolCallResult, ToolDefinition } from '../core/types.js';
 import type { Fingerprinter, Redactor } from '../security/redact.js';
-import type { TraceStore } from './trace-store.js';
+import type { TraceRecord, TraceStore } from './trace-store.js';
 
 export interface ObserverOptions {
   captureArguments: 'redacted' | 'none';
   /** Called after every record; used by the dashboard's live view. */
-  onTrace?: (id: string) => void;
+  onTrace?: (record: TraceRecord) => void;
 }
 
 /**
@@ -56,7 +56,7 @@ export class UsageObserver {
     const durationMs = performance.now() - t0;
     try {
       const serialized = result.data === undefined ? '' : JSON.stringify(result.data);
-      this.store.insert({
+      const record: TraceRecord = {
         id,
         sessionId: ctx.sessionId,
         parentId: ctx.parentCallId ?? null,
@@ -77,8 +77,9 @@ export class UsageObserver {
           ? this.redactPaths(this.fingerprinter.resultFingerprints(result.data))
           : {},
         resultBytes: Buffer.byteLength(serialized),
-      });
-      this.opts.onTrace?.(id);
+      };
+      this.store.insert(record);
+      this.opts.onTrace?.(record);
     } catch (err) {
       process.stderr.write(`[toolsmith] failed to record trace: ${(err as Error).message}\n`);
     }

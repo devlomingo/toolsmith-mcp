@@ -156,6 +156,16 @@ export const ConfigSchema = z.object({
     .default({ maxSteps: 20, maxFanOut: 50, concurrency: 8, timeoutMs: 60_000 }),
   /** Expose toolsmith's own meta tools (capability requests) to agents. */
   metaTools: z.boolean().default(true),
+  /** OpenTelemetry export of tool-call spans (OTLP/HTTP JSON). Off unless an endpoint is set. */
+  telemetry: z
+    .object({
+      otlpEndpoint: z.string().url().optional(),
+      headers: z.record(z.string(), z.string()).default({}),
+      serviceName: z.string().default('toolsmith-mcp'),
+      /** Export redacted tool arguments as span attributes. Results are never exported. */
+      exportArguments: z.boolean().default(false),
+    })
+    .default({ headers: {}, serviceName: 'toolsmith-mcp', exportArguments: false }),
   /** Which tools clients see and may call (per client in server.clients). */
   exposure: z.lazy(() => ExposureSchema).default({ tools: [], list: 'all', pinned: [] }),
 });

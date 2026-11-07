@@ -14,6 +14,8 @@ import { evaluateComposite, evaluateIntegration } from './evaluator/evaluator.js
 import { CallApprovals } from './gateway/approvals.js';
 import { Catalog, Dispatcher, type BuiltinTool } from './gateway/gateway.js';
 import { UsageObserver } from './observer/observer.js';
+import { OtlpExporter } from './observer/otel.js';
+import { resolveEnvRefs } from './security/secrets.js';
 import { TraceStore } from './observer/trace-store.js';
 import { endpointsToOpenApi, parseEndpointText } from './openapi/endpoints.js';
 import { importOpenApi } from './openapi/import.js';
@@ -57,6 +59,7 @@ export class Toolsmith {
   readonly dispatcher: Dispatcher;
   readonly discovery: DiscoveryEngine;
   private readonly observer: UsageObserver;
+  readonly otel?: OtlpExporter;
   private changeListeners = new Set<() => void>();
   private lastRevision = -1;
   private pollTimer?: NodeJS.Timeout;
@@ -72,12 +75,23 @@ export class Toolsmith {
     this.traces = new TraceStore(this.db);
     this.audit = new AuditLog(this.db);
     this.approvals = new CallApprovals(this.db, this.redactor);
+    if (cfg.telemetry.otlpEndpoint) {
+      this.otel = new OtlpExporter({
+        endpoint: cfg.telemetry.otlpEndpoint,
+        headers: Object.fromEntries(
+          Object.entries(cfg.telemetry.headers).map(([k, v]) => [k, resolveEnvRefs(v)]),
+        ),
+        serviceName: cfg.telemetry.serviceName,
+        exportArguments: cfg.telemetry.exportArguments,
+      });
+    }
     this.observer = new UsageObserver(
       this.traces,
       this.redactor,
       new Fingerprinter(this.fingerprintKey()),
       {
         captureArguments: cfg.traces.captureArguments,
+        onTrace: (r) => this.otel?.record(r),
       },
     );
     this.upstreams = new UpstreamManager(() => this.refresh(), this.redactor);
@@ -122,6 +136,7 @@ export class Toolsmith {
 
   async close(): Promise<void> {
     if (this.pollTimer) clearInterval(this.pollTimer);
+    await this.otel?.close();
     await this.upstreams.closeAll();
     this.db.close();
   }
