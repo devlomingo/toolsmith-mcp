@@ -47,7 +47,7 @@ describe('in-client approval through elicitation (opt-in)', () => {
       );
       const r = await yes.c.callTool({ name: 'shop__deleteProduct', arguments: { id: 3 } });
       expect(r.isError).toBeFalsy();
-      expect(yes.prompts[0]).toMatch(/Allow ONE call to shop__deleteProduct with \{"id":3\}/);
+      expect(yes.prompts[0]).toMatch(/Allow ONE call to shop__deleteProduct\?[\s\S]*"id": 3/);
       expect(h.shop.products.some((p) => p.id === 3)).toBe(false);
       expect(h.app.audit.list().some((a) => a.actor === 'human:client-elicitation')).toBe(true);
 
