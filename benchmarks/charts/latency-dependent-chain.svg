@@ -11,24 +11,24 @@
 <rect class="s1" x="20" y="52" width="12" height="12" rx="3"/><text class="leg" x="38" y="62">Sequential agent (1 call at a time)</text><rect class="s2" x="20" y="70" width="12" height="12" rx="3"/><text class="leg" x="38" y="80">Composite tool (1 call)</text>
 <line class="grid" x1="280" x2="280" y1="90" y2="276"/><text class="tick" x="280" y="292" text-anchor="middle">0</text><line class="grid" x1="382.5" x2="382.5" y1="90" y2="276"/><text class="tick" x="382.5" y="292" text-anchor="middle">50</text><line class="grid" x1="485" x2="485" y1="90" y2="276"/><text class="tick" x="485" y="292" text-anchor="middle">100</text><line class="grid" x1="587.5" x2="587.5" y1="90" y2="276"/><text class="tick" x="587.5" y="292" text-anchor="middle">150</text><line class="grid" x1="690" x2="690" y1="90" y2="276"/><text class="tick" x="690" y="292" text-anchor="middle">200</text>
 <text class="lbl" x="270" y="115" text-anchor="end">API latency 0 ms</text>
-<path class="s1" d="M280,96 h0 a3.7515000000000214,3.7515000000000214 0 0 1 3.7515000000000214,3.7515000000000214 v6.496999999999957 a3.7515000000000214,3.7515000000000214 0 0 1 -3.7515000000000214,3.7515000000000214 h-0 z"><title>API latency 0 ms — Sequential agent (1 call at a time): 1.8 ms (p50)</title></path>
-<text class="val" x="289.7515" y="107">1.8</text>
-<path class="s2" d="M280,112 h0 a2.132000000000005,2.132000000000005 0 0 1 2.132000000000005,2.132000000000005 v9.73599999999999 a2.132000000000005,2.132000000000005 0 0 1 -2.132000000000005,2.132000000000005 h-0 z"><title>API latency 0 ms — Composite tool (1 call): 1 ms (p50)</title></path>
-<text class="val" x="288.132" y="123">1</text>
+<path class="s1" d="M280,96 h0 a3.9769999999999754,3.9769999999999754 0 0 1 3.9769999999999754,3.9769999999999754 v6.046000000000049 a3.9769999999999754,3.9769999999999754 0 0 1 -3.9769999999999754,3.9769999999999754 h-0 z"><title>API latency 0 ms — Sequential agent (1 call at a time): 1.9 ms (p50)</title></path>
+<text class="val" x="289.977" y="107">1.9</text>
+<path class="s2" d="M280,112 h0 a2.4189999999999827,2.4189999999999827 0 0 1 2.4189999999999827,2.4189999999999827 v9.162000000000035 a2.4189999999999827,2.4189999999999827 0 0 1 -2.4189999999999827,2.4189999999999827 h-0 z"><title>API latency 0 ms — Composite tool (1 call): 1.2 ms (p50)</title></path>
+<text class="val" x="288.419" y="123">1.2</text>
 <text class="lbl" x="270" y="159" text-anchor="end">API latency 10 ms</text>
-<path class="s1" d="M280,140 h88.80349999999999 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-88.80349999999999 z"><title>API latency 10 ms — Sequential agent (1 call at a time): 45.3 ms (p50)</title></path>
-<text class="val" x="378.8035" y="151">45.3</text>
-<path class="s2" d="M280,156 h82.24349999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-82.24349999999998 z"><title>API latency 10 ms — Composite tool (1 call): 42.1 ms (p50)</title></path>
-<text class="val" x="372.2435" y="167">42.1</text>
+<path class="s1" d="M280,140 h87.69650000000001 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-87.69650000000001 z"><title>API latency 10 ms — Sequential agent (1 call at a time): 44.7 ms (p50)</title></path>
+<text class="val" x="377.6965" y="151">44.7</text>
+<path class="s2" d="M280,156 h82.61250000000001 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-82.61250000000001 z"><title>API latency 10 ms — Composite tool (1 call): 42.3 ms (p50)</title></path>
+<text class="val" x="372.6125" y="167">42.3</text>
 <text class="lbl" x="270" y="203" text-anchor="end">API latency 25 ms</text>
-<path class="s1" d="M280,184 h187.34699999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-187.34699999999998 z"><title>API latency 25 ms — Sequential agent (1 call at a time): 93.3 ms (p50)</title></path>
-<text class="val" x="477.347" y="195">93.3</text>
-<path class="s2" d="M280,200 h178.901 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-178.901 z"><title>API latency 25 ms — Composite tool (1 call): 89.2 ms (p50)</title></path>
-<text class="val" x="468.901" y="211">89.2</text>
+<path class="s1" d="M280,184 h186.30150000000003 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-186.30150000000003 z"><title>API latency 25 ms — Sequential agent (1 call at a time): 92.8 ms (p50)</title></path>
+<text class="val" x="476.30150000000003" y="195">92.8</text>
+<path class="s2" d="M280,200 h177.507 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-177.507 z"><title>API latency 25 ms — Composite tool (1 call): 88.5 ms (p50)</title></path>
+<text class="val" x="467.507" y="211">88.5</text>
 <text class="lbl" x="270" y="247" text-anchor="end">API latency 50 ms</text>
-<path class="s1" d="M280,228 h347.0625 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-347.0625 z"><title>API latency 50 ms — Sequential agent (1 call at a time): 171 ms (p50)</title></path>
-<text class="val" x="637.0625" y="239">171</text>
-<path class="s2" d="M280,244 h336.587 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-336.587 z"><title>API latency 50 ms — Composite tool (1 call): 166 ms (p50)</title></path>
-<text class="val" x="626.587" y="255">166</text>
+<path class="s1" d="M280,228 h347.49300000000005 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-347.49300000000005 z"><title>API latency 50 ms — Sequential agent (1 call at a time): 171 ms (p50)</title></path>
+<text class="val" x="637.493" y="239">171</text>
+<path class="s2" d="M280,244 h338.5345 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-338.5345 z"><title>API latency 50 ms — Composite tool (1 call): 167 ms (p50)</title></path>
+<text class="val" x="628.5345" y="255">167</text>
 <text class="tick" x="20" y="292">ms (p50)</text>
 </svg>
