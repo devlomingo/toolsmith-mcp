@@ -1,5 +1,6 @@
 import type { Config, IntegrationConfig } from '../config/config.js';
 import { CompositeExecutor } from '../composite/executor.js';
+import { COMPOSITE_OUTPUT_SCHEMA } from '../composite/generator.js';
 import { maxAccess, type CompositeDef } from '../composite/plan.js';
 import { errorMessage } from '../core/errors.js';
 import { toolName } from '../core/naming.js';
@@ -183,7 +184,7 @@ export class Catalog {
           name: c.def.toolName,
           description: c.def.description,
           inputSchema: c.def.inputSchema,
-          outputSchema: c.def.outputSchema,
+          outputSchema: c.def.outputSchema ?? COMPOSITE_OUTPUT_SCHEMA,
           access: maxAccess(c.def.steps.map((s) => next.get(s.tool)!.def.access)),
           source: 'composite',
           artifactId: c.artifactId,

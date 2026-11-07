@@ -35,6 +35,14 @@ export interface SyntheticOptions {
   seed: number;
   /** Interleave loop bodies per item (agent style) or run them in blocks. */
   interleave?: boolean;
+  /** Probability of an unrelated call between two workflow steps. */
+  innerNoiseRate?: number;
+  /** Probability that a workflow run is abandoned after a random step. */
+  truncateRate?: number;
+  /** Draw ids from 1..N so values collide across calls (0 = unique ids). */
+  smallIdRange?: number;
+  /** Probability that a session is merged into the previous one (two agents sharing a session key, calls interleaved). */
+  mergeRate?: number;
 }
 
 export interface SyntheticResult {
@@ -86,7 +94,10 @@ export function generateTraces(opts: SyntheticOptions): SyntheticResult {
   const runs: Record<string, number> = {};
   let clock = 1_700_000_000_000;
   let nextId = 1_000_000;
-  const id = () => (nextId += 1 + Math.floor(rand() * 7));
+  const id = () =>
+    opts.smallIdRange
+      ? 1 + Math.floor(rand() * opts.smallIdRange)
+      : (nextId += 1 + Math.floor(rand() * 7));
 
   const record = (
     sessionId: string,
@@ -120,12 +131,13 @@ export function generateTraces(opts: SyntheticOptions): SyntheticResult {
 
   const noise = (sessionId: string) => {
     const tool = opts.noiseTools[Math.floor(rand() * opts.noiseTools.length)]!;
-    record(
-      sessionId,
-      tool,
-      { q: `n${Math.floor(rand() * 1e9)}` },
-      { value: Math.floor(rand() * 1e9) + 5_000_000_000 },
-    );
+    // With small ids, noise also carries colliding numeric values.
+    const q = opts.smallIdRange ? id() : `n${Math.floor(rand() * 1e9)}`;
+    const value = opts.smallIdRange ? id() : Math.floor(rand() * 1e9) + 5_000_000_000;
+    record(sessionId, tool, { q }, { value });
+  };
+  const inner = (sessionId: string) => {
+    if (opts.innerNoiseRate && rand() < opts.innerNoiseRate) noise(sessionId);
   };
 
   for (let s = 0; s < opts.sessions; s++) {
@@ -136,8 +148,12 @@ export function generateTraces(opts: SyntheticOptions): SyntheticResult {
       if (rand() < opts.noiseRate) noise(sessionId);
       const input = id();
       const outputs: unknown[] = [];
+      const stopAt =
+        opts.truncateRate && rand() < opts.truncateRate
+          ? 1 + Math.floor(rand() * (w.steps.length - 1))
+          : w.steps.length;
       let i = 0;
-      while (i < w.steps.length) {
+      while (i < stopAt) {
         const step = w.steps[i]!;
         if (typeof step.source.from === 'number' && step.source.each) {
           const src = step.source.from;
@@ -159,6 +175,7 @@ export function generateTraces(opts: SyntheticOptions): SyntheticResult {
             const result = { id: id(), parent: items[k]!.id, status: rand() < 0.5 ? 'a' : 'b' };
             record(sessionId, st.tool, { [st.arg]: items[k]!.id }, result);
             (groupOut[g] ??= []).push(result);
+            inner(sessionId);
           }
           for (const g of group) outputs[g] = groupOut[g] ?? [];
           if (rand() < opts.noiseRate / 2) noise(sessionId);
@@ -181,6 +198,7 @@ export function generateTraces(opts: SyntheticOptions): SyntheticResult {
         record(sessionId, step.tool, { [step.arg]: value }, result);
         outputs[i] = result;
         i++;
+        if (i < stopAt) inner(sessionId);
       }
       if (rand() < opts.noiseRate) noise(sessionId);
     } else {
@@ -188,6 +206,26 @@ export function generateTraces(opts: SyntheticOptions): SyntheticResult {
       for (let k = 0; k < n; k++) noise(sessionId);
     }
     clock += 10 * 60_000; // gap between sessions
+  }
+  if (opts.mergeRate) {
+    // Two agents behind one session key: shift a session onto the previous
+    // one's timeline so their calls interleave, and give it the same key.
+    const bySession = new Map<string, TraceRecord[]>();
+    for (const t of traces)
+      (bySession.get(t.sessionId) ?? bySession.set(t.sessionId, []).get(t.sessionId)!).push(t);
+    const keys = [...bySession.keys()];
+    for (let k = 1; k < keys.length; k++) {
+      if (rand() >= opts.mergeRate) continue;
+      const prev = bySession.get(keys[k - 1]!)!;
+      const cur = bySession.get(keys[k]!)!;
+      const shift = prev[0]!.startedAt + 700 - cur[0]!.startedAt;
+      for (const t of cur) {
+        t.startedAt += shift;
+        t.sessionId = prev[0]!.sessionId;
+      }
+      k++; // do not chain merges
+    }
+    traces.sort((a, b) => a.startedAt - b.startedAt);
   }
   return { traces, truth: opts.workflows.map(expectedSignature), runsPerWorkflow: runs };
 }

@@ -21,11 +21,23 @@ export interface MinerOptions {
   minConfidence: number;
   maxLength: number;
   episodeGapMs: number;
+  /**
+   * 'dataflow' (default) splits each episode into connected components of
+   * the data-flow graph, so unrelated calls and interleaved agents sharing a
+   * session do not break or merge workflows. 'contiguous' mines the raw
+   * call order (kept for comparison in benchmarks).
+   */
+  segmentation?: 'dataflow' | 'contiguous';
+  /**
+   * Drop pattern P when a longer pattern containing it accounts for at least
+   * this share of P's support (P is then mostly a prefix of abandoned runs).
+   */
+  closedRatio?: number;
 }
 
 export type Binding =
-  | { type: 'output'; from: number; path: string }
-  | { type: 'shared'; from: number; fromArg: string };
+  | { type: 'output'; from: number; path: string; tier: number }
+  | { type: 'shared'; from: number; fromArg: string; tier: number };
 
 interface EpisodeCall {
   trace: TraceRecord;
@@ -118,14 +130,18 @@ export function bindCalls(episode: TraceRecord[]): EpisodeCall[] {
         const ci = calls[i]!.trace;
         const fromArg = Object.keys(ci.argFingerprints).find((k) => ci.argFingerprints[k] === hash);
         if (fromArg) {
-          const rank = tier(nameAffinity(argPath, fromArg, ci.tool)) * 1000 - i * 2;
-          if (!best || rank > best.rank) best = { b: { type: 'shared', from: i, fromArg }, rank };
+          const t = tier(nameAffinity(argPath, fromArg, ci.tool));
+          const rank = t * 1_000_000 - i * 2;
+          if (!best || rank > best.rank)
+            best = { b: { type: 'shared', from: i, fromArg, tier: t }, rank };
         }
         const paths = ci.resultFingerprints[hash];
         if (paths?.length) {
           const path = pickPath(paths, argPath);
-          const rank = tier(nameAffinity(argPath, path, ci.tool)) * 1000 - i * 2 - 1;
-          if (!best || rank > best.rank) best = { b: { type: 'output', from: i, path }, rank };
+          const t = tier(nameAffinity(argPath, path, ci.tool));
+          const rank = t * 1_000_000 - i * 2 - 1;
+          if (!best || rank > best.rank)
+            best = { b: { type: 'output', from: i, path, tier: t }, rank };
         }
       }
       if (best) cj.bindings.set(argPath, best.b);
@@ -242,10 +258,13 @@ interface EpisodeModel {
 }
 
 export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern[] {
-  const episodes: EpisodeModel[] = segmentEpisodes(traces, opts.episodeGapMs).map((ep) => {
-    const calls = bindCalls(ep);
-    return { calls, ...toElements(calls) };
-  });
+  const segmentation = opts.segmentation ?? 'dataflow';
+  const episodes: EpisodeModel[] = segmentEpisodes(traces, opts.episodeGapMs)
+    .flatMap((ep) => (segmentation === 'dataflow' ? dataflowComponents(ep) : [ep]))
+    .map((ep) => {
+      const calls = bindCalls(ep);
+      return { calls, ...toElements(calls) };
+    });
 
   const grams = new Map<string, Occurrence[]>();
   const firstTokenEpisodes = new Map<string, Set<number>>();
@@ -290,10 +309,32 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
           q !== p &&
           q.elements.length > p.elements.length &&
           containsContiguous(q.signature, p.signature) &&
-          q.support >= 0.9 * p.support,
+          q.support >= (opts.closedRatio ?? 0.6) * p.support,
       ),
   );
   return kept.sort((a, b) => b.support * b.elements.length - a.support * a.elements.length);
+}
+
+/**
+ * Split an episode into groups of calls linked by data flow (union-find over
+ * argument bindings). Each group keeps time order; singletons are dropped
+ * because a one-call "workflow" has nothing to compose.
+ */
+export function dataflowComponents(episode: TraceRecord[]): TraceRecord[][] {
+  const calls = bindCalls(episode);
+  const parent = calls.map((_, i) => i);
+  const find = (x: number): number => (parent[x] === x ? x : (parent[x] = find(parent[x]!)));
+  calls.forEach((c, j) => {
+    // Only links with naming evidence (orderId <- id, userId <- userId) join
+    // groups; a bare value match is too often a coincidence between small ids.
+    for (const b of c.bindings.values()) if (b.tier >= 1) parent[find(j)] = find(b.from);
+  });
+  const groups = new Map<number, TraceRecord[]>();
+  calls.forEach((c, i) => {
+    const root = find(i);
+    (groups.get(root) ?? groups.set(root, []).get(root)!).push(c.trace);
+  });
+  return [...groups.values()].filter((g) => g.length >= 2);
 }
 
 function containsContiguous(longer: string, shorter: string): boolean {

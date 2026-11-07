@@ -1,0 +1,123 @@
+{
+  "benchmark": "scalability",
+  "generatedAt": "2026-11-07T20:09:57.667Z",
+  "environment": {
+    "toolsmith": "0.1.0",
+    "commit": "5c1599e",
+    "node": "v22.13.1",
+    "platform": "darwin 27.2.0 arm64",
+    "cpu": "Apple M1 Pro",
+    "cores": 10,
+    "memoryGb": 17,
+    "ci": false,
+    "mcpSdk": {
+      "server": "2.4.0",
+      "client": "2.4.0"
+    }
+  },
+  "notes": [
+    "Single process on one machine; the demo API adds 5 ms latency per request in the throughput test. Loopback networking only."
+  ],
+  "mining": [
+    {
+      "sessions": 200,
+      "traces": 872,
+      "ms": {
+        "n": 1,
+        "mean": 5.5,
+        "sd": 0,
+        "min": 5.5,
+        "p50": 5.5,
+        "p95": 5.5,
+        "p99": 5.5,
+        "max": 5.5
+      }
+    },
+    {
+      "sessions": 1000,
+      "traces": 4390,
+      "ms": {
+        "n": 1,
+        "mean": 19.08,
+        "sd": 0,
+        "min": 19.08,
+        "p50": 19.08,
+        "p95": 19.08,
+        "p99": 19.08,
+        "max": 19.08
+      }
+    }
+  ],
+  "throughput": [
+    {
+      "concurrency": 1,
+      "calls": 20,
+      "errors": 0,
+      "callsPerSec": 106,
+      "latency": {
+        "n": 20,
+        "mean": 9.39,
+        "sd": 3.31,
+        "min": 6.79,
+        "p50": 8.39,
+        "p95": 11.65,
+        "p99": 23.04,
+        "max": 23.04
+      },
+      "cpuMs": 120,
+      "rssMb": 161
+    },
+    {
+      "concurrency": 10,
+      "calls": 200,
+      "errors": 0,
+      "callsPerSec": 629,
+      "latency": {
+        "n": 200,
+        "mean": 15.72,
+        "sd": 2.45,
+        "min": 10.32,
+        "p50": 15.6,
+        "p95": 19.48,
+        "p99": 25.13,
+        "max": 26.1
+      },
+      "cpuMs": 309,
+      "rssMb": 185
+    }
+  ],
+  "catalog": [
+    {
+      "operations": 50,
+      "tools": 51,
+      "importMs": 51,
+      "catalogRebuildMs": 0.9,
+      "listToolsMs": {
+        "n": 5,
+        "mean": 2.03,
+        "sd": 1.07,
+        "min": 1.42,
+        "p50": 1.52,
+        "p95": 4.17,
+        "p99": 4.17,
+        "max": 4.17
+      }
+    },
+    {
+      "operations": 500,
+      "tools": 501,
+      "importMs": 78,
+      "catalogRebuildMs": 4.4,
+      "listToolsMs": {
+        "n": 5,
+        "mean": 5.66,
+        "sd": 0.78,
+        "min": 4.66,
+        "p50": 5.5,
+        "p95": 7.05,
+        "p99": 7.05,
+        "max": 7.05
+      }
+    }
+  ]
+}

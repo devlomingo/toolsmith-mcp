@@ -1,0 +1,271 @@
+{
+  "benchmark": "performance",
+  "generatedAt": "2026-11-07T20:09:23.021Z",
+  "environment": {
+    "toolsmith": "0.1.0",
+    "commit": "5c1599e",
+    "node": "v22.13.1",
+    "platform": "darwin 27.2.0 arm64",
+    "cpu": "Apple M1 Pro",
+    "cores": 10,
+    "memoryGb": 17,
+    "ci": false,
+    "mcpSdk": {
+      "server": "2.4.0",
+      "client": "2.4.0"
+    }
+  },
+  "iterations": 8,
+  "warmup": 2,
+  "notes": [
+    "Latency is measured at the MCP client: one workflow run, end to end, over Streamable HTTP on loopback (protocol 2026-07-28).",
+    "No LLM is involved. Agent reasoning time between tool calls is NOT included, so real agents see larger absolute savings per avoided round-trip; this benchmark does not measure that and makes no claim about it.",
+    "LLM requests and tokens are not measured. resultBytesPerRun is the size of tool results returned to the client, not a token count.",
+    "apiRequests is counted by the demo API server itself.",
+    "correctness = fraction of runs whose result deep-equals a sequential reference run for the same input."
+  ],
+  "scenarios": [
+    {
+      "name": "order-details @ 0 ms API latency",
+      "scenario": "order-details",
+      "apiLatencyMs": 0,
+      "description": "Customer + orders + items and payments of every order (fan-out, parallelizable)",
+      "variants": [
+        {
+          "name": "sequential",
+          "latency": {
+            "n": 8,
+            "mean": 9.3,
+            "sd": 1.21,
+            "min": 7.41,
+            "p50": 9.19,
+            "p95": 10.87,
+            "p99": 10.87,
+            "max": 10.87
+          },
+          "mcpCalls": 8,
+          "apiRequests": 8,
+          "resultBytesPerRun": 1828,
+          "successRate": 1,
+          "correctness": 1,
+          "errors": 0,
+          "cpuMsPerRun": 35.25,
+          "peakRssMb": 152
+        },
+        {
+          "name": "parallel-client",
+          "latency": {
+            "n": 8,
+            "mean": 6.52,
+            "sd": 0.88,
+            "min": 5.57,
+            "p50": 6.23,
+            "p95": 8.03,
+            "p99": 8.03,
+            "max": 8.03
+          },
+          "mcpCalls": 8,
+          "apiRequests": 8,
+          "resultBytesPerRun": 1828,
+          "successRate": 1,
+          "correctness": 1,
+          "errors": 0,
+          "cpuMsPerRun": 23.71,
+          "peakRssMb": 162
+        },
+        {
+          "name": "composite",
+          "latency": {
+            "n": 8,
+            "mean": 2.68,
+            "sd": 0.26,
+            "min": 2.23,
+            "p50": 2.74,
+            "p95": 3,
+            "p99": 3,
+            "max": 3
+          },
+          "mcpCalls": 1,
+          "apiRequests": 8,
+          "resultBytesPerRun": 2196,
+          "successRate": 1,
+          "correctness": 1,
+          "errors": 0,
+          "cpuMsPerRun": 16.8,
+          "peakRssMb": 166
+        }
+      ]
+    },
+    {
+      "name": "dependent-chain @ 0 ms API latency",
+      "scenario": "dependent-chain",
+      "apiLatencyMs": 0,
+      "description": "Order → its customer → that customer’s orders (strictly sequential, nothing to parallelize)",
+      "variants": [
+        {
+          "name": "sequential",
+          "latency": {
+            "n": 8,
+            "mean": 2.76,
+            "sd": 0.35,
+            "min": 2.38,
+            "p50": 2.63,
+            "p95": 3.49,
+            "p99": 3.49,
+            "max": 3.49
+          },
+          "mcpCalls": 3,
+          "apiRequests": 3,
+          "resultBytesPerRun": 730,
+          "successRate": 1,
+          "correctness": 1,
+          "errors": 0,
+          "cpuMsPerRun": 10.09,
+          "peakRssMb": 171
+        },
+        {
+          "name": "composite",
+          "latency": {
+            "n": 8,
+            "mean": 1.81,
+            "sd": 0.61,
+            "min": 1.42,
+            "p50": 1.55,
+            "p95": 3.34,
+            "p99": 3.34,
+            "max": 3.34
+          },
+          "mcpCalls": 1,
+          "apiRequests": 3,
+          "resultBytesPerRun": 955,
+          "successRate": 1,
+          "correctness": 1,
+          "errors": 0,
+          "cpuMsPerRun": 7,
+          "peakRssMb": 173
+        }
+      ]
+    },
+    {
+      "name": "order-details @ 25 ms API latency",
+      "scenario": "order-details",
+      "apiLatencyMs": 25,
+      "description": "Customer + orders + items and payments of every order (fan-out, parallelizable)",
+      "variants": [
+        {
+          "name": "sequential",
+          "latency": {
+            "n": 8,
+            "mean": 259.34,
+            "sd": 13.54,
+            "min": 238.17,
+            "p50": 254.31,
+            "p95": 288.18,
+            "p99": 288.18,
+            "max": 288.18
+          },
+          "mcpCalls": 8,
+          "apiRequests": 8,
+          "resultBytesPerRun": 1828,
+          "successRate": 1,
+          "correctness": 1,
+          "errors": 0,
+          "cpuMsPerRun": 106.04,
+          "peakRssMb": 191
+        },
+        {
+          "name": "parallel-client",
+          "latency": {
+            "n": 8,
+            "mean": 69.28,
+            "sd": 4.09,
+            "min": 63.07,
+            "p50": 69.53,
+            "p95": 74.45,
+            "p99": 74.45,
+            "max": 74.45
+          },
+          "mcpCalls": 8,
+          "apiRequests": 8,
+          "resultBytesPerRun": 1828,
+          "successRate": 1,
+          "correctness": 1,
+          "errors": 0,
+          "cpuMsPerRun": 66.52,
+          "peakRssMb": 200
+        },
+        {
+          "name": "composite",
+          "latency": {
+            "n": 8,
+            "mean": 64.01,
+            "sd": 3.86,
+            "min": 60.64,
+            "p50": 62.25,
+            "p95": 73.25,
+            "p99": 73.25,
+            "max": 73.25
+          },
+          "mcpCalls": 1,
+          "apiRequests": 8,
+          "resultBytesPerRun": 2196,
+          "successRate": 1,
+          "correctness": 1,
+          "errors": 0,
+          "cpuMsPerRun": 60.5,
+          "peakRssMb": 205
+        }
+      ]
+    },
+    {
+      "name": "dependent-chain @ 25 ms API latency",
+      "scenario": "dependent-chain",
+      "apiLatencyMs": 25,
+      "description": "Order → its customer → that customer’s orders (strictly sequential, nothing to parallelize)",
+      "variants": [
+        {
+          "name": "sequential",
+          "latency": {
+            "n": 8,
+            "mean": 91.27,
+            "sd": 3.93,
+            "min": 83.14,
+            "p50": 90.97,
+            "p95": 96.54,
+            "p99": 96.54,
+            "max": 96.54
+          },
+          "mcpCalls": 3,
+          "apiRequests": 3,
+          "resultBytesPerRun": 730,
+          "successRate": 1,
+          "correctness": 1,
+          "errors": 0,
+          "cpuMsPerRun": 35.49,
+          "peakRssMb": 209
+        },
+        {
+          "name": "composite",
+          "latency": {
+            "n": 8,
+            "mean": 89.03,
+            "sd": 3.84,
+            "min": 82.93,
+            "p50": 87.29,
+            "p95": 96.79,
+            "p99": 96.79,
+            "max": 96.79
+          },
+          "mcpCalls": 1,
+          "apiRequests": 3,
+          "resultBytesPerRun": 955,
+          "successRate": 1,
+          "correctness": 1,
+          "errors": 0,
+          "cpuMsPerRun": 31.1,
+          "peakRssMb": 212
+        }
+      ]
+    }
+  ]
+}
