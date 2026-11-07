@@ -1,0 +1,159 @@
+{
+  "benchmark": "load",
+  "generatedAt": "2026-11-07T22:10:39.603Z",
+  "environment": {
+    "toolsmith": "0.1.0",
+    "commit": "02df403",
+    "node": "v22.13.1",
+    "platform": "darwin 27.2.0 arm64",
+    "cpu": "Apple M1 Pro",
+    "cores": 10,
+    "memoryGb": 17,
+    "ci": false,
+    "mcpSdk": {
+      "server": "2.4.0",
+      "client": "2.4.0"
+    }
+  },
+  "apiLatencyMs": 20,
+  "runsPerAgent": 3,
+  "notes": [
+    "Each agent runs the order-details workflow 3 times back to back; all agents start together. The demo API adds 20 ms per request.",
+    "Clients, gateway and demo API share one Node process on one machine, so CPU and memory figures cover all three and throughput is bounded by that single process.",
+    "No LLM is involved; agent reasoning time between calls is excluded."
+  ],
+  "rows": [
+    {
+      "concurrency": 1,
+      "variant": "sequential",
+      "runs": 3,
+      "errors": 0,
+      "workflowsPerSec": 4.7,
+      "latency": {
+        "n": 3,
+        "mean": 214.09,
+        "sd": 7.74,
+        "min": 205.6,
+        "p50": 212.34,
+        "p95": 224.33,
+        "p99": 224.33,
+        "max": 224.33
+      },
+      "mcpCallsPerRun": 8,
+      "mcpRequestsPerSec": 37,
+      "apiRequestsPerRun": 8,
+      "cpuSecondsPerRun": 0.0599,
+      "rssMb": 155
+    },
+    {
+      "concurrency": 1,
+      "variant": "parallel-client",
+      "runs": 3,
+      "errors": 0,
+      "workflowsPerSec": 16.6,
+      "latency": {
+        "n": 3,
+        "mean": 60.3,
+        "sd": 1.5,
+        "min": 58.28,
+        "p50": 60.75,
+        "p95": 61.87,
+        "p99": 61.87,
+        "max": 61.87
+      },
+      "mcpCallsPerRun": 8,
+      "mcpRequestsPerSec": 133,
+      "apiRequestsPerRun": 8,
+      "cpuSecondsPerRun": 0.0221,
+      "rssMb": 156
+    },
+    {
+      "concurrency": 1,
+      "variant": "composite",
+      "runs": 3,
+      "errors": 0,
+      "workflowsPerSec": 19.6,
+      "latency": {
+        "n": 3,
+        "mean": 50.91,
+        "sd": 2.02,
+        "min": 48.35,
+        "p50": 51.09,
+        "p95": 53.29,
+        "p99": 53.29,
+        "max": 53.29
+      },
+      "mcpCallsPerRun": 1,
+      "mcpRequestsPerSec": 20,
+      "apiRequestsPerRun": 8,
+      "cpuSecondsPerRun": 0.0149,
+      "rssMb": 157
+    },
+    {
+      "concurrency": 10,
+      "variant": "sequential",
+      "runs": 30,
+      "errors": 0,
+      "workflowsPerSec": 40.9,
+      "latency": {
+        "n": 30,
+        "mean": 240.31,
+        "sd": 14.23,
+        "min": 218.11,
+        "p50": 237.39,
+        "p95": 259.78,
+        "p99": 260.01,
+        "max": 260.01
+      },
+      "mcpCallsPerRun": 8,
+      "mcpRequestsPerSec": 327,
+      "apiRequestsPerRun": 8,
+      "cpuSecondsPerRun": 0.0136,
+      "rssMb": 173
+    },
+    {
+      "concurrency": 10,
+      "variant": "parallel-client",
+      "runs": 30,
+      "errors": 0,
+      "workflowsPerSec": 130.3,
+      "latency": {
+        "n": 30,
+        "mean": 73.81,
+        "sd": 13.04,
+        "min": 56.02,
+        "p50": 70.21,
+        "p95": 99.53,
+        "p99": 104.38,
+        "max": 104.38
+      },
+      "mcpCallsPerRun": 8,
+      "mcpRequestsPerSec": 1042,
+      "apiRequestsPerRun": 8,
+      "cpuSecondsPerRun": 0.0133,
+      "rssMb": 176
+    },
+    {
+      "concurrency": 10,
+      "variant": "composite",
+      "runs": 30,
+      "errors": 0,
+      "workflowsPerSec": 147.4,
+      "latency": {
+        "n": 30,
+        "mean": 67.69,
+        "sd": 2.35,
+        "min": 63.51,
+        "p50": 68.29,
+        "p95": 71.01,
+        "p99": 73.14,
+        "max": 73.14
+      },
+      "mcpCallsPerRun": 1,
+      "mcpRequestsPerSec": 147,
+      "apiRequestsPerRun": 8,
+      "cpuSecondsPerRun": 0.0038,
+      "rssMb": 178
+    }
+  ]
+}

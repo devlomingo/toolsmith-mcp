@@ -19,7 +19,8 @@ const load = (name) => {
 const perf = load('performance');
 const pat = load('patterns');
 const scale = load('scalability');
-if (!perf && !pat && !scale) {
+const loadRes = load('load');
+if (!perf && !pat && !scale && !loadRes) {
   console.error('No results found. Run `npm run benchmark` first.');
   process.exit(1);
 }
@@ -109,7 +110,7 @@ const md = [];
 const charts = [];
 const fmtMs = (v) => (v >= 100 ? String(Math.round(v)) : String(Math.round(v * 10) / 10));
 md.push('# Benchmark report', '');
-const env = (perf ?? pat ?? scale).environment;
+const env = (perf ?? pat ?? scale ?? loadRes).environment;
 md.push(
   `Generated ${new Date().toISOString()} from the JSON files in \`benchmarks/results/\`. Nothing in this report is estimated or hand-edited.`,
   '',
@@ -169,6 +170,38 @@ if (perf) {
     }
     md.push('');
   }
+}
+
+if (loadRes) {
+  const label = { sequential: 'Sequential agents', 'parallel-client': 'Best-case parallel clients', composite: 'Composite tool' };
+  const variants = [...new Set(loadRes.rows.map((r) => r.variant))];
+  const conc = [...new Set(loadRes.rows.map((r) => r.concurrency))];
+  const get = (c, v) => loadRes.rows.find((r) => r.concurrency === c && r.variant === v);
+  const thr = groupedBars({
+    title: 'High traffic: workflows completed per second',
+    subtitle: `Concurrent agents running order-details; demo API ${loadRes.apiLatencyMs} ms per request`,
+    unit: 'workflows/s (higher is better)',
+    series: variants.map((v) => label[v] ?? v),
+    groups: conc.map((c) => ({ label: `${c} agent${c > 1 ? 's' : ''}`, values: variants.map((v) => get(c, v)?.workflowsPerSec ?? null) })),
+    fmt: (v) => String(Math.round(v * 10) / 10),
+  });
+  writeFileSync(join(CHARTS, 'load-throughput.svg'), thr);
+  const p95 = groupedBars({
+    title: 'High traffic: p95 workflow latency',
+    subtitle: 'Per-run latency at the MCP client while all agents run at once',
+    unit: 'ms, p95 (lower is better)',
+    series: variants.map((v) => label[v] ?? v),
+    groups: conc.map((c) => ({ label: `${c} agent${c > 1 ? 's' : ''}`, values: variants.map((v) => get(c, v)?.latency.p95 ?? null) })),
+    fmt: fmtMs,
+  });
+  writeFileSync(join(CHARTS, 'load-p95.svg'), p95);
+  charts.push('load-throughput.svg', 'load-p95.svg');
+  md.push('## High traffic', '');
+  for (const n of loadRes.notes) md.push(`- ${n}`);
+  md.push('', '![Throughput under load](../charts/load-throughput.svg)', '', '![p95 latency under load](../charts/load-p95.svg)', '');
+  md.push('| Agents | Variant | Workflows/s | p50 ms | p95 ms | p99 ms | MCP calls/run | MCP requests/s | API requests/run | Errors | CPU s/run (whole process) |', '|---|---|---|---|---|---|---|---|---|---|---|');
+  for (const r of loadRes.rows) md.push(`| ${r.concurrency} | ${r.variant} | ${r.workflowsPerSec} | ${r.latency.p50} | ${r.latency.p95} | ${r.latency.p99} | ${r.mcpCallsPerRun} | ${r.mcpRequestsPerSec} | ${r.apiRequestsPerRun} | ${r.errors} | ${r.cpuSecondsPerRun} |`);
+  md.push('');
 }
 
 if (pat) {
@@ -270,6 +303,6 @@ md.push(
 writeFileSync(join(REPORTS, 'REPORT.md'), `${md.join('\n')}\n`);
 writeFileSync(
   join(RESULTS, 'latest.json'),
-  `${JSON.stringify({ generatedAt: new Date().toISOString(), environment: env, performance: perf, patterns: pat, scalability: scale, charts }, null, 2)}\n`,
+  `${JSON.stringify({ generatedAt: new Date().toISOString(), environment: env, performance: perf, patterns: pat, scalability: scale, load: loadRes, charts }, null, 2)}\n`,
 );
 console.log(`Wrote benchmarks/reports/REPORT.md and ${charts.length} charts.`);

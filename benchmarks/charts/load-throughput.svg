@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 268" width="760" height="268" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+<title id="t">High traffic: workflows completed per second</title><desc id="d">Concurrent agents running order-details; demo API 20 ms per request</desc>
+<style>
+  .bg{fill:#fcfcfb}.ttl{fill:#1b1b1a;font-size:16px;font-weight:600}.sub,.tick,.leg{fill:#5f5e58;font-size:12px}.lbl{fill:#2f2e2b;font-size:12.5px}.val{fill:#2f2e2b;font-size:11.5px;font-variant-numeric:tabular-nums}
+  .grid{stroke:#e6e5e0;stroke-width:1}.s1{fill:#2a78d6}.s2{fill:#eb6834}.s3{fill:#1baf7a}
+  @media (prefers-color-scheme: dark){.bg{fill:#1a1a19}.ttl{fill:#f0efec}.sub,.tick,.leg{fill:#a9a89f}.lbl,.val{fill:#d9d8d0}.grid{stroke:#33332f}.s1{fill:#3987e5}.s2{fill:#d95926}.s3{fill:#199e70}}
+</style>
+<rect class="bg" width="100%" height="100%" rx="8"/>
+<text class="ttl" x="20" y="28">High traffic: workflows completed per second</text>
+<text class="sub" x="20" y="44">Concurrent agents running order-details; demo API 20 ms per request</text>
+<rect class="s1" x="20" y="52" width="12" height="12" rx="3"/><text class="leg" x="38" y="62">Sequential agents</text><rect class="s2" x="20" y="70" width="12" height="12" rx="3"/><text class="leg" x="38" y="80">Best-case parallel clients</text><rect class="s3" x="20" y="88" width="12" height="12" rx="3"/><text class="leg" x="38" y="98">Composite tool</text>
+<line class="grid" x1="280" x2="280" y1="108" y2="238"/><text class="tick" x="280" y="254" text-anchor="middle">0</text><line class="grid" x1="382.5" x2="382.5" y1="108" y2="238"/><text class="tick" x="382.5" y="254" text-anchor="middle">40</text><line class="grid" x1="485" x2="485" y1="108" y2="238"/><text class="tick" x="485" y="254" text-anchor="middle">80</text><line class="grid" x1="587.5" x2="587.5" y1="108" y2="238"/><text class="tick" x="587.5" y="254" text-anchor="middle">120</text><line class="grid" x1="690" x2="690" y1="108" y2="238"/><text class="tick" x="690" y="254" text-anchor="middle">160</text>
+<text class="lbl" x="270" y="141" text-anchor="end">1 agent</text>
+<path class="s1" d="M280,114 h8.043749999999989 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-8.043749999999989 z"><title>1 agent — Sequential agents: 4.7 workflows/s (higher is better)</title></path>
+<text class="val" x="298.04375" y="125">4.7</text>
+<path class="s2" d="M280,130 h38.53750000000002 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-38.53750000000002 z"><title>1 agent — Best-case parallel clients: 16.6 workflows/s (higher is better)</title></path>
+<text class="val" x="328.5375" y="141">16.6</text>
+<path class="s3" d="M280,146 h46.22500000000002 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-46.22500000000002 z"><title>1 agent — Composite tool: 19.6 workflows/s (higher is better)</title></path>
+<text class="val" x="336.225" y="157">19.6</text>
+<text class="lbl" x="270" y="201" text-anchor="end">10 agents</text>
+<path class="s1" d="M280,174 h100.80624999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-100.80624999999998 z"><title>10 agents — Sequential agents: 40.9 workflows/s (higher is better)</title></path>
+<text class="val" x="390.80625" y="185">40.9</text>
+<path class="s2" d="M280,190 h329.89374999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-329.89374999999995 z"><title>10 agents — Best-case parallel clients: 130.3 workflows/s (higher is better)</title></path>
+<text class="val" x="619.89375" y="201">130.3</text>
+<path class="s3" d="M280,206 h373.7125 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-373.7125 z"><title>10 agents — Composite tool: 147.4 workflows/s (higher is better)</title></path>
+<text class="val" x="663.7125" y="217">147.4</text>
+<text class="tick" x="20" y="254">workflows/s (higher is better)</text>
+</svg>

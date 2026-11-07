@@ -39,7 +39,8 @@
     "site:check": "node site/check-links.mjs",
     "prepublishOnly": "npm run build",
     "prepare": "npm run build",
-    "benchmark:check": "node benchmarks/scripts/check-regression.mjs"
+    "benchmark:check": "node benchmarks/scripts/check-regression.mjs",
+    "benchmark:load": "npm run build && node benchmarks/scripts/load.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",

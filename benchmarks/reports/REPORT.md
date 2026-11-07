@@ -1,6 +1,6 @@
 # Benchmark report
 
-Generated 2026-11-07T21:33:10.956Z from the JSON files in `benchmarks/results/`. Nothing in this report is estimated or hand-edited.
+Generated 2026-11-07T22:11:15.943Z from the JSON files in `benchmarks/results/`. Nothing in this report is estimated or hand-edited.
 
 **Environment:** toolsmith-mcp 0.1.0 (commit `8a4fd8b`), Node v22.13.1, darwin 27.2.0 arm64, Apple M1 Pro (10 cores, 17 GB), MCP SDK server 2.4.0 / client 2.4.0, developer workstation.
 
@@ -52,6 +52,25 @@ Order → its customer → that customer’s orders (strictly sequential, nothin
 | 50 ms | sequential | 171.46 | 176.16 | 178.32 | 3 | 3 | 100% | 100% | 36.8 | 735 |
 | 50 ms | composite | 167.09 | 172.19 | 177.39 | 1 | 3 | 100% | 100% | 30.75 | 960 |
 
+## High traffic
+
+- Each agent runs the order-details workflow 3 times back to back; all agents start together. The demo API adds 20 ms per request.
+- Clients, gateway and demo API share one Node process on one machine, so CPU and memory figures cover all three and throughput is bounded by that single process.
+- No LLM is involved; agent reasoning time between calls is excluded.
+
+![Throughput under load](../charts/load-throughput.svg)
+
+![p95 latency under load](../charts/load-p95.svg)
+
+| Agents | Variant | Workflows/s | p50 ms | p95 ms | p99 ms | MCP calls/run | MCP requests/s | API requests/run | Errors | CPU s/run (whole process) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | sequential | 4.7 | 212.34 | 224.33 | 224.33 | 8 | 37 | 8 | 0 | 0.0599 |
+| 1 | parallel-client | 16.6 | 60.75 | 61.87 | 61.87 | 8 | 133 | 8 | 0 | 0.0221 |
+| 1 | composite | 19.6 | 51.09 | 53.29 | 53.29 | 1 | 20 | 8 | 0 | 0.0149 |
+| 10 | sequential | 40.9 | 237.39 | 259.78 | 260.01 | 8 | 327 | 8 | 0 | 0.0136 |
+| 10 | parallel-client | 130.3 | 70.21 | 99.53 | 104.38 | 8 | 1042 | 8 | 0 | 0.0133 |
+| 10 | composite | 147.4 | 68.29 | 71.01 | 73.14 | 1 | 147 | 8 | 0 | 0.0038 |
+
 ## Workflow discovery accuracy
 
 - Synthetic data: 3 planted workflows (fan-out loop, 3-step dependent chain, list+loop) plus 7 noise tools. This measures the algorithm, not real agent behaviour.
@@ -62,44 +81,44 @@ Order → its customer → that customer’s orders (strictly sequential, nothin
 
 | Condition | Miner | Precision | Recall | F1 (mean ± sd) | Mining ms (p50) |
 |---|---|---|---|---|---|
-| clean | default | 1 | 1 | 1 ± 0 | 2.72 |
-| clean | no AWO rules | 1 | 1 | 1 ± 0 | 1.4 |
-| clean | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.57 |
-| boundary noise 80% | default | 1 | 1 | 1 ± 0 | 2.11 |
-| boundary noise 80% | no AWO rules | 1 | 1 | 1 ± 0 | 1.35 |
-| boundary noise 80% | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 2.07 |
-| rare workflows (10% of sessions) | default | 1 | 0.83 | 0.9 ± 0.1 | 0.6 |
-| rare workflows (10% of sessions) | no AWO rules | 1 | 0.83 | 0.9 ± 0.1 | 0.52 |
-| rare workflows (10% of sessions) | contiguous (v0 baseline) | 1 | 0.83 | 0.9 ± 0.1 | 1.08 |
-| block-style loops | default | 1 | 1 | 1 ± 0 | 1.3 |
-| block-style loops | no AWO rules | 1 | 1 | 1 ± 0 | 1.16 |
-| block-style loops | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.19 |
-| noise between steps 10% | default | 1 | 1 | 1 ± 0 | 1.5 |
-| noise between steps 10% | no AWO rules | 1 | 1 | 1 ± 0 | 1.07 |
-| noise between steps 10% | contiguous (v0 baseline) | 0.71 | 1 | 0.81 ± 0.14 | 1.54 |
-| noise between steps 30% | default | 1 | 1 | 1 ± 0 | 1.61 |
-| noise between steps 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.16 |
-| noise between steps 30% | contiguous (v0 baseline) | 0.35 | 1 | 0.51 ± 0.02 | 1.85 |
-| abandoned runs 30% | default | 1 | 1 | 1 ± 0 | 1.15 |
-| abandoned runs 30% | no AWO rules | 1 | 1 | 1 ± 0 | 0.96 |
-| abandoned runs 30% | contiguous (v0 baseline) | 0.73 | 1 | 0.83 ± 0.1 | 1.14 |
-| colliding small ids (1..50) | default | 0.95 | 1 | 0.97 ± 0.06 | 1.2 |
-| colliding small ids (1..50) | no AWO rules | 0.95 | 1 | 0.97 ± 0.06 | 1.28 |
-| colliding small ids (1..50) | contiguous (v0 baseline) | 0.98 | 1 | 0.99 ± 0.04 | 1.41 |
-| colliding small ids (1..10) | default | 0.69 | 1 | 0.81 ± 0.08 | 1.54 |
-| colliding small ids (1..10) | no AWO rules | 0.66 | 1 | 0.78 ± 0.13 | 1.08 |
-| colliding small ids (1..10) | contiguous (v0 baseline) | 0.69 | 1 | 0.8 ± 0.11 | 1.39 |
-| two agents share a session key 30% | default | 1 | 1 | 1 ± 0 | 1.77 |
-| two agents share a session key 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.14 |
-| two agents share a session key 30% | contiguous (v0 baseline) | 0.59 | 1 | 0.73 ± 0.12 | 1.46 |
-| independent reads in random order 50% | default | 1 | 1 | 1 ± 0 | 1.18 |
-| independent reads in random order 50% | no AWO rules | 0.75 | 1 | 0.86 ± 0 | 0.99 |
-| independent reads in random order 50% | contiguous (v0 baseline) | 0.75 | 1 | 0.86 ± 0 | 1.17 |
-| all of the above (moderate) | default | 0.95 | 1 | 0.97 ± 0.06 | 1.21 |
-| all of the above (moderate) | no AWO rules | 0.98 | 1 | 0.99 ± 0.04 | 1.03 |
-| all of the above (moderate) | contiguous (v0 baseline) | 0.49 | 1 | 0.65 ± 0.07 | 1.46 |
+| clean | default | 1 | 1 | 1 ± 0 | 5.14 |
+| clean | no AWO rules | 1 | 1 | 1 ± 0 | 3.27 |
+| clean | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 2.81 |
+| boundary noise 80% | default | 1 | 1 | 1 ± 0 | 4.92 |
+| boundary noise 80% | no AWO rules | 1 | 1 | 1 ± 0 | 2.48 |
+| boundary noise 80% | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 2.87 |
+| rare workflows (10% of sessions) | default | 1 | 1 | 1 ± 0 | 0.87 |
+| rare workflows (10% of sessions) | no AWO rules | 1 | 1 | 1 ± 0 | 0.74 |
+| rare workflows (10% of sessions) | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.54 |
+| block-style loops | default | 1 | 1 | 1 ± 0 | 1.66 |
+| block-style loops | no AWO rules | 1 | 1 | 1 ± 0 | 1.7 |
+| block-style loops | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.54 |
+| noise between steps 10% | default | 1 | 1 | 1 ± 0 | 1.94 |
+| noise between steps 10% | no AWO rules | 1 | 1 | 1 ± 0 | 1.71 |
+| noise between steps 10% | contiguous (v0 baseline) | 0.63 | 1 | 0.76 ± 0.1 | 2.03 |
+| noise between steps 30% | default | 1 | 1 | 1 ± 0 | 2.05 |
+| noise between steps 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.71 |
+| noise between steps 30% | contiguous (v0 baseline) | 0.33 | 1 | 0.5 ± 0 | 2.37 |
+| abandoned runs 30% | default | 1 | 1 | 1 ± 0 | 2.16 |
+| abandoned runs 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.92 |
+| abandoned runs 30% | contiguous (v0 baseline) | 0.68 | 1 | 0.8 ± 0.05 | 1.56 |
+| colliding small ids (1..50) | default | 1 | 1 | 1 ± 0 | 1.85 |
+| colliding small ids (1..50) | no AWO rules | 1 | 1 | 1 ± 0 | 1.76 |
+| colliding small ids (1..50) | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.89 |
+| colliding small ids (1..10) | default | 0.63 | 1 | 0.76 ± 0.1 | 2.4 |
+| colliding small ids (1..10) | no AWO rules | 0.55 | 1 | 0.71 ± 0.04 | 2.25 |
+| colliding small ids (1..10) | contiguous (v0 baseline) | 0.5 | 1 | 0.67 ± 0 | 2.13 |
+| two agents share a session key 30% | default | 1 | 1 | 1 ± 0 | 2.21 |
+| two agents share a session key 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.98 |
+| two agents share a session key 30% | contiguous (v0 baseline) | 0.51 | 1 | 0.68 ± 0.07 | 2.47 |
+| independent reads in random order 50% | default | 1 | 1 | 1 ± 0 | 1.84 |
+| independent reads in random order 50% | no AWO rules | 0.75 | 1 | 0.86 ± 0 | 1.64 |
+| independent reads in random order 50% | contiguous (v0 baseline) | 0.75 | 1 | 0.86 ± 0 | 2.21 |
+| all of the above (moderate) | default | 1 | 1 | 1 ± 0 | 1.85 |
+| all of the above (moderate) | no AWO rules | 1 | 1 | 1 ± 0 | 1.62 |
+| all of the above (moderate) | contiguous (v0 baseline) | 0.6 | 1 | 0.75 ± 0 | 2.12 |
 
-Overall mean across conditions (shipped miner): precision 0.97, recall 0.99, F1 0.97. v0 baseline: F1 0.84.
+Overall mean across conditions (shipped miner): precision 0.97, recall 1, F1 0.98. v0 baseline: F1 0.84.
 
 ## Scalability
 
