@@ -6,7 +6,6 @@ import {
   type CompositeDef,
 } from '../composite/plan.js';
 import { materialize, resolveRef, type Scope } from '../composite/refs.js';
-import { errorMessage } from '../core/errors.js';
 import {
   TOOL_NAME_PATTERN,
   type CallContext,
@@ -16,6 +15,7 @@ import {
 } from '../core/types.js';
 import { toolName } from '../core/naming.js';
 import { HttpIntegrationClient } from '../openapi/http-executor.js';
+import { verifyOperations } from '../openapi/verify.js';
 import type { OpenApiIntegrationDef } from '../openapi/types.js';
 import type { Evaluation } from '../registry/registry.js';
 import { stableStringify } from '../registry/registry.js';
@@ -23,7 +23,6 @@ import type { Redactor } from '../security/redact.js';
 import { envRefNames } from '../security/secrets.js';
 import { isPrivateAddress } from '../security/ssrf.js';
 import { isIP } from 'node:net';
-import { validateAgainst } from '../gateway/validation.js';
 
 type Check = Evaluation['checks'][number];
 
@@ -139,62 +138,49 @@ export async function evaluateIntegration(
 
   if (opts.live && missing.length === 0 && (!privateHost || cfg.allowPrivateNetwork)) {
     const client = new HttpIntegrationClient(cfg, cfg.baseUrl ?? def.baseUrl, redactor);
-    const probes = def.operations
-      .filter((o) => o.method === 'GET' && !o.params.some((p) => p.required))
-      .slice(0, 5);
-    const latencies: number[] = [];
-    for (const op of probes) {
-      const t0 = performance.now();
-      try {
-        const out = await client.call(op, {});
-        latencies.push(performance.now() - t0);
-        if (!out.ok) {
-          checks.push({
-            name: `live: ${op.name}`,
-            passed: out.errorCode !== 'auth',
-            detail: out.error,
-            severity: out.errorCode === 'auth' ? 'error' : 'warning',
-          });
-          continue;
-        }
-        let detail = `HTTP ${out.status}`;
-        let severity: Check['severity'] = 'info';
-        if (op.outputSchema && cfg.validateOutput) {
-          const data = out.data ?? null;
-          const shaped =
-            op.outputWrapped || !data || typeof data !== 'object' || Array.isArray(data)
-              ? { result: data }
-              : data;
-          const v = validateAgainst(op.outputSchema, shaped);
-          if (!v.valid) {
-            detail += `; response does not match documented schema (${v.message}). Fix the spec or set "validateOutput": false.`;
-            severity = 'error';
-          }
-        }
-        checks.push({ name: `live: ${op.name}`, passed: severity !== 'error', detail, severity });
-      } catch (err) {
-        checks.push({
-          name: `live: ${op.name}`,
-          passed: false,
-          detail: errorMessage(err),
-          severity: 'warning',
-        });
-      }
-    }
-    if (probes.length === 0)
+    const report = await verifyOperations(def, cfg, client);
+    metrics.verifiedOperations = report.verified;
+    metrics.probedOperations = report.probed;
+    const lat = report.results
+      .filter((r) => r.ms !== undefined)
+      .map((r) => r.ms!)
+      .sort((a, b) => a - b);
+    if (lat.length) metrics.liveMedianMs = lat[Math.floor(lat.length / 2)]!;
+    const counts: Record<string, number> = {};
+    for (const r of report.results) counts[r.status] = (counts[r.status] ?? 0) + 1;
+    checks.push({
+      name: 'live verification',
+      passed: !counts.auth_failed,
+      detail: `${report.verified}/${report.probed} read operations verified with real calls (${Object.entries(
+        counts,
+      )
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ')})`,
+      severity: counts.auth_failed ? 'error' : report.verified < report.probed ? 'warning' : 'info',
+    });
+    for (const r of report.results) {
+      if (r.status === 'not_probed_write') continue;
+      const src =
+        r.valueSources && Object.keys(r.valueSources).length
+          ? ` [values: ${Object.entries(r.valueSources)
+              .map(([k, v]) => `${k}←${v}`)
+              .join(', ')}]`
+          : '';
       checks.push({
-        name: 'live smoke test',
-        passed: true,
-        detail: 'no parameter-free GET operations to probe',
-        severity: 'info',
+        name: `live: ${r.operation}`,
+        passed: r.status !== 'auth_failed' && r.status !== 'schema_mismatch',
+        detail: `${r.status}${r.detail ? ` — ${r.detail}` : ''}${src}`,
+        severity:
+          r.status === 'verified'
+            ? 'info'
+            : r.status === 'auth_failed' || r.status === 'schema_mismatch'
+              ? 'error'
+              : 'warning',
       });
-    if (latencies.length)
-      metrics.liveMedianMs = Math.round(
-        latencies.sort((a, b) => a - b)[Math.floor(latencies.length / 2)]!,
-      );
+    }
   } else if (!opts.live) {
     checks.push({
-      name: 'live smoke test',
+      name: 'live verification',
       passed: true,
       detail: 'skipped (--no-live)',
       severity: 'info',

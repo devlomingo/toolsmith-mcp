@@ -160,6 +160,8 @@ export async function handleAdminApi(
         }),
       );
     }
+    if (method === 'GET' && parts[0] === 'composites' && parts[1] === 'usage')
+      return json(res, 200, app.compositeUsage());
     if (parts[0] === 'patterns') {
       if (method === 'GET') return json(res, 200, app.mine());
       if (method === 'POST' && parts[1] === 'propose') {

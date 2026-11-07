@@ -45,6 +45,7 @@ ${c.bold('Discover')}
   discover                                propose composite tools from those patterns
   ask "<what you need>"                   check whether the connected APIs can do it
   traces [--tool <name>] [--limit N]      recent tool calls
+  usage                                   how much published composites are used and save
 
 ${c.bold('Other')}
   doctor                                  check configuration, credentials and connectivity
@@ -197,6 +198,28 @@ async function main(argv: string[]): Promise<number> {
         return traces(app, values.tool, values.limit ? Number(values.limit) : 30);
       case 'doctor':
         return await doctor(app);
+      case 'usage': {
+        const u = app.compositeUsage();
+        if (!u.length) return (say('No published composite tools yet.'), 0);
+        table(
+          u.map((x) => ({
+            tool: x.tool,
+            calls: x.calls,
+            sessions: x.sessions,
+            'round-trips saved': x.roundTripsSaved,
+            'still done by hand': x.manualRunsSincePublish,
+            adoption: x.adoption ?? '-',
+            status: x.unused ? c.yellow('unused') : c.green('in use'),
+          })),
+        );
+        if (u.some((x) => x.unused))
+          say(
+            c.dim(
+              '  Consider disabling unused composites: every extra tool costs the agent context.',
+            ),
+          );
+        return 0;
+      }
       default:
         return 2;
     }

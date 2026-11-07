@@ -15,6 +15,7 @@ import {
 } from '../core/types.js';
 import { HttpIntegrationClient } from '../openapi/http-executor.js';
 import type { OpenApiIntegrationDef, OperationDef } from '../openapi/types.js';
+import { describeParamSources } from '../openapi/verify.js';
 import type { UsageObserver } from '../observer/observer.js';
 import type { Registry } from '../registry/registry.js';
 import type { Redactor } from '../security/redact.js';
@@ -235,7 +236,8 @@ function describeOperation(def: OpenApiIntegrationDef, op: OperationDef): string
       : op.access === 'write'
         ? ' [modifies data]'
         : ' [destructive: needs per-call approval]';
-  const full = `${base} (${def.title}: ${op.method} ${op.path})${access}`;
+  const hints = describeParamSources(op, def.name);
+  const full = `${base} (${def.title}: ${op.method} ${op.path})${access}${hints ? ` Tip: ${hints}.` : ''}`;
   return full.length > 1024 ? `${full.slice(0, 1021)}...` : full;
 }
 

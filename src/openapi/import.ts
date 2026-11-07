@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { load as parseYaml } from 'js-yaml';
 import { ToolsmithError } from '../core/errors.js';
 import { camelCase } from '../core/naming.js';
-import type { AccessLevel, JsonSchema } from '../core/types.js';
+import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
 import { toJsonSchema, wrapAsObjectSchema } from './schema-utils.js';
 import type {
   OpenApiIntegrationDef,
@@ -216,6 +216,8 @@ export async function importOpenApi(
     );
   }
 
+  linkParamSources(operations);
+
   const info = (doc.info ?? {}) as Doc;
   return {
     kind: 'openapi',
@@ -307,6 +309,65 @@ export function synthesizeName(method: string, path: string): string {
   return camelCase([verb, ...words].join(' ')) || `${method}Root`;
 }
 
+const fieldsOf = (schema: JsonSchema | undefined): { fields: Set<string>; list: boolean } => {
+  const fields = new Set<string>();
+  let node = schema;
+  let list = false;
+  if (
+    node?.properties &&
+    (node.properties as Record<string, JsonSchema>).result &&
+    Object.keys(node.properties as object).length === 1
+  ) {
+    node = (node.properties as Record<string, JsonSchema>).result;
+  }
+  if (node?.type === 'array') {
+    list = true;
+    node = node.items as JsonSchema | undefined;
+  }
+  for (const k of Object.keys((node?.properties as object) ?? {})) fields.add(k);
+  return { fields, list };
+};
+
+/**
+ * Link each required parameter of a read operation to a parameter-free read
+ * operation whose response carries the value: same field name, or "id" of
+ * the matching resource (orderId <- /orders → [*].id). Purely schema-based;
+ * live verification later confirms or refutes each link.
+ */
+export function linkParamSources(operations: OperationDef[]): void {
+  const roots = operations.filter((o) => o.method === 'GET' && !o.params.some((p) => p.required));
+  for (const op of operations) {
+    const sources: NonNullable<OperationDef['paramSources']> = [];
+    for (const p of op.params.filter((x) => x.required && (x.in === 'path' || x.in === 'query'))) {
+      const name = p.name.toLowerCase();
+      for (const root of roots) {
+        if (root === op) continue;
+        const { fields, list } = fieldsOf(root.outputSchema);
+        const resource = singular(
+          root.path
+            .split('/')
+            .filter((x) => x && !x.startsWith('{'))
+            .pop() ?? '',
+        ).toLowerCase();
+        let field: string | undefined;
+        if (fields.has(p.name)) field = p.name;
+        else if (
+          fields.has('id') &&
+          (name === `${resource}id` ||
+            name === `${resource}_id` ||
+            (name === 'id' && op.path.toLowerCase().includes(`/${resource}`)))
+        )
+          field = 'id';
+        if (field) {
+          sources.push({ param: p.name, from: root.name, field, list });
+          break;
+        }
+      }
+    }
+    if (sources.length) op.paramSources = sources;
+  }
+}
+
 function accessFor(method: string): AccessLevel {
   if (method === 'delete') return 'destructive';
   if (method === 'get' || method === 'head' || method === 'options') return 'read';
@@ -328,9 +389,25 @@ function mergeParams(shared: unknown[], own: unknown[]): OperationParam[] {
       required: loc === 'path' ? true : Boolean(param.required),
       schema: Object.keys(schema).length > 0 ? schema : { type: 'string' },
       description: param.description ? String(param.description) : undefined,
+      example: pickExample(param),
     });
   }
   return [...byKey.values()];
+}
+
+function pickExample(param: Doc): JsonValue | undefined {
+  const schema = (param.schema ?? {}) as Doc;
+  if (param.example !== undefined) return param.example as JsonValue;
+  if (param.examples && typeof param.examples === 'object') {
+    const first = Object.values(param.examples as Record<string, Doc>)[0];
+    if (first && typeof first === 'object' && 'value' in first) return first.value as JsonValue;
+  }
+  if (schema.example !== undefined) return schema.example as JsonValue;
+  if (param['x-example'] !== undefined) return param['x-example'] as JsonValue;
+  if (schema.default !== undefined) return schema.default as JsonValue;
+  if (param.default !== undefined) return param.default as JsonValue;
+  const en = (schema.enum ?? param.enum) as JsonValue[] | undefined;
+  return Array.isArray(en) && en.length ? en[0] : undefined;
 }
 
 function pickSwagger2Schema(param: Doc): Doc {

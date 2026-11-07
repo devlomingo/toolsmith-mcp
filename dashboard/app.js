@@ -92,6 +92,14 @@ const I18N = {
     inputJson: 'Test input (JSON, optional)',
     done: 'Done',
     steps: 'Steps',
+    usageTitle: 'Published composite tools',
+    discovered: 'Discovered workflows',
+    callsCol: 'Calls',
+    saved: 'Round-trips saved',
+    manual: 'Still done by hand',
+    adoption: 'Adoption',
+    unused: 'unused',
+    inUse: 'in use',
   },
   ar: {
     skip: 'تخطَّ إلى المحتوى',
@@ -182,6 +190,14 @@ const I18N = {
     inputJson: 'مدخل اختبار (JSON، اختياري)',
     done: 'تم',
     steps: 'الخطوات',
+    usageTitle: 'الأدوات المركّبة المنشورة',
+    discovered: 'سير العمل المكتشف',
+    callsCol: 'الاستدعاءات',
+    saved: 'الجولات الموفَّرة',
+    manual: 'ما زال يُنفَّذ يدويًا',
+    adoption: 'نسبة الاعتماد',
+    unused: 'غير مستخدمة',
+    inUse: 'مستخدمة',
   },
 };
 
@@ -616,9 +632,31 @@ const views = {
   },
 
   async workflows() {
-    const patterns = await api('patterns');
+    const [patterns, usage] = await Promise.all([api('patterns'), api('composites/usage')]);
     return [
       h('h1', {}, t('nav.workflows')),
+      h('h2', {}, t('usageTitle')),
+      table(
+        [
+          t('tool'),
+          t('callsCol'),
+          t('sessions'),
+          t('saved'),
+          t('manual'),
+          t('adoption'),
+          t('status'),
+        ],
+        usage.map((u) => [
+          h('code', {}, u.tool),
+          u.calls,
+          u.sessions,
+          u.roundTripsSaved,
+          u.manualRunsSincePublish,
+          u.adoption ?? '—',
+          u.unused ? pill(t('unused'), 'warn') : pill(t('inUse'), 'ok'),
+        ]),
+      ),
+      h('h2', {}, t('discovered')),
       patterns.length
         ? h(
             'div',

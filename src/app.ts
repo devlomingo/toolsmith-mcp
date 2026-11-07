@@ -396,6 +396,67 @@ export class Toolsmith {
     return out;
   }
 
+  // ---- Composite usage (AWO: measure benefit, not just equivalence) -------
+
+  /**
+   * For each published composite: how often agents use it, how many MCP
+   * round-trips it saved, and how often agents still run the same workflow
+   * by hand since it was published. Unused composites are flagged: extra
+   * tools are not free for the agent (AWO saw weaker models regress).
+   */
+  compositeUsage(unusedAfterDays = 7): Array<{
+    name: string;
+    tool: string;
+    publishedAt: string;
+    calls: number;
+    sessions: number;
+    stepCalls: number;
+    roundTripsSaved: number;
+    manualRunsSincePublish: number;
+    adoption: number | null;
+    lastUsed: string | null;
+    unused: boolean;
+  }> {
+    const out = [];
+    for (const { artifact, version } of this.registry.publishedVersions()) {
+      if (artifact.kind !== 'composite') continue;
+      const def = version.definition as unknown as CompositeDef;
+      const published = this.registry
+        .events(artifact.id)
+        .find((e) => e.version === version.version && e.toStatus === 'published');
+      const since = published ? Date.parse(published.at) : 0;
+      const calls = this.traces.query({
+        tool: def.toolName,
+        since,
+        topLevelOnly: true,
+        limit: 100_000,
+      });
+      const stepCalls = calls.reduce((n, t) => n + this.traces.children(t.id).length, 0);
+      const manual =
+        def.provenance.type === 'pattern'
+          ? (this.mine(since).find((p) => p.id === def.provenance.ref)?.support ?? 0)
+          : 0;
+      const ageDays = (Date.now() - since) / 86_400_000;
+      out.push({
+        name: artifact.name,
+        tool: def.toolName,
+        publishedAt: published?.at ?? '',
+        calls: calls.length,
+        sessions: new Set(calls.map((c) => c.sessionId)).size,
+        stepCalls,
+        roundTripsSaved: Math.max(0, stepCalls - calls.length),
+        manualRunsSincePublish: manual,
+        adoption:
+          calls.length + manual > 0
+            ? Math.round((calls.length / (calls.length + manual)) * 100) / 100
+            : null,
+        lastUsed: calls[0] ? new Date(calls[0].startedAt).toISOString() : null,
+        unused: calls.length === 0 && ageDays >= unusedAfterDays,
+      });
+    }
+    return out;
+  }
+
   // ---- Workflow discovery ---------------------------------------------------
 
   mine(sinceMs?: number): Pattern[] {

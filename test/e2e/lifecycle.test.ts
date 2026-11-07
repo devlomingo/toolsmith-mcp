@@ -126,6 +126,14 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
     // the composite's own steps are traced as children
     const top = h.app.traces.query({ tool: 'flow__getUserOrdersDetails' })[0]!;
     expect(h.app.traces.children(top.id).length).toBe(8);
+    const usage = h.app.compositeUsage().find((u) => u.tool === 'flow__getUserOrdersDetails')!;
+    expect(usage).toMatchObject({
+      calls: 1,
+      sessions: 1,
+      stepCalls: 8,
+      roundTripsSaved: 7,
+      unused: false,
+    });
     await client.close();
   });
 

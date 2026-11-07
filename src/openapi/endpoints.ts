@@ -35,10 +35,14 @@ export function parseEndpointText(text: string, baseUrl: string, title?: string)
       );
     }
     const [, method, pathWithQuery, description] = m;
-    const [path, query] = pathWithQuery!.split('?');
+    // Accept the common path-parameter spellings: {id}, :id and <id> (ToolFactory, App. C).
+    const [rawPath, query] = pathWithQuery!.split('?');
+    const path = rawPath!
+      .replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, '{$1}')
+      .replace(/<([A-Za-z_][A-Za-z0-9_]*)>/g, '{$1}');
     endpoints.push({
       method: method!.toUpperCase(),
-      path: path!,
+      path,
       description: description?.trim() || undefined,
       query: query
         ? query
