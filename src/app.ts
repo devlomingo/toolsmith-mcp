@@ -1,13 +1,15 @@
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { IntegrationConfig, LoadedConfig } from './config/config.js';
+import type { Exposure, IntegrationConfig, LoadedConfig } from './config/config.js';
 import { resolvePath } from './config/config.js';
 import { patternToComposite } from './composite/generator.js';
 import type { CompositeDef } from './composite/plan.js';
 import { ToolsmithError } from './core/errors.js';
-import type { CallContext, JsonObject, JsonValue } from './core/types.js';
-import { DiscoveryEngine } from './discovery/discovery.js';
+import type { CallContext, JsonObject, JsonValue, ToolDefinition } from './core/types.js';
+import { DiscoveryEngine, terms } from './discovery/discovery.js';
+import { globMatch } from './core/naming.js';
+import { isTransform } from './composite/plan.js';
 import { evaluateComposite, evaluateIntegration } from './evaluator/evaluator.js';
 import { CallApprovals } from './gateway/approvals.js';
 import { Catalog, Dispatcher, type BuiltinTool } from './gateway/gateway.js';
@@ -166,8 +168,106 @@ export class Toolsmith {
     }
   }
 
+  // ---- Exposure (which tools a client sees and may call) ------------------
+
+  exposureFor(principal?: string): Exposure {
+    const name = principal?.startsWith('http:') ? principal.slice(5) : undefined;
+    const client = name ? this.config.server.clients.find((c) => c.name === name) : undefined;
+    return client?.exposure ?? this.config.exposure;
+  }
+
+  /**
+   * May this client call this tool? Builtins are always allowed. A composite
+   * is allowed only if every tool it calls is, so an allow-list cannot be
+   * sidestepped through a composite.
+   */
+  allowed(principal: string | undefined, tool: string): boolean {
+    const exp = this.exposureFor(principal);
+    const entry = this.catalog.get(tool);
+    if (entry?.def.source === 'builtin') return true;
+    if (exp.tools.length === 0) return true;
+    const ok = (name: string) => exp.tools.some((p) => globMatch(p, name));
+    if (!ok(tool)) return false;
+    if (entry?.exec.type === 'composite')
+      return entry.exec.def.steps.filter((s) => !isTransform(s)).every((s) => ok(s.tool));
+    return true;
+  }
+
+  /** The tool list a client gets from tools/list. */
+  listedTools(principal?: string): ToolDefinition[] {
+    const exp = this.exposureFor(principal);
+    return this.catalog
+      .list()
+      .filter((t) => this.allowed(principal, t.name))
+      .filter(
+        (t) =>
+          exp.list === 'all' ||
+          t.source === 'builtin' ||
+          exp.pinned.some((p) => globMatch(p, t.name)),
+      );
+  }
+
+  /** Rank the tools a client may call against a free-text query. */
+  searchTools(
+    query: string,
+    principal?: string,
+    limit = 8,
+  ): Array<ToolDefinition & { score: number }> {
+    const q = new Set(terms(query));
+    if (q.size === 0) return [];
+    return this.catalog
+      .list()
+      .filter((t) => t.source !== 'builtin' && this.allowed(principal, t.name))
+      .map((t) => {
+        const tt = new Set([...terms(t.name), ...terms(t.description)]);
+        const hits = [...q].filter((w) => tt.has(w)).length;
+        return { ...t, score: Math.round((hits / q.size) * 100) / 100 };
+      })
+      .filter((t) => t.score > 0)
+      .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+      .slice(0, limit);
+  }
+
   private builtinTools(): BuiltinTool[] {
     return [
+      {
+        name: 'toolsmith__search_tools',
+        description:
+          'Find tools by describing what you need ("customer orders", "delete a product"). Returns matching tool names with their descriptions and input schemas; call them directly afterwards. Use this when the tool list is short (large catalogs list only a few tools).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', minLength: 2, maxLength: 500 },
+            limit: { type: 'integer', minimum: 1, maximum: 20 },
+          },
+          required: ['query'],
+          additionalProperties: false,
+        },
+        handler: async (args, ctx) => {
+          const found = this.searchTools(
+            String(args.query),
+            ctx.principal ?? ctx.sessionId,
+            typeof args.limit === 'number' ? args.limit : 8,
+          );
+          return {
+            ok: true,
+            data: {
+              tools: found.map((t) => ({
+                name: t.name,
+                description: t.description,
+                access: t.access,
+                score: t.score,
+                inputSchema: t.inputSchema as JsonValue,
+              })),
+              hint: found.length
+                ? 'Call any of these by name.'
+                : 'Nothing matched. If the task needs something new, call toolsmith__request_capability.',
+            } as JsonValue,
+            upstreamRequests: 0,
+            retries: 0,
+          };
+        },
+      },
       {
         name: 'toolsmith__request_capability',
         description:

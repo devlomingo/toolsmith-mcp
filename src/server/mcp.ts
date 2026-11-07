@@ -103,7 +103,12 @@ export function createServerFactory(app: Toolsmith, opts: ServerFactoryOptions =
       'tools/list',
       async () =>
         ({
-          tools: app.catalog.list().map(toMcpTool),
+          tools: app
+            .listedTools(
+              opts.sessionId ??
+                `http:${rctx?.requestInfo?.headers?.get('x-toolsmith-client') ?? 'local'}`,
+            )
+            .map(toMcpTool),
         }) as never,
     );
 
@@ -114,6 +119,19 @@ export function createServerFactory(app: Toolsmith, opts: ServerFactoryOptions =
         envelope?.clientInfo?.name ?? server.getClientVersion()?.name,
       );
       const entry = app.catalog.get(params.name);
+      if (!app.allowed(principal, params.name)) {
+        return toMcpResult(
+          undefined,
+          {
+            ok: false,
+            errorCode: 'forbidden',
+            error: `${params.name} is not available to this client.`,
+            upstreamRequests: 0,
+            retries: 0,
+          },
+          false,
+        ) as never;
+      }
       const result = await app.call(params.name, params.arguments ?? {}, {
         sessionId: session,
         principal,

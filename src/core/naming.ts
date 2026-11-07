@@ -34,6 +34,12 @@ export function toolName(namespace: string, name: string): string {
   return full;
 }
 
+/** Glob with `*` wildcards, anchored, case-sensitive (tool names). */
+export function globMatch(pattern: string, value: string): boolean {
+  const re = new RegExp(`^${pattern.replace(/[.+^${}()|[\]\\?]/g, '\\$&').replace(/\*/g, '.*')}$`);
+  return re.test(value);
+}
+
 /** Validate a user-chosen integration/composite name. */
 export function isValidNamespace(name: string): boolean {
   return /^[a-z][a-z0-9-]{0,30}$/.test(name);

@@ -47,6 +47,20 @@ export const IntegrationSchema = z.object({
 });
 export type IntegrationConfig = z.infer<typeof IntegrationSchema>;
 
+/**
+ * Tool exposure for a client. `tools` is an allow-list of glob patterns
+ * (empty = every published tool) and is enforced on calls, not just on
+ * listing. `list: "search"` keeps the tool list short for large catalogs:
+ * only meta tools and `pinned` patterns are listed, and the agent finds the
+ * rest with toolsmith__search_tools.
+ */
+export const ExposureSchema = z.object({
+  tools: z.array(z.string()).default([]),
+  list: z.enum(['all', 'search']).default('all'),
+  pinned: z.array(z.string()).default([]),
+});
+export type Exposure = z.infer<typeof ExposureSchema>;
+
 export const UpstreamSchema = z.union([
   z.object({
     name: namespace,
@@ -94,7 +108,14 @@ export const ConfigSchema = z.object({
        * client named "default".
        */
       clients: z
-        .array(z.object({ name: z.string().regex(/^[A-Za-z0-9_.-]{1,40}$/), token: z.string() }))
+        .array(
+          z.object({
+            name: z.string().regex(/^[A-Za-z0-9_.-]{1,40}$/),
+            token: z.string(),
+            /** Overrides the top-level `exposure` for this client. */
+            exposure: z.lazy(() => ExposureSchema).optional(),
+          }),
+        )
         .default([]),
     })
     .default({ host: '127.0.0.1', port: 7420, clients: [] }),
@@ -127,6 +148,8 @@ export const ConfigSchema = z.object({
     .default({ maxSteps: 20, maxFanOut: 50, concurrency: 8, timeoutMs: 60_000 }),
   /** Expose toolsmith's own meta tools (capability requests) to agents. */
   metaTools: z.boolean().default(true),
+  /** Which tools clients see and may call (per client in server.clients). */
+  exposure: z.lazy(() => ExposureSchema).default({ tools: [], list: 'all', pinned: [] }),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 
