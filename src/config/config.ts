@@ -30,6 +30,8 @@ export type AuthConfig = z.infer<typeof AuthSchema>;
 
 export const IntegrationSchema = z.object({
   name: namespace,
+  /** "graphql": `spec` is the GraphQL endpoint URL (introspected) or a saved introspection JSON file. */
+  type: z.enum(['openapi', 'graphql']).default('openapi'),
   /** Path or http(s) URL of an OpenAPI 3.x / Swagger 2.0 document (JSON or YAML). */
   spec: z.string(),
   /** Overrides the spec's servers[0].url. Required when the spec has none. */

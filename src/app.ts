@@ -19,6 +19,8 @@ import { resolveEnvRefs } from './security/secrets.js';
 import { TraceStore } from './observer/trace-store.js';
 import { endpointsToOpenApi, parseEndpointText } from './openapi/endpoints.js';
 import { importOpenApi } from './openapi/import.js';
+import { HttpIntegrationClient } from './openapi/http-executor.js';
+import { INTROSPECTION_QUERY, introspectionToDef, isIntrospection } from './graphql/graphql.js';
 import type { OpenApiIntegrationDef } from './openapi/types.js';
 import { minePatterns, type Pattern } from './patterns/miner.js';
 import { Registry, type Permissions, type VersionRow } from './registry/registry.js';
@@ -348,13 +350,16 @@ export class Toolsmith {
         );
       source = endpointsToOpenApi(parseEndpointText(text, cfg.baseUrl, name));
     }
-    const def = await importOpenApi(source, {
-      name,
-      baseUrl: cfg.baseUrl,
-      include: cfg.include,
-      exclude: cfg.exclude,
-      allowPrivateNetwork: cfg.allowPrivateNetwork,
-    });
+    const def =
+      cfg.type === 'graphql'
+        ? await this.importGraphql(cfg)
+        : await importOpenApi(source, {
+            name,
+            baseUrl: cfg.baseUrl,
+            include: cfg.include,
+            exclude: cfg.exclude,
+            allowPrivateNetwork: cfg.allowPrivateNetwork,
+          });
     def.specSource = cfg.spec;
     const artifact = this.registry.ensureArtifact('openapi', name);
     const { version, created } = this.registry.addVersion(
@@ -371,6 +376,52 @@ export class Toolsmith {
     });
     if (!created) return version;
     return this.runEvaluation(artifact.id, version.version, actor, { live: opts.live ?? true });
+  }
+
+  /** Introspect a GraphQL endpoint (through the guarded client) or read a saved introspection file. */
+  private async importGraphql(cfg: IntegrationConfig): Promise<OpenApiIntegrationDef> {
+    const isUrl = /^https?:\/\//.test(cfg.spec);
+    const endpoint = isUrl ? cfg.spec : cfg.baseUrl;
+    if (!endpoint) {
+      throw new ToolsmithError(
+        'A GraphQL integration needs the endpoint URL',
+        'validation',
+        'Set "spec" to the endpoint URL, or "baseUrl" when "spec" is a saved introspection file.',
+      );
+    }
+    let intro: unknown;
+    if (isUrl) {
+      const url = new URL(endpoint);
+      const client = new HttpIntegrationClient(cfg, url.origin, this.redactor);
+      const r = await client.call(
+        {
+          name: 'introspect',
+          method: 'POST',
+          path: url.pathname,
+          summary: '',
+          description: '',
+          params: [],
+          inputSchema: { type: 'object' },
+          outputWrapped: false,
+          access: 'read',
+          tags: [],
+          graphql: { document: INTROSPECTION_QUERY, field: '__schema' },
+        },
+        {},
+      );
+      if (!r.ok)
+        throw new ToolsmithError(
+          `GraphQL introspection failed: ${r.error}`,
+          r.errorCode ?? 'upstream',
+          'Introspection may be disabled on this server; save an introspection result to a file and point "spec" at it.',
+        );
+      intro = { __schema: r.data };
+    } else {
+      intro = JSON.parse(readFileSync(resolvePath(this.loaded, cfg.spec), 'utf8'));
+    }
+    if (!isIntrospection(intro))
+      throw new ToolsmithError('Not a GraphQL introspection result', 'validation');
+    return introspectionToDef(cfg.name, endpoint, intro);
   }
 
   async runEvaluation(

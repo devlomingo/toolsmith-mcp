@@ -8,6 +8,7 @@ import type { Redactor } from '../security/redact.js';
 import { resolveEnvRefs, envRefNames } from '../security/secrets.js';
 import { assertHostAllowed, guardedLookup, type EgressPolicy } from '../security/ssrf.js';
 import type { OperationDef } from './types.js';
+import { graphqlResult } from '../graphql/graphql.js';
 
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 
@@ -119,6 +120,19 @@ export class HttpIntegrationClient {
         retries++;
         continue;
       }
+      if (res.status >= 200 && res.status < 300 && op.graphql) {
+        const g = graphqlResult(op.graphql.field, this.redactor.scrubSecrets(parseBody(res)));
+        return g.ok
+          ? { ok: true, status: res.status, data: g.data, requests, retries }
+          : {
+              ok: false,
+              status: res.status,
+              errorCode: 'upstream',
+              error: this.redactor.redactString(g.error),
+              requests,
+              retries,
+            };
+      }
       if (res.status >= 200 && res.status < 300) {
         // An API that echoes the credential (debug endpoints, reflected
         // headers) must not hand it to the agent.
@@ -192,7 +206,11 @@ export class HttpIntegrationClient {
     }
     this.applyAuth(this.cfg.auth, headers, url);
     let body: string | undefined;
-    if (op.body && args.body !== undefined) {
+    if (op.graphql) {
+      // Arguments are passed as GraphQL variables, never spliced into the document.
+      body = JSON.stringify({ query: op.graphql.document, variables: args });
+      headers['content-type'] = 'application/json';
+    } else if (op.body && args.body !== undefined) {
       body = JSON.stringify(args.body);
       headers['content-type'] = op.body.contentType.includes('json')
         ? op.body.contentType

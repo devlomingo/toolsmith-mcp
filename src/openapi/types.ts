@@ -44,6 +44,8 @@ export interface OperationDef {
   tags: string[];
   /** Suggested sources for required parameters (see ParamSource). */
   paramSources?: ParamSource[];
+  /** GraphQL operations: the document to send and the root field to return. */
+  graphql?: { document: string; field: string };
 }
 
 export type FindingSeverity = 'info' | 'warning' | 'error';
