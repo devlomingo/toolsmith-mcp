@@ -5,7 +5,8 @@ import type {
   JsonValue,
   ToolCallResult,
 } from '../core/types.js';
-import { stepDependencies, type CompositeDef, type PlanStep } from './plan.js';
+import { isTransform, stepDependencies, type CompositeDef, type PlanStep } from './plan.js';
+import { applyTransform } from './transform.js';
 import { materialize, resolveRef, type Scope } from './refs.js';
 
 export type StepCaller = (
@@ -100,6 +101,22 @@ export class CompositeExecutor {
     };
 
     const runStep = async (step: PlanStep): Promise<boolean> => {
+      if (isTransform(step) && step.transform) {
+        try {
+          scope.steps[step.id] = {
+            result: applyTransform(resolveRef(step.transform.from, scope), step.transform.ops),
+          };
+          return true;
+        } catch (err) {
+          errors.push({
+            step: step.id,
+            tool: step.tool,
+            code: 'validation',
+            error: (err as Error).message,
+          });
+          return false;
+        }
+      }
       if (!step.forEach) {
         const args = materialize(step.args, scope) as JsonObject;
         const data = await callOnce(step, args);

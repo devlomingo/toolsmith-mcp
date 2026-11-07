@@ -5,7 +5,7 @@ import {
   compositeArtifactName,
   useInsteadOf,
 } from '../composite/generator.js';
-import type { CompositeDef, PlanStep } from '../composite/plan.js';
+import { TRANSFORM_TOOL, type CompositeDef, type PlanStep } from '../composite/plan.js';
 import { camelCase, toolName } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
 import type { OpenApiIntegrationDef, OperationDef } from '../openapi/types.js';
@@ -334,7 +334,7 @@ export class DiscoveryEngine {
       return this.persist(sessionId, {
         ...base,
         verdict: 'composable',
-        explanation: `No single tool does this, but ${chain.map((c) => c.op.tool).join(' → ')} can be combined. Proposed composite ${def.toolName} (awaiting evaluation and human approval). Until then, call the tools in that order.${modifiers.length ? ` Note: "${modifiers.join(', ')}" is not applied by the API; filter the result yourself.` : ''}`,
+        explanation: `No single tool does this, but ${chain.map((c) => c.op.tool).join(' → ')} can be combined. Proposed composite ${def.toolName} (awaiting evaluation and human approval). Until then, call the tools in that order.${def.steps.some((st) => st.transform) ? ` The proposed tool also selects the ${modifiers.join(', ')} item for you.` : modifiers.length ? ` Note: "${modifiers.join(', ')}" is not applied by the API; filter the result yourself.` : ''}`,
         uncovered: [],
         matches,
         chain: chainView,
@@ -480,12 +480,45 @@ function chainToComposite(request: string, chain: ChainLink[], modifiers: string
   const steps: PlanStep[] = [];
   const inputProps: Record<string, JsonSchema> = {};
   const required: string[] = [];
+  const stepOf: string[] = []; // chain index -> id of the step holding its (possibly selected) result
+  // "latest"/"oldest" become a transform step on the first list that has a
+  // date field: sort by it and take one item, instead of telling the agent.
+  const wantsLatest = modifiers.some((m) => ['latest', 'recent', 'last', 'newest'].includes(m));
+  const wantsOldest = modifiers.some((m) => ['oldest', 'first'].includes(m));
+  const applied: string[] = [];
+  const selected = new Set<number>();
   chain.forEach((link, i) => {
     const args: PlanStep['args'] = {};
+    let forEach = link.binding?.forEach ?? false;
+    if (link.binding && forEach && (wantsLatest || wantsOldest) && !selected.size) {
+      const src = chain[link.binding.fromIndex]!.op;
+      const dateField = [...src.outputFields].find((f) =>
+        /(created|updated|date|time|At$)/i.test(f),
+      );
+      if (dateField) {
+        const id = `${wantsLatest ? 'latest' : 'oldest'}${camelCase(src.resource).replace(/^./, (c) => c.toUpperCase())}`;
+        steps.push({
+          id,
+          tool: TRANSFORM_TOOL,
+          args: {},
+          transform: {
+            from: `steps.${stepOf[link.binding.fromIndex]}.result`,
+            ops: [
+              { sort: { field: dateField, order: wantsLatest ? 'desc' : 'asc' } },
+              { first: true },
+            ],
+          },
+        });
+        stepOf[link.binding.fromIndex] = id;
+        selected.add(link.binding.fromIndex);
+        applied.push(`${wantsLatest ? 'latest' : 'oldest'} by ${dateField}`);
+        forEach = false;
+      }
+    }
     for (const p of link.op.op.params) {
       if (link.binding && p.name === link.binding.param) {
-        const src = steps[link.binding.fromIndex]!.id;
-        args[p.name] = link.binding.forEach
+        const src = stepOf[link.binding.fromIndex]!;
+        args[p.name] = forEach
           ? { $ref: `item.${link.binding.field}` }
           : { $ref: `steps.${src}.result.${link.binding.field}` };
         continue;
@@ -496,10 +529,14 @@ function chainToComposite(request: string, chain: ChainLink[], modifiers: string
       args[p.name] = { $ref: `input.${p.name}` };
     }
     const step: PlanStep = { id: link.op.op.name, tool: link.op.tool, args };
-    if (link.binding?.forEach)
-      step.forEach = `steps.${steps[link.binding.fromIndex]!.id}.result[*]`;
+    if (forEach && link.binding) step.forEach = `steps.${stepOf[link.binding.fromIndex]}.result[*]`;
     steps.push(step);
+    stepOf[i] = step.id;
   });
+  const unapplied = modifiers.filter(
+    (m) =>
+      !(applied.length && ['latest', 'recent', 'last', 'newest', 'oldest', 'first'].includes(m)),
+  );
   const base = camelCase(
     `get ${chain
       .map((c) => c.op.resource)
@@ -510,7 +547,7 @@ function chainToComposite(request: string, chain: ChainLink[], modifiers: string
     kind: 'composite',
     name: compositeArtifactName(base),
     toolName: toolName(COMPOSITE_NAMESPACE, base),
-    description: `${useInsteadOf(steps)} Answers requests like "${request.slice(0, 160)}" by running ${steps.map((s) => s.id + (s.forEach ? ' (for each)' : '')).join(' → ')} in one call.${modifiers.length ? ` Does not apply "${modifiers.join(', ')}"; filter the result.` : ''} Returns each step's result under "results".`,
+    description: `${useInsteadOf(steps)} Answers requests like "${request.slice(0, 160)}" by running ${steps.map((s) => s.id + (s.forEach ? ' (for each)' : '')).join(' → ')} in one call.${applied.length ? ` Selects the ${applied.join(', ')}.` : ''}${unapplied.length ? ` Does not apply "${unapplied.join(', ')}"; filter the result.` : ''} Returns each step's result under "results".`,
     inputSchema: {
       type: 'object',
       properties: inputProps,

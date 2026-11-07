@@ -1,7 +1,7 @@
 import type { Config, IntegrationConfig } from '../config/config.js';
 import { CompositeExecutor } from '../composite/executor.js';
 import { COMPOSITE_OUTPUT_SCHEMA } from '../composite/generator.js';
-import { maxAccess, type CompositeDef } from '../composite/plan.js';
+import { isTransform, maxAccess, type CompositeDef } from '../composite/plan.js';
 import { errorMessage } from '../core/errors.js';
 import { toolName } from '../core/naming.js';
 import {
@@ -195,9 +195,9 @@ export class Catalog {
     // Composites last: they are only exposed when every tool they call is
     // itself exposed, so revoking a step's permission also hides the composite.
     for (const c of composites) {
-      const missing = c.def.steps.filter(
-        (s) => !next.has(s.tool) || next.get(s.tool)!.exec.type === 'composite',
-      );
+      const missing = c.def.steps
+        .filter((s) => !isTransform(s))
+        .filter((s) => !next.has(s.tool) || next.get(s.tool)!.exec.type === 'composite');
       if (missing.length) {
         problems.push({
           artifact: c.def.name,
@@ -205,7 +205,9 @@ export class Catalog {
         });
         continue;
       }
-      const access = maxAccess(c.def.steps.map((s) => next.get(s.tool)!.def.access));
+      const access = maxAccess(
+        c.def.steps.filter((s) => !isTransform(s)).map((s) => next.get(s.tool)!.def.access),
+      );
       // A composite that writes is exposed only if its own approval granted
       // that level, independently of what its steps were granted.
       if (

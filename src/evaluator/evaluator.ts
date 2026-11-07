@@ -1,10 +1,12 @@
 import type { IntegrationConfig } from '../config/config.js';
 import {
+  isTransform,
   validatePlan,
   stepDependencies,
   planStages,
   type CompositeDef,
 } from '../composite/plan.js';
+import { applyTransform } from '../composite/transform.js';
 import { materialize, resolveRef, type Scope } from '../composite/refs.js';
 import {
   TOOL_NAME_PATTERN,
@@ -249,7 +251,7 @@ export async function evaluateComposite(
   metrics.steps = def.steps.length;
   metrics.stages = stages.length;
   metrics.maxParallelism = Math.max(...stages.map((s) => s.length));
-  const accesses = def.steps.map((s) => deps.toolAccess(s.tool)!);
+  const accesses = def.steps.filter((s) => !isTransform(s)).map((s) => deps.toolAccess(s.tool)!);
   const writes = accesses.filter((a) => a !== 'read').length;
   checks.push({
     name: 'authorization preserved',
@@ -345,6 +347,12 @@ async function sequentialReference(
   for (const id of order) {
     const step = def.steps.find((s) => s.id === id)!;
     if (stepDependencies(step).some((d) => !scope.steps[d])) continue;
+    if (isTransform(step) && step.transform) {
+      scope.steps[id] = {
+        result: applyTransform(resolveRef(step.transform.from, scope), step.transform.ops),
+      };
+      continue;
+    }
     if (step.forEach) {
       const src = resolveRef(step.forEach, scope);
       const items = Array.isArray(src) ? src : src == null ? [] : [src];

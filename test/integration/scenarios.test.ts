@@ -464,3 +464,41 @@ describe('scenario 14: generated tool rollback', () => {
     );
   });
 });
+
+describe('capability requests with "latest"', () => {
+  it('proposes a composite that selects the latest order itself', async () => {
+    h = await makeHarness();
+    await approveShop(h.app);
+    const a = h.app.discovery.analyze(
+      "Find a customer's latest order and show its payment status",
+      's',
+    );
+    expect(a.verdict).toBe('composable');
+    expect(a.explanation).toMatch(/selects the latest/);
+    const art = h.app.registry.getArtifactByName(a.proposal!.artifact)!;
+    const def = h.app.registry.latestVersion(art.id)!.definition as unknown as CompositeDef;
+    const t = def.steps.find((s) => s.tool === '$transform')!;
+    expect(t.transform!.ops).toEqual([
+      { sort: { field: 'createdAt', order: 'desc' } },
+      { first: true },
+    ]);
+    const v = await h.app.evaluateLatest(a.proposal!.artifact, [{ userId: 2 }], 'human:test');
+    expect(v.status).toBe('awaiting_approval');
+    h.app.approve(
+      a.proposal!.artifact,
+      { allowWrite: false, allowDestructive: false },
+      'human:test',
+    );
+    const r = await h.app.call(def.toolName, { userId: 2 }, ctx);
+    const res = (r.data as { results: Record<string, unknown> }).results;
+    const latest = res[t.id] as { id: number; createdAt: string };
+    const all = res.getOrders as Array<{ createdAt: string }>;
+    expect(latest.createdAt).toBe(
+      all
+        .map((o) => o.createdAt)
+        .sort()
+        .at(-1),
+    );
+    expect(Array.isArray(res.getPayments)).toBe(true);
+  });
+});

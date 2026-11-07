@@ -1,3 +1,4 @@
+import { validateTransform, type TransformOp } from './transform.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
 
 /**
@@ -25,7 +26,14 @@ export interface PlanStep {
   optional?: boolean;
   /** Ordering-only dependencies (no data flows): run after these steps. */
   after?: string[];
+  /** For tool "$transform": reshape the value at `from` (see transform.ts). */
+  transform?: { from: string; ops: TransformOp[] };
 }
+
+/** Reserved tool name for data-transform steps (no tool is called). */
+export const TRANSFORM_TOOL = '$transform';
+
+export const isTransform = (step: PlanStep): boolean => step.tool === TRANSFORM_TOOL;
 
 export interface CompositeDef {
   kind: 'composite';
@@ -69,6 +77,7 @@ export function stepDependencies(step: PlanStep): string[] {
   };
   visit(step.args);
   if (step.forEach) visit({ $ref: step.forEach });
+  if (step.transform) visit({ $ref: step.transform.from });
   for (const a of step.after ?? []) deps.add(a);
   return [...deps];
 }
@@ -124,7 +133,21 @@ export function validatePlan(
     if (!/^[A-Za-z0-9_-]{1,40}$/.test(step.id)) problems.push(`invalid step id "${step.id}"`);
     if (ids.has(step.id)) problems.push(`duplicate step id "${step.id}"`);
     ids.add(step.id);
-    if (!toolExists(step.tool))
+    if (isTransform(step)) {
+      if (
+        !step.transform ||
+        typeof step.transform.from !== 'string' ||
+        !/^(steps|input)\./.test(step.transform.from)
+      ) {
+        problems.push(
+          `step "${step.id}" transform needs "from" referencing a step result or input`,
+        );
+      } else {
+        for (const p of validateTransform(step.transform.ops))
+          problems.push(`step "${step.id}" ${p}`);
+      }
+      if (step.forEach) problems.push(`step "${step.id}" transform steps cannot use forEach`);
+    } else if (!toolExists(step.tool))
       problems.push(`step "${step.id}" calls unknown or unpublished tool "${step.tool}"`);
     if (step.tool === def.toolName) problems.push(`step "${step.id}" calls the composite itself`);
   }
