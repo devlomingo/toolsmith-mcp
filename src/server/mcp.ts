@@ -93,8 +93,9 @@ export function createServerFactory(app: Toolsmith, opts: ServerFactoryOptions =
       const headers = rctx?.requestInfo?.headers;
       const principal = `http:${headers?.get('x-toolsmith-client') ?? 'local'}`;
       const explicit = headers?.get('x-toolsmith-session') ?? headers?.get('mcp-session-id');
-      const conn = headers?.get('x-toolsmith-conn') ?? '';
-      const sub = explicit ? explicit.slice(0, 80) : `${envelopeClient ?? 'client'}@${conn}`;
+      // Without a session header, group by client name; the miner splits
+      // back-to-back runs itself (run restarts and data flow).
+      const sub = explicit ? explicit.slice(0, 80) : (envelopeClient ?? 'client');
       return { principal, session: `${principal}/${sub}` };
     };
 

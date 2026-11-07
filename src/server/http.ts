@@ -7,6 +7,7 @@ import type { AddressInfo } from 'node:net';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Toolsmith } from '../app.js';
+import { ToolsmithError } from '../core/errors.js';
 import { resolveEnvRefs } from '../security/secrets.js';
 import { handleAdminApi } from './admin-api.js';
 import { createServerFactory } from './mcp.js';
@@ -59,9 +60,14 @@ export async function startHttpServer(
     ...(mcpToken ? [{ name: 'default', token: mcpToken }] : []),
     ...app.config.server.clients.map((c) => ({ name: c.name, token: resolveEnvRefs(c.token) })),
   ];
-  if (!isLoopback(host) && clientTokens.length === 0) {
-    throw new Error(
-      `Refusing to listen on ${host} without server.mcpToken. Set one, or bind to 127.0.0.1.`,
+  // Every HTTP client needs a token, even on loopback: the token is the
+  // client's identity, and per-call approvals are bound to it. Without one,
+  // every local client would share an identity and could spend another's approval.
+  if (clientTokens.length === 0) {
+    throw new ToolsmithError(
+      `Refusing to serve MCP over HTTP on ${host} without a client token.`,
+      'validation',
+      'Set server.mcpToken (or server.clients). `toolsmith-mcp init` generates one in .env.',
     );
   }
   if (!adminToken)
@@ -88,20 +94,14 @@ export async function startHttpServer(
         // Identify the client by its token. These headers are set only by
         // the gateway: anything a client sends under these names is dropped.
         delete req.headers['x-toolsmith-client'];
-        delete req.headers['x-toolsmith-conn'];
-        let client: string | undefined;
-        if (clientTokens.length === 0) client = 'local';
-        else
-          client = clientTokens.find((c) => tokenMatches(req.headers.authorization, c.token))?.name;
+        const client = clientTokens.find((c) =>
+          tokenMatches(req.headers.authorization, c.token),
+        )?.name;
         if (!client) {
           res.setHeader('www-authenticate', 'Bearer');
           return json(res, 401, { error: 'Missing or invalid bearer token for /mcp' });
         }
         req.headers['x-toolsmith-client'] = client;
-        // The TCP connection groups a keep-alive client's calls for workflow
-        // discovery when it sends no session header (2025-era HTTP is stateless).
-        req.headers['x-toolsmith-conn'] =
-          `${req.socket.remoteAddress ?? ''}:${req.socket.remotePort ?? ''}`;
         // Browsers must not be able to drive the gateway cross-site.
         const origin = req.headers.origin;
         if (origin && !sameOrigin(origin, req))

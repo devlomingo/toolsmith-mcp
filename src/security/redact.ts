@@ -51,8 +51,23 @@ const MAX_KEYS = 200;
 export class Redactor {
   private readonly secrets = new Set<string>();
 
+  /** Longest first, so an encoded form is replaced before a shorter form inside it. */
+  private bySize(): string[] {
+    return [...this.secrets].sort((a, b) => b.length - a.length);
+  }
+
   registerSecret(value: string | undefined): void {
-    if (value && value.length >= 4) this.secrets.add(value);
+    if (!value || value.length < 4) return;
+    // A secret can come back encoded: in a reflected URL (percent-encoding,
+    // or form encoding with "+" for spaces) or as base64.
+    for (const form of [
+      value,
+      encodeURIComponent(value),
+      new URLSearchParams({ k: value }).toString().slice(2),
+      Buffer.from(value).toString('base64').replace(/=+$/, ''),
+    ]) {
+      if (form.length >= 4) this.secrets.add(form);
+    }
   }
 
   /**
@@ -66,7 +81,7 @@ export class Redactor {
     const walk = (v: unknown): unknown => {
       if (typeof v === 'string') {
         let out = v;
-        for (const secret of this.secrets)
+        for (const secret of this.bySize())
           if (out.includes(secret)) out = out.split(secret).join('[REDACTED_SECRET]');
         return out;
       }
@@ -84,7 +99,7 @@ export class Redactor {
 
   redactString(input: string): string {
     let out = input;
-    for (const secret of this.secrets) {
+    for (const secret of this.bySize()) {
       if (out.includes(secret)) out = out.split(secret).join('[REDACTED_SECRET]');
     }
     for (const [re, replacement] of VALUE_PATTERNS) out = out.replace(re, replacement);

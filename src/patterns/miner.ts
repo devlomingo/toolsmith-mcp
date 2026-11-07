@@ -115,10 +115,27 @@ export function segmentEpisodes(traces: TraceRecord[], gapMs: number): TraceReco
     list.sort((a, b) => a.startedAt - b.startedAt);
     let current: TraceRecord[] = [];
     let lastEnd = -Infinity;
+    // result fingerprint -> where it appeared, in the current episode
+    let produced = new Map<string, Array<{ path: string; tool: string }>>();
     for (const t of list) {
-      if (current.length && t.startedAt - lastEnd > gapMs) {
+      // A new run begins at an idle gap, or when the call that started this
+      // episode comes again with arguments nothing in the episode produced
+      // (agents sharing a session key, or one agent running back to back).
+      // "Produced" needs name evidence (userId <- user.id, orderId <- orderId):
+      // small values like 2 appear everywhere as quantities and ids.
+      const derived = Object.entries(t.argFingerprints).some(([argPath, h]) =>
+        (produced.get(h) ?? []).some((src) => nameAffinity(argPath, src.path, src.tool) >= 3),
+      );
+      const restart =
+        current.length >= 2 && t.tool === current[0]!.tool && !derived && startedRun(current);
+      if (current.length && (t.startedAt - lastEnd > gapMs || restart)) {
         episodes.push(current);
         current = [];
+        produced = new Map();
+      }
+      for (const [h, paths] of Object.entries(t.resultFingerprints)) {
+        const list = produced.get(h) ?? produced.set(h, []).get(h)!;
+        for (const path of paths) list.push({ path, tool: t.tool });
       }
       current.push(t);
       lastEnd = Math.max(lastEnd, t.startedAt + t.durationMs);
@@ -126,6 +143,19 @@ export function segmentEpisodes(traces: TraceRecord[], gapMs: number): TraceReco
     if (current.length) episodes.push(current);
   }
   return episodes;
+}
+
+/** True when the episode's first call fed a later call, i.e. it really started a run. */
+function startedRun(episode: TraceRecord[]): boolean {
+  const root = episode[0]!;
+  return episode.slice(1).some((c) =>
+    Object.entries(c.argFingerprints).some(([argPath, h]) => {
+      if (root.argFingerprints[argPath] === h) return true; // same input passed on
+      return (root.resultFingerprints[h] ?? []).some(
+        (p) => nameAffinity(argPath, p, root.tool) >= 3,
+      );
+    }),
+  );
 }
 
 export function bindCalls(episode: TraceRecord[]): EpisodeCall[] {

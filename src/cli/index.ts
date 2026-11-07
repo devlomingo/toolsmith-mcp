@@ -572,7 +572,11 @@ function clientConfig(loaded: LoadedConfig): number {
           toolsmith: {
             type: 'http',
             url: `http://${host}:${port}/mcp`,
-            headers: { Authorization: 'Bearer <TOOLSMITH_MCP_TOKEN from .env>' },
+            headers: {
+              Authorization: 'Bearer <TOOLSMITH_MCP_TOKEN from .env>',
+              'X-Toolsmith-Session':
+                '<optional: a stable id per agent run, improves workflow discovery>',
+            },
           },
         },
       },

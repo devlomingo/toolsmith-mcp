@@ -49,7 +49,16 @@ async function fetchSpec(url: string, allowPrivateNetwork: boolean): Promise<Res
       const host = current.hostname.replace(/^\[|\]$/g, '');
       const addresses = isIP(host)
         ? [host]
-        : (await lookup(host, { all: true }).catch(() => [])).map((a) => a.address);
+        : (
+            await lookup(host, { all: true }).catch(() => {
+              // Fail closed: an address we could not check is not fetched.
+              throw new ToolsmithError(
+                `Could not resolve ${host} to check where the spec download would go`,
+                'network',
+                'Check the hostname, or download the spec and pass the local file path.',
+              );
+            })
+          ).map((a) => a.address);
       const bad = addresses.find((a) => isPrivateAddress(a));
       if (bad) {
         throw new ToolsmithError(

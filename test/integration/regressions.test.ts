@@ -546,3 +546,132 @@ describe('m12: capability verbs', () => {
     expect(a.matches[0]!.tool).toBe('shop__deleteProduct');
   });
 });
+
+// ---- Round 3 -------------------------------------------------------------
+
+describe('N6: secrets survive no truncation trick in error bodies', () => {
+  it('a padded reflection still has the credential fully redacted', async () => {
+    const srv = createServer((q, s) => {
+      const pad = Number(new URL(q.url ?? '/', 'http://x').searchParams.get('pad') ?? 0);
+      s.writeHead(400, { 'content-type': 'text/plain' });
+      s.end(`${'x'.repeat(pad)}${q.headers.authorization}`);
+    });
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+    process.env.N6_U = 'echouser';
+    process.env.N6_P = 'echo-PASS-55555';
+    const cfg = IntegrationSchema.parse({
+      name: 't',
+      spec: 'x',
+      allowPrivateNetwork: true,
+      maxRetries: 0,
+      auth: { type: 'basic', username: '${env:N6_U}', password: '${env:N6_P}' },
+    });
+    const port = (srv.address() as { port: number }).port;
+    const client = new HttpIntegrationClient(cfg, `http://127.0.0.1:${port}`, new Redactor());
+    const o = {
+      ...op('/e'),
+      params: [{ name: 'pad', in: 'query' as const, required: false, schema: { type: 'integer' } }],
+    };
+    const b64 = Buffer.from('echouser:echo-PASS-55555').toString('base64');
+    for (let pad = 230; pad <= 300; pad++) {
+      const r = await client.call(o, { pad });
+      for (let k = 8; k <= b64.length; k++)
+        expect(r.error ?? '', `pad ${pad}`).not.toContain(b64.slice(0, k));
+    }
+    srv.close();
+  });
+});
+
+describe('N7: secrets reflected in encoded form', () => {
+  it('scrubs percent-encoded and form-encoded query keys', async () => {
+    const srv = createServer((q, s) => {
+      s.writeHead(200, { 'content-type': 'application/json' });
+      s.end(JSON.stringify({ url: q.url }));
+    });
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+    process.env.N7_KEY = 'eq+QUERY/KEY=88888 x';
+    const cfg = IntegrationSchema.parse({
+      name: 't',
+      spec: 'x',
+      allowPrivateNetwork: true,
+      auth: { type: 'apiKey', in: 'query', name: 'api_key', value: '${env:N7_KEY}' },
+    });
+    const port = (srv.address() as { port: number }).port;
+    const r = await new HttpIntegrationClient(cfg, `http://127.0.0.1:${port}`, new Redactor()).call(
+      op('/echo'),
+      {},
+    );
+    srv.close();
+    const text = JSON.stringify(r.data);
+    expect(text).not.toMatch(/88888/);
+    expect(text).toContain('[REDACTED_SECRET]');
+  });
+
+  it('scrubs literal credentials written in the config and flags them in evaluation', async () => {
+    h = await makeHarness({
+      importNow: false,
+      integration: { auth: { type: 'bearer', token: SHOP_TOKEN } },
+    });
+    const v = await h.app.importIntegration('shop', 'human:test');
+    expect(
+      v.evaluation!.checks.find((c) => c.name === 'credentials kept out of config'),
+    ).toBeTruthy();
+    expect(JSON.stringify(v)).not.toContain(SHOP_TOKEN);
+  });
+});
+
+describe('N5: workflow discovery over HTTP without a session header', () => {
+  it('finds both workflows from 8 back-to-back header-less legacy runs', async () => {
+    const { Client, StreamableHTTPClientTransport } = await import('@modelcontextprotocol/client');
+    const { startHttpServer } = await import('../../src/server/http.js');
+    h = await makeHarness();
+    await approveShop(h.app);
+    const gw = await startHttpServer(h.app, {
+      host: '127.0.0.1',
+      port: 0,
+      mcpToken: 'tok',
+      adminToken: 'adm',
+    });
+    try {
+      const unwrap = (r: { structuredContent?: unknown }) => {
+        const sc = r.structuredContent as Record<string, unknown>;
+        return (Object.keys(sc).length === 1 && 'result' in sc ? sc.result : sc) as never;
+      };
+      for (let run = 0; run < 8; run++) {
+        const c = new Client(
+          { name: 'agent', version: '1' },
+          { capabilities: {}, versionNegotiation: { mode: 'legacy' } },
+        );
+        await c.connect(
+          new StreamableHTTPClientTransport(new URL(`${gw.url}/mcp`), {
+            requestInit: { headers: { authorization: 'Bearer tok' } },
+          }),
+        );
+        if (run % 2 === 0) {
+          const userId = run / 2 + 1;
+          await c.callTool({ name: 'shop__getUser', arguments: { userId } });
+          const orders = unwrap(
+            await c.callTool({ name: 'shop__getOrders', arguments: { userId } }),
+          ) as Array<{ id: number }>;
+          for (const o of orders)
+            await c.callTool({ name: 'shop__getOrderItems', arguments: { orderId: o.id } });
+        } else {
+          const orderId = 40 + run;
+          const order = unwrap(
+            await c.callTool({ name: 'shop__getOrder', arguments: { orderId } }),
+          ) as { userId: number };
+          await c.callTool({ name: 'shop__getPayments', arguments: { orderId } });
+          await c.callTool({ name: 'shop__getUser', arguments: { userId: order.userId } });
+        }
+        await c.close();
+      }
+      const sigs = h.app.mine().map((p) => p.signature);
+      expect(sigs).toContain('shop__getOrders > shop__getUser > loop(shop__getOrderItems)');
+      expect(
+        sigs.some((s) => s.includes('shop__getOrder >') && s.includes('shop__getPayments')),
+      ).toBe(true);
+    } finally {
+      await gw.close();
+    }
+  });
+});

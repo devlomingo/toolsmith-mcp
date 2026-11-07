@@ -286,6 +286,6 @@ describe('admin and MCP endpoints', () => {
     const { startHttpServer } = await import('../../src/server/http.js');
     await expect(
       startHttpServer(h.app, { host: '0.0.0.0', port: 0, adminToken: 'x' }),
-    ).rejects.toThrow(/without server.mcpToken/);
+    ).rejects.toThrow(/without a client token/);
   });
 });

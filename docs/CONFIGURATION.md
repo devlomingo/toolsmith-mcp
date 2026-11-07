@@ -55,7 +55,7 @@ from or wherever `--config <path>` points.
 |---|---|---|
 | `host` | `127.0.0.1` | Bind address. Anything other than loopback requires `mcpToken`. |
 | `port` | `7420` | HTTP port for `/mcp`, `/api` and `/dashboard`. |
-| `mcpToken` | none | Bearer token that MCP clients must send. Required off-loopback; recommended always. |
+| `mcpToken` | none | Bearer token that MCP clients must send. It identifies the client named `default`. Serving MCP over HTTP requires at least one client token, even on loopback. |
 | `adminToken` | none | Bearer token for the dashboard and admin API. Required to run `start`. |
 | `clients` | `[]` | Extra MCP clients, each `{ "name": "agent-a", "token": "${env:AGENT_A_TOKEN}" }`. The token identifies the client, and per-call approvals are bound to it. Give each agent its own. |
 

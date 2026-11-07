@@ -19,7 +19,7 @@ fix.
 | `This action grants access and needs a person at an interactive terminal` | `approve`, `approve-call`, `publish`, `enable` and `rollback` ask you to type `yes`. They don't run from scripts or agents. Use the dashboard for remote or scripted approval. |
 | `approval_required` on every call | The tool is destructive. Approve each call with `toolsmith-mcp approve-call <id>`; approvals are single-use and bound to the exact arguments. |
 | No workflows found | Fewer than `minSupport` (3) sessions ran it, or calls aren't linked by data flow. Over HTTP, send `X-Toolsmith-Session` so one agent's calls group together. |
-| `Refusing to listen on 0.0.0.0 without server.mcpToken` | Binding beyond loopback requires a token. Run `toolsmith-mcp init` or set `server.mcpToken`. |
+| `Refusing to serve MCP over HTTP … without a client token` | HTTP serving always needs a token, even on loopback, because the token is the client's identity for approvals. Run `toolsmith-mcp init` or set `server.mcpToken`. |
 | Dashboard says the token was not accepted | Use `TOOLSMITH_ADMIN_TOKEN`, not the MCP token. `start` prints a sign-in link. |
 | HTTP 403 from `/mcp` in a browser | Cross-origin requests are refused on purpose. Use an MCP client. |
 | Upstream server `not connected` | Check its command or URL; `doctor` prints the error. Toolsmith keeps serving everything else. |

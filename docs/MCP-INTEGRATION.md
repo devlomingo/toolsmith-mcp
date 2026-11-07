@@ -58,7 +58,10 @@ each process is its own client.
 in this order of preference:
 
 1. the `X-Toolsmith-Session` header (`Mcp-Session-Id` also works);
-2. otherwise, the client's reported name plus its TCP connection.
+2. otherwise, the client's reported name. The miner then splits back-to-back
+   runs itself: a run restarts when its first tool is called again with
+   arguments no earlier step produced. Data flow separates interleaved
+   workflows.
 
 Send the header with something stable per agent run:
 

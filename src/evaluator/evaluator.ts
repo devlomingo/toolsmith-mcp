@@ -116,9 +116,20 @@ export async function evaluateIntegration(
       ? `missing environment variables: ${missing.join(', ')}`
       : refs.length
         ? `from ${refs.join(', ')}`
-        : 'no authentication configured',
+        : cfg.auth.type === 'none'
+          ? 'no authentication configured'
+          : 'credentials are written directly in the config file',
     severity: 'error',
   });
+  if (cfg.auth.type !== 'none' && refs.length === 0) {
+    checks.push({
+      name: 'credentials kept out of config',
+      passed: true,
+      detail:
+        'The credential is a literal in toolsmith.config.json. Move it to an environment variable and reference it as ${env:NAME}, so it never lands in version control.',
+      severity: 'warning',
+    });
+  }
 
   const counts = { read: 0, write: 0, destructive: 0 };
   for (const op of def.operations) counts[op.access]++;

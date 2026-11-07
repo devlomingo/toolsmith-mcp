@@ -174,7 +174,8 @@ export class HttpIntegrationClient {
 
   private secret(value: string): string {
     const resolved = resolveEnvRefs(value);
-    if (envRefNames(value).length > 0) this.redactor.registerSecret(resolved);
+    // Literal credentials written into the config are secrets too.
+    this.redactor.registerSecret(resolved);
     return resolved;
   }
 
@@ -282,7 +283,9 @@ export class HttpIntegrationClient {
   }
 
   private httpError(op: OperationDef, res: RawResponse): Omit<HttpOutcome, 'requests' | 'retries'> {
-    const snippet = this.redactor.redactString(res.body.slice(0, 300));
+    // Redact the whole body first, then shorten it: truncating first would let a
+    // caller pad the request so a reflected secret is cut just before its end.
+    const snippet = this.redactor.redactString(res.body).slice(0, 300);
     const detail = snippet ? ` Response: ${snippet}` : '';
     const s = res.status;
     if (s === 401) {
