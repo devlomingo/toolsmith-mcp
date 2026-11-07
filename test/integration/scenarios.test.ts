@@ -502,3 +502,25 @@ describe('capability requests with "latest"', () => {
     expect(Array.isArray(res.getPayments)).toBe(true);
   });
 });
+
+describe('baked constants', () => {
+  it('an argument with the same value in every run becomes a literal, not an input', async () => {
+    h = await makeHarness();
+    await approveShop(h.app);
+    for (const s of ['c1', 'c2', 'c3', 'c4']) {
+      const list = await h.app.call(
+        'shop__getProducts',
+        { category: 'books', limit: 2 + Number(s[1]) },
+        { sessionId: s },
+      );
+      for (const p of list.data as Array<{ id: number }>)
+        await h.app.call('shop__getProduct', { id: p.id }, { sessionId: s });
+    }
+    const out = await h.app.proposeComposites('system');
+    const def = out.find((o) => o.def?.steps.some((st) => st.tool === 'shop__getProducts'))!.def!;
+    const step = def.steps.find((st) => st.tool === 'shop__getProducts')!;
+    expect(step.args.category).toBe('books'); // constant
+    expect(step.args.limit).toEqual({ $ref: 'input.limit' }); // varies: stays an input
+    expect(Object.keys(def.inputSchema.properties as object)).toEqual(['limit']);
+  });
+});

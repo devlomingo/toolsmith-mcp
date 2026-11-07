@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { TraceRecord } from '../observer/trace-store.js';
+import type { JsonValue } from '../core/types.js';
+import { resolvePath } from '../composite/refs.js';
 
 /**
  * Workflow discovery over recorded traces.
@@ -64,7 +66,9 @@ export type ArgSource =
   | { type: 'input' }
   | { type: 'output'; element: number; path: string }
   | { type: 'item'; path: string }
-  | { type: 'shared'; element: number; tool: string; arg: string };
+  | { type: 'shared'; element: number; tool: string; arg: string }
+  /** Same value in every occurrence: baked into the composite as a literal. */
+  | { type: 'constant'; value: JsonValue };
 
 export interface ElementArgs {
   /** element index -> tool -> arg path -> where its value comes from */
@@ -490,6 +494,9 @@ function buildPattern(
   const tallies: Array<
     Record<string, Record<string, Map<string, { src: ArgSource; count: number }>>>
   > = elements.map(() => ({}));
+  const constants: Array<
+    Record<string, Record<string, { hashes: Set<string>; value: JsonValue | undefined }>>
+  > = elements.map(() => ({}));
   const seenCount: Array<Record<string, Record<string, number>>> = elements.map(() => ({}));
   for (const o of occs) {
     const ep = episodes[o.episode]!;
@@ -530,6 +537,15 @@ function buildPattern(
               }
             }
           }
+          // Remember every value this argument took (as fingerprints) and one
+          // readable example, to spot constants.
+          const cst = ((constants[k]![tool] ??= {})[argPath] ??= {
+            hashes: new Set(),
+            value: undefined,
+          });
+          cst.hashes.add(call.trace.argFingerprints[argPath]!);
+          if (cst.value === undefined && call.trace.args)
+            cst.value = resolvePath(call.trace.args, argPath);
           const t = ((tallies[k]![tool] ??= {})[argPath] ??= new Map());
           const key = JSON.stringify(src);
           const entry = t.get(key) ?? { src, count: 0 };
@@ -540,17 +556,28 @@ function buildPattern(
       }
     }
   }
-  const args: ElementArgs[] = tallies.map((byTool) => {
+  const args: ElementArgs[] = tallies.map((byTool, k) => {
     const out: ElementArgs = {};
     for (const [tool, byArg] of Object.entries(byTool)) {
       out[tool] = {};
       for (const [argPath, map] of Object.entries(byArg)) {
         const best = [...map.values()].sort((a, b) => b.count - a.count)[0]!;
         const total = [...map.values()].reduce((s, x) => s + x.count, 0);
+        const cst = constants[k]?.[tool]?.[argPath];
+        const isConstant =
+          cst !== undefined &&
+          cst.hashes.size === 1 &&
+          total >= opts.minSupport &&
+          cst.value !== undefined &&
+          cst.value !== null &&
+          typeof cst.value !== 'object' &&
+          !String(cst.value).includes('[REDACTED');
         out[tool]![argPath] =
           best.src.type !== 'input' && best.count / total >= opts.minConfidence
             ? best.src
-            : { type: 'input' };
+            : isConstant
+              ? { type: 'constant', value: cst!.value! }
+              : { type: 'input' };
       }
     }
     return out;

@@ -139,6 +139,8 @@ export function patternToComposite(
     switch (src.type) {
       case 'item':
         return { $ref: src.path ? `item.${src.path}` : 'item' };
+      case 'constant':
+        return src.value;
       case 'output': {
         const stepId = stepIds[src.element]![0]!;
         return { $ref: `steps.${stepId}.result${src.path.startsWith('[') ? '' : '.'}${src.path}` };
