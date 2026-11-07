@@ -569,7 +569,9 @@ function buildPattern(
         // Ids are what a workflow is about (which user, which order); a run of
         // sessions that happened to use the same one must not freeze it.
         const leaf = argPath.split('.').pop() ?? '';
-        const idLike = /^id$|Id$|_id$|-id$/.test(leaf);
+        // Ids and identities: what a workflow is about, never a fixed value.
+        const idLike =
+          /(id|ids|uuid|guid|key|name|owner|email|handle|slug|login|account|user)$/i.test(leaf);
         const isConstant =
           !idLike &&
           cst !== undefined &&

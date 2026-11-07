@@ -227,21 +227,21 @@ export async function evaluateIntegration(
 
 /** Every human-readable string in a JSON Schema (descriptions, titles, enum values, defaults). */
 export function schemaTexts(schema: unknown, depth = 0, out: string[] = []): string[] {
-  if (!schema || typeof schema !== 'object' || depth > 12) return out;
+  // Collect every string anywhere in the schema (any key, any depth), so
+  // nothing a spec can put there escapes the scan.
+  if (out.length > 20_000) return out;
+  if (typeof schema === 'string') {
+    out.push(schema);
+    return out;
+  }
+  if (!schema || typeof schema !== 'object') return out;
+  if (Array.isArray(schema)) {
+    for (const v of schema) schemaTexts(v, depth + 1, out);
+    return out;
+  }
   for (const [k, v] of Object.entries(schema as Record<string, unknown>)) {
-    if (
-      (k === 'description' || k === 'title' || k === 'default' || k === 'example') &&
-      typeof v === 'string'
-    )
-      out.push(v);
-    else if (k === 'enum' && Array.isArray(v))
-      out.push(...v.filter((x): x is string => typeof x === 'string'));
-    else if (k === 'properties' && v && typeof v === 'object') {
-      for (const [name, child] of Object.entries(v as Record<string, unknown>)) {
-        out.push(name);
-        schemaTexts(child, depth + 1, out);
-      }
-    } else if (v && typeof v === 'object') schemaTexts(v, depth + 1, out);
+    out.push(k);
+    schemaTexts(v, depth + 1, out);
   }
   return out;
 }

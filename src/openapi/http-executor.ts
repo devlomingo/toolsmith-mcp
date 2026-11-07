@@ -229,18 +229,21 @@ export class HttpIntegrationClient {
   private token?: { value: string; expiresAt: number };
 
   /** OAuth 2.0 client-credentials token, cached until shortly before expiry. */
-  private async oauthToken(signal?: AbortSignal): Promise<string> {
+  private async oauthToken(_signal?: AbortSignal): Promise<string> {
     const auth = this.cfg.auth;
     if (auth.type !== 'oauth2ClientCredentials') throw new Error('not an OAuth integration');
     if (this.token && this.token.expiresAt > Date.now()) return this.token.value;
     // One fetch at a time: parallel cold calls share it.
-    this.tokenFetch ??= this.fetchToken(signal).finally(() => (this.tokenFetch = undefined));
+    // The shared fetch is not tied to one caller's signal: cancelling one
+    // call must not fail the others waiting on the same token.
+    this.tokenFetch ??= this.fetchToken().finally(() => (this.tokenFetch = undefined));
     return this.tokenFetch;
   }
 
   private tokenFetch?: Promise<string>;
+  private issued: Array<{ value: string; expiresAt: number }> = [];
 
-  private async fetchToken(signal?: AbortSignal): Promise<string> {
+  private async fetchToken(): Promise<string> {
     const auth = this.cfg.auth;
     if (auth.type !== 'oauth2ClientCredentials') throw new Error('not an OAuth integration');
     const form = new URLSearchParams({
@@ -257,7 +260,7 @@ export class HttpIntegrationClient {
       url,
       { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
       form.toString(),
-      signal,
+      undefined, // bounded by the integration timeout inside send()
     );
     let parsed: { access_token?: unknown; expires_in?: unknown } = {};
     try {
@@ -272,9 +275,18 @@ export class HttpIntegrationClient {
       );
     }
     // Keep only the live token in the redactor; old ones would pile up and slow every scrub.
-    if (this.token) this.redactor.unregisterSecret(this.token.value);
-    this.redactor.registerSecret(parsed.access_token);
     const ttl = typeof parsed.expires_in === 'number' ? parsed.expires_in * 1000 : 3_600_000;
+    // A replaced token still works upstream until it really expires, and a
+    // slow response can still echo it: keep scrubbing it until then (plus a
+    // grace period), and only then forget it, so the redactor stays bounded.
+    const now = Date.now();
+    this.issued = this.issued.filter((t) => {
+      if (t.expiresAt + 300_000 > now) return true;
+      this.redactor.unregisterSecret(t.value);
+      return false;
+    });
+    this.issued.push({ value: parsed.access_token, expiresAt: now + ttl });
+    this.redactor.registerSecret(parsed.access_token);
     // Refresh a little early, but never so early that short-lived tokens are refetched on every call.
     const margin = Math.min(60_000, ttl / 4);
     this.token = { value: parsed.access_token, expiresAt: Date.now() + ttl - margin };

@@ -62,6 +62,7 @@ export class Redactor {
       value,
       encodeURIComponent(value),
       encodeURIComponent(value).replace(/%[0-9A-F]{2}/g, (m) => m.toLowerCase()),
+      encodeURIComponent(encodeURIComponent(value)),
       new URLSearchParams({ k: value }).toString().slice(2),
       Buffer.from(value).toString('base64').replace(/=+$/, ''),
     ]) {
@@ -77,6 +78,7 @@ export class Redactor {
       value,
       encodeURIComponent(value),
       encodeURIComponent(value).replace(/%[0-9A-F]{2}/g, (m) => m.toLowerCase()),
+      encodeURIComponent(encodeURIComponent(value)),
       new URLSearchParams({ k: value }).toString().slice(2),
       Buffer.from(value).toString('base64').replace(/=+$/, ''),
     ]) {

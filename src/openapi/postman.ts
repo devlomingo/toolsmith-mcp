@@ -156,13 +156,18 @@ export function postmanToOpenApi(collection: Doc, baseUrlOverride?: string): Doc
     if (origin && !origin.includes('{{')) origins.add(origin.replace(/\/+$/, ''));
     const params: Doc[] = [];
     const pathSegs = segments.map((seg) => {
-      const m =
-        seg.match(/^:([A-Za-z_][A-Za-z0-9_]*)$/) ?? seg.match(/^\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}$/);
+      const m = seg.match(/^:([A-Za-z_][A-Za-z0-9_]*)$/);
       if (m) {
         params.push({ name: m[1], in: 'path', required: true, schema: { type: 'string' } });
         return `{${m[1]}}`;
       }
-      return seg;
+      // {{var}} anywhere in a segment (/bot{{token}}/getMe) becomes a path
+      // parameter; its value is never written into the tool definition.
+      return seg.replace(/\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/g, (_m, name: string) => {
+        if (!params.some((p) => p.name === name))
+          params.push({ name, in: 'path', required: true, schema: { type: 'string' } });
+        return `{${name}}`;
+      });
     });
     for (const q of query)
       params.push({ name: q, in: 'query', required: false, schema: { type: 'string' } });

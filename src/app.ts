@@ -79,7 +79,7 @@ export class Toolsmith {
   private readonly observer: UsageObserver;
   readonly otel?: OtlpExporter;
   /** In-client approval prompts sent and not yet answered (principal, tool, args). */
-  readonly inClientAsks = new Set<string>();
+  readonly inClientAsks = new Map<string, number>();
   private changeListeners = new Set<() => void>();
   private lastRevision = -1;
   private pollTimer?: NodeJS.Timeout;
@@ -458,22 +458,8 @@ export class Toolsmith {
    * the tools this client may call; invented names are dropped.
    */
   async analyzeCapability(request: string, sessionId?: string, principal?: string) {
-    const raw = this.discovery.analyze(request, sessionId);
-    // Answer in terms of what this client may actually call.
     const ok = (tool: string) => this.allowed(principal ?? sessionId, tool);
-    const analysis = { ...raw, matches: raw.matches.filter((m) => ok(m.tool)) };
-    if (
-      (raw.verdict === 'available' || raw.verdict === 'composable') &&
-      ((raw.chain ?? []).some((c) => !ok(c.tool)) ||
-        (raw.verdict === 'available' && analysis.matches.length === 0))
-    ) {
-      Object.assign(analysis, {
-        verdict: 'unsupported' as const,
-        chain: undefined,
-        explanation:
-          'The connected APIs may be able to do this, but not with the tools available to this client. Ask an administrator to extend its access.',
-      });
-    }
+    const analysis = this.discovery.analyze(request, sessionId, ok);
     const llm = this.llmStage();
     if (analysis.verdict !== 'unsupported' || !llm || !this.config.llm.capabilityFallback)
       return analysis;

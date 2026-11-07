@@ -108,9 +108,16 @@ Fixed before release, after independent validation (see
   checked before connecting, so unlike tool calls they are not protected
   against DNS rebinding; these URLs come from the operator. IPv4-translated
   IPv6 is blocked.
-- Instruction-like text is detected in every description an agent reads,
-  including parameter, body-field, GraphQL argument and output-schema
-  descriptions, and fails evaluation.
+- Tool poisoning:
+  - Schemas shown to agents keep only standard JSON Schema keywords, and
+    invisible characters are stripped.
+  - Every string an agent reads is scanned for instruction-like text. This
+    is a best-effort tripwire; a hit fails evaluation.
+  - Reviewers see full descriptions and schemas in `show` and the
+    dashboard.
+- OAuth tokens stay scrubbed until they really expire.
+- In-client approval prompts expire, can't be accepted after a decline,
+  and show invisible characters as escapes.
 - In-client approval prompts show the complete arguments, and only answers
   to prompts the gateway sent count.
 - Capability answers only offer tools the calling client may use. Postman

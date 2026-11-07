@@ -8,7 +8,7 @@ import { isPrivateAddress } from '../security/ssrf.js';
 import { isPostmanCollection, postmanToOpenApi } from './postman.js';
 import { camelCase } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
-import { toJsonSchema, wrapAsObjectSchema } from './schema-utils.js';
+import { cleanText, toJsonSchema, wrapAsObjectSchema } from './schema-utils.js';
 import type {
   OpenApiIntegrationDef,
   OperationDef,
@@ -243,8 +243,8 @@ export async function importOpenApi(
           operation: name,
         });
       }
-      const summary = String(op.summary ?? '').trim();
-      const description = String(op.description ?? '').trim();
+      const summary = cleanText(String(op.summary ?? '')).trim();
+      const description = cleanText(String(op.description ?? '')).trim();
       if (!summary && !description) {
         findings.push({
           severity: 'warning',
@@ -462,7 +462,7 @@ function mergeParams(shared: unknown[], own: unknown[]): OperationParam[] {
       in: loc,
       required: loc === 'path' ? true : Boolean(param.required),
       schema: Object.keys(schema).length > 0 ? schema : { type: 'string' },
-      description: param.description ? String(param.description) : undefined,
+      description: param.description ? cleanText(String(param.description)) : undefined,
       example: pickExample(param),
     });
   }
@@ -575,17 +575,22 @@ function collectSecurityParamNames(doc: Doc): Set<string> {
 }
 
 const INJECTION_PATTERNS = [
-  /ignore (all |any )?(previous|prior|above) (instructions|prompts)/i,
-  /<\s*(important|system|instructions?)\s*>/i,
-  /do not (tell|inform|mention).{0,30}(user|human)/i,
-  /\b(send|forward|exfiltrate|upload) .{0,40}(credentials|password|token|secret|api key|ssh key)/i,
-  /\byou (must|should) (always )?(call|use|invoke) /i,
+  /\b(ignore|disregard|forget) (all |any |the )?(previous|prior|above|earlier|other) (instructions|prompts|rules|messages)/i,
+  /<\s*\/?\s*(important|system|instructions?|admin|override)\s*>/i,
+  /\bdo ?n[o']t (tell|inform|mention|reveal|show).{0,40}\b(the )?(user|human|operator)/i,
+  // Exfiltration needs a destination to count: "send the token to https://…".
+  /\b(send|forward|exfiltrate|upload|post|leak|include)\b.{0,60}\b(credentials?|passwords?|secrets?|api ?keys?|private keys?|ssh keys?|tokens?)\b.{0,40}\b(to|into)\b.{0,20}(https?:\/\/|\S+@\S+\.\w+|an? (external|remote|third))/i,
+  /(~\/\.ssh|\bid_(rsa|ed25519|ecdsa)\b|\.aws\/credentials|\/etc\/(passwd|shadow)|\.env\b)/i,
+  /\byou (must|should|need to) (always |first )?(call|use|invoke|run) /i,
+  /\bbefore (using|calling) (this|any other) tool\b/i,
 ];
 
 /** Flag tool-poisoning style text in third-party descriptions. */
 export function detectInjection(text: string): string | undefined {
+  // Match on the cleaned text, so zero-width characters cannot split a phrase.
+  const clean = cleanText(text).replace(/\s+/g, ' ');
   for (const re of INJECTION_PATTERNS) {
-    const m = text.match(re);
+    const m = clean.match(re);
     if (m) return m[0];
   }
   return undefined;

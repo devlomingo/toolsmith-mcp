@@ -1,5 +1,58 @@
 import type { JsonSchema } from '../core/types.js';
 
+/**
+ * The only JSON Schema keywords passed on to agents. Everything else
+ * (`$comment`, vendor extensions, made-up keys) is dropped: any string a
+ * third-party spec can place in a schema is a place to hide instructions,
+ * so the agent only gets keywords that mean something to a validator.
+ */
+const ALLOWED_KEYWORDS = new Set([
+  'type',
+  'properties',
+  'items',
+  'required',
+  'enum',
+  'const',
+  'format',
+  'description',
+  'title',
+  'default',
+  'minimum',
+  'maximum',
+  'exclusiveMinimum',
+  'exclusiveMaximum',
+  'multipleOf',
+  'minLength',
+  'maxLength',
+  'pattern',
+  'minItems',
+  'maxItems',
+  'uniqueItems',
+  'minProperties',
+  'maxProperties',
+  'additionalProperties',
+  'anyOf',
+  'oneOf',
+  'allOf',
+  'not',
+]);
+
+/**
+ * Remove characters that change how text is displayed without being
+ * visible: zero-width characters, bidi overrides, other control characters.
+ * They can split a phrase so filters miss it, or reorder what a human sees.
+ */
+export function cleanText(text: string): string {
+  return (
+    text
+      .normalize('NFKC')
+      .replace(/[\u2028\u2029]/g, '\n')
+      .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\u00AD]/g, '')
+      // eslint-disable-next-line no-control-regex -- stripping control characters is the point
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+  );
+}
+
 const DROP_KEYS = new Set([
   'example',
   'examples',
@@ -23,6 +76,11 @@ export function toJsonSchema(schema: unknown, depth = 0, seen = new WeakSet<obje
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(src)) {
     if (DROP_KEYS.has(k) || k.startsWith('x-') || k === 'nullable' || k === '$ref') continue;
+    if (!ALLOWED_KEYWORDS.has(k)) continue;
+    if ((k === 'description' || k === 'title') && typeof v === 'string') {
+      out[k] = cleanText(v);
+      continue;
+    }
     if (k === 'readOnly' || k === 'writeOnly') continue;
     if (k === 'properties' && v && typeof v === 'object') {
       const props: Record<string, unknown> = {};

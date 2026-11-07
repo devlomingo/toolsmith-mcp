@@ -202,7 +202,15 @@ export class DiscoveryEngine {
     return out;
   }
 
-  analyze(request: string, sessionId?: string): CapabilityAnalysis {
+  /**
+   * `allowed` limits the analysis to tools the calling client may use, so the
+   * answer never names, suggests or proposes anything outside its allow-list.
+   */
+  analyze(
+    request: string,
+    sessionId?: string,
+    allowed: (tool: string) => boolean = () => true,
+  ): CapabilityAnalysis {
     const words = terms(request);
     const intent = words.reduce<AccessLevel>(
       (acc, w) => (rank(VERBS[w]) > rank(acc) ? VERBS[w]! : acc),
@@ -210,9 +218,9 @@ export class DiscoveryEngine {
     );
     const modifiers = [...new Set(words.filter((w) => MODIFIERS.has(w)))];
     const concepts = [...new Set(words.filter((w) => !VERBS[w] && !MODIFIERS.has(w)))];
-    const ops = this.operations().filter(
-      (o) => rank(o.op.access) <= rank(intent) || o.op.access === intent,
-    );
+    const ops = this.operations()
+      .filter((o) => allowed(o.tool))
+      .filter((o) => rank(o.op.access) <= rank(intent) || o.op.access === intent);
 
     const id = randomUUID().slice(0, 8);
     const base = { id, request, intent, concepts, modifiers };

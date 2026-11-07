@@ -93,6 +93,7 @@ const I18N = {
     done: 'Done',
     steps: 'Steps',
     usageTitle: 'Published composite tools',
+    schemas: 'Full schemas',
     descriptionLabel: 'Description agents will see (say when to use it)',
     discovered: 'Discovered workflows',
     callsCol: 'Calls',
@@ -192,6 +193,7 @@ const I18N = {
     done: 'تم',
     steps: 'الخطوات',
     usageTitle: 'الأدوات المركّبة المنشورة',
+    schemas: 'المخططات كاملة',
     descriptionLabel: 'الوصف الذي يراه الوكيل (اذكر متى يُستخدم)',
     discovered: 'سير العمل المكتشف',
     callsCol: 'الاستدعاءات',
@@ -587,7 +589,8 @@ const views = {
             o.method,
             h('code', {}, o.path),
             pill(o.access, o.access === 'read' ? 'ok' : o.access === 'write' ? 'warn' : 'bad'),
-            o.summary || o.description,
+            // The reviewer sees everything the agent will read, schemas included.
+            h('div', {}, o.summary || o.description, h('details', {}, h('summary', {}, t('schemas')), code({ description: o.description, input: o.inputSchema, output: o.outputSchema ?? null }))),
           ]),
         ),
       );

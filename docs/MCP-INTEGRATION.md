@@ -134,8 +134,14 @@ can miss.
 ### In-client approval (opt-in)
 
 With `"approvals": { "inClient": true }`, a destructive call from a client
-that supports elicitation asks for confirmation in that client: *"Allow ONE
-call to shop__deleteProduct with {"id":3}?"*.
+that supports elicitation asks for confirmation in that client. The prompt
+reads *"Allow ONE call to shop__deleteProduct? … Complete arguments:"*,
+followed by every argument, with invisible characters escaped.
+- Calls with arguments too long to show in full go to the dashboard
+  instead.
+- A prompt expires after 5 minutes.
+- An answer only counts once, and only if this gateway asked for it.
+- A declined prompt cannot be accepted later.
 - On the 2026-07-28 protocol, this uses the `input_required` round trip.
 - On 2025-era connections such as stdio, it uses `elicitation/create`.
 - Accepting runs that one call. The approval is recorded in the audit log
@@ -157,7 +163,9 @@ the rest on demand:
 
 The result lists matching tools with their descriptions and input schemas,
 and the agent calls them directly. Allow-lists still apply: a client can
-neither find nor call a tool outside its `exposure.tools`.
+neither find nor call a tool outside its `exposure.tools`, and
+`toolsmith__request_capability` answers only in terms of tools the client
+may use.
 
 ## Aggregating other MCP servers
 

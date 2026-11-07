@@ -10,6 +10,17 @@ import type { JsonObject, JsonValue, ToolCallResult, ToolDefinition } from '../c
 
 const MAX_TEXT = 200_000;
 
+/**
+ * JSON with invisible and layout-changing characters shown as \uXXXX
+ * escapes. (JSON.stringify already escapes ASCII control characters inside
+ * strings; these Unicode ones it leaves alone.)
+ */
+const visibleJson = (v: unknown): string =>
+  JSON.stringify(v, null, 2).replace(
+    /[\u007f-\u009f\u00ad\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u206f\ufeff]/g,
+    (ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  );
+
 const askKey = (principal: string, tool: string, args: JsonObject): string =>
   `${principal}\n${tool}\n${JSON.stringify(args)}`;
 
@@ -138,29 +149,34 @@ export function createServerFactory(app: Toolsmith, opts: ServerFactoryOptions =
             { approve?: unknown } | undefined;
           // Only an answer to a prompt this gateway actually sent counts: a
           // client cannot pre-fill an approval without being asked.
-          if (
-            answer?.approve === true &&
-            app.inClientAsks.delete(askKey(principal, params.name, params.arguments ?? {}))
-          ) {
+          const key = askKey(principal, params.name, params.arguments ?? {});
+          const asked = (app.inClientAsks.get(key) ?? 0) > Date.now();
+          const answered = Boolean(
+            ctx.mcpReq.inputResponses && 'approve' in ctx.mcpReq.inputResponses,
+          );
+          // Any answer, accepted or not, uses up the prompt: a declined prompt
+          // cannot be accepted later, and an expired one counts for nothing.
+          if (answered) app.inClientAsks.delete(key);
+          if (answer?.approve === true && asked) {
             // The person confirmed in the client: record it like a dashboard approval.
             const req = app.approvals.request(params.name, params.arguments ?? {}, principal);
             app.approvals.decide(req.id, true, 'human:client-elicitation');
             app.audit.write('human:client-elicitation', 'approve-call', req.id, {
               tool: params.name,
             });
-          } else if (
-            (!ctx.mcpReq.inputResponses || !('approve' in ctx.mcpReq.inputResponses)) &&
-            JSON.stringify(params.arguments ?? {}, null, 2).length <= 1500
-          ) {
+          } else if (!answered && JSON.stringify(params.arguments ?? {}, null, 2).length <= 1500) {
             // Not asked yet. (Declined or cancelled answers fall through to the
             // dashboard flow below.) The prompt shows the complete arguments,
             // never a cut-off prefix: calls too large to show in full go to the
             // dashboard instead, so padding cannot hide the real target.
-            app.inClientAsks.add(askKey(principal, params.name, params.arguments ?? {}));
+            // Prompts expire after 5 minutes; the set is bounded.
+            app.inClientAsks.set(key, Date.now() + 300_000);
+            if (app.inClientAsks.size > 1000)
+              app.inClientAsks.delete(app.inClientAsks.keys().next().value!);
             return inputRequired({
               inputRequests: {
                 approve: inputRequired.elicit({
-                  message: `Allow ONE call to ${params.name}? It is marked destructive. Complete arguments:\n${JSON.stringify(params.arguments ?? {}, null, 2)}`,
+                  message: `Allow ONE call to ${params.name}? It is marked destructive. Complete arguments:\n${visibleJson(params.arguments ?? {})}`,
                   requestedSchema: {
                     type: 'object',
                     properties: { approve: { type: 'boolean', title: 'Approve this call' } },

@@ -2,6 +2,7 @@ import { ToolsmithError } from '../core/errors.js';
 import { camelCase } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
 import { detectInjection } from '../openapi/import.js';
+import { cleanText } from '../openapi/schema-utils.js';
 import type { OpenApiIntegrationDef, OperationDef, SpecFinding } from '../openapi/types.js';
 
 /**
@@ -104,7 +105,7 @@ class SchemaIndex {
       for (const f of full.inputFields ?? []) {
         properties[f.name] = {
           ...this.jsonSchema(f.type, depth + 1),
-          ...(f.description ? { description: f.description } : {}),
+          ...(f.description ? { description: cleanText(f.description) } : {}),
         };
         if (f.type.kind === 'NON_NULL') required.push(f.name);
       }
@@ -182,12 +183,12 @@ export function introspectionToDef(
       for (const a of args) {
         properties[a.name] = {
           ...idx.jsonSchema(a.type),
-          ...(a.description ? { description: a.description } : {}),
+          ...(a.description ? { description: cleanText(a.description) } : {}),
         };
         if (a.type.kind === 'NON_NULL') required.push(a.name);
       }
       const out = idx.jsonSchema(field.type);
-      const description = (field.description ?? '').trim();
+      const description = cleanText(field.description ?? '').trim();
       const hit = detectInjection(description);
       if (hit) {
         findings.push({

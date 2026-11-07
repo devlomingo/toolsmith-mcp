@@ -644,6 +644,26 @@ function show(app: Toolsmith, ref: string, asJson: boolean): number {
         access: o.access === 'read' ? o.access : c.yellow(o.access),
       })),
     );
+    // Everything the agent will read, so a reviewer can see it before approving.
+    say('', c.bold('What agents will see (descriptions and parameters)'));
+    for (const o of d.operations) {
+      say(
+        `  ${c.bold(`${artifact.name}__${o.name}`)}: ${o.summary || o.description || c.dim('(no description)')}`,
+      );
+      if (o.description && o.description !== o.summary)
+        say(c.dim(`    ${o.description.replace(/\s+/g, ' ').slice(0, 600)}`));
+      const props = (o.inputSchema.properties ?? {}) as Record<
+        string,
+        { description?: string; type?: unknown }
+      >;
+      const req = new Set((o.inputSchema.required as string[] | undefined) ?? []);
+      for (const [name, p] of Object.entries(props)) {
+        say(
+          `    - ${name}${req.has(name) ? '*' : ''}${p.type ? ` (${String(p.type)})` : ''}${p.description ? `: ${p.description.replace(/\s+/g, ' ')}` : ''}`,
+        );
+      }
+    }
+    say(c.dim('  Full input/output schemas: toolsmith-mcp show <name> --json'));
     if (d.findings.length) {
       say('', c.bold('Findings'));
       for (const f of d.findings)
