@@ -11,7 +11,9 @@ Toolsmith is an MCP gateway with three jobs:
   Independent steps run in parallel, and the composite is checked against
   the original calls.
 
-Nothing becomes available to an agent until a human approves it.
+Nothing Toolsmith generates (API tools, composite tools) reaches an agent
+until a human approves it. Destructive calls, including those of connected
+MCP servers, need a human per call.
 
 [![CI](https://github.com/devlomingo/toolsmith-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/devlomingo/toolsmith-mcp/actions/workflows/ci.yml)
 · Website: <https://devlomingo.github.io/toolsmith-mcp/> · MIT licensed
@@ -34,10 +36,10 @@ leaves the gateway and dashboard running for you to explore.
 | **Live verification** | Every read operation is called before review. Parameter values come from spec examples, or from another endpoint that returns them (`orderId ← listOrders[*].id`). Results are classified (`verified`, `wrong_parameter_value`, `schema_mismatch`, …). Writes are never called. Inspired by [ToolFactory](docs/PAPERS.md#toolfactory). |
 | **One endpoint for every MCP server** | Upstream MCP servers (stdio or HTTP, either protocol era) are re-exposed under a prefix, with the same tracing. |
 | **Workflow discovery** | Traces store keyed hashes of values, not payloads. Repeated sequences are linked by data flow and loops are detected. The AWO majority rule and commutative reads are applied ([AWO](docs/PAPERS.md#awo-optimizing-agentic-workflows-using-meta-tools)). |
-| **Composite tools** | Mined workflows become declarative DAG plans: parallel stages, `forEach` fan-out, partial results. They are executed by fixed code; nothing generated runs as code. |
+| **Composite tools** | Mined workflows become declarative DAG plans: parallel stages, `forEach` fan-out, partial results. They are executed by fixed code; nothing generated runs as code. Each one tells the agent what it replaces ("Use this instead of calling … one by one"), and the reviewer can rewrite that description at approval. |
 | **Evaluation** | Composites are run against the original tools one by one and must return identical results. Plans that write data are never executed automatically. |
 | **Missing capabilities** | Agents call `toolsmith__request_capability`. The answer is `available`, `composable` (and a composite is proposed), `needs_approval`, or `unsupported`. |
-| **Human approval** | A lifecycle state machine. Write and destructive tools stay hidden until granted. Every destructive call is approved individually, bound to its exact arguments. Versions can be rolled back. |
+| **Human approval** | A lifecycle state machine. Write and destructive tools stay hidden until granted, including composites that write. Every destructive call is approved individually, by a person in the dashboard or an interactive terminal, bound to its exact arguments and session. Versions can be rolled back. |
 | **Dashboard** | Approvals, integrations, tools, workflows and usage, capability requests, traces (p50/p95), benchmarks, audit log. English and Arabic, with right-to-left layout. |
 | **Protocol** | MCP 2025-11-25 and 2026-07-28 over stdio and Streamable HTTP, through the official v2 TypeScript SDK. Not tied to any client. |
 
@@ -80,11 +82,11 @@ end-to-end latency at the MCP client:**
 
 How to read this table:
 
-- **The comparison that matters is the parallel client.** A client that
-  already parallelizes perfectly gains only 5–10% in latency (10–50 ms API
-  latency). The real
-  saving is **7 fewer MCP round-trips**: in a real agent those are model
-  turns, which this benchmark does not include.
+- **The comparison that matters is the parallel client.** Against a client
+  that already parallelizes perfectly, the composite's latency is the same
+  within run-to-run noise (an independent re-run measured it 2% slower at
+  25 ms). The real saving is **7 fewer MCP round-trips**: in a real agent
+  those are model turns, which this benchmark does not include.
 - **A strictly sequential chain gains little.** A 3-step dependent chain
   gains 2–3% at 10–50 ms API latency.
 - **No correctness was lost:** every composite run matched the sequential

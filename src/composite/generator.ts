@@ -31,7 +31,9 @@ function shortName(tool: string): string {
 }
 
 /** "getUser", "getOrders", "getOrderItems" -> "getUserOrdersDetails". */
-export function compositeName(tools: string[]): string {
+export function compositeName(tools: string[], writeTool?: string): string {
+  // A plan that changes data must not be named like a read.
+  if (writeTool) return camelCase(`${shortName(writeTool)} flow`).slice(0, 50);
   const nouns = tools
     .map((t) =>
       shortName(t).replace(/^(get|list|fetch|find|read|search|create|update|delete)/i, ''),
@@ -41,6 +43,17 @@ export function compositeName(tools: string[]): string {
   const verb = /^(get|list|fetch|find|read|search)/i.test(shortName(tools[0]!)) ? 'get' : 'run';
   const core = unique.length >= 3 ? `${unique[0]}${unique[1]}Details` : unique.join('With');
   return camelCase(`${verb} ${core}`).slice(0, 50) || 'workflow';
+}
+
+/**
+ * The sentence that tells an agent when to pick the composite. AWO observed
+ * agents ignoring meta-tools unless the alternative is obvious, so it leads
+ * the description.
+ */
+export function useInsteadOf(steps: Array<{ tool: string; forEach?: string }>): string {
+  const names = [...new Set(steps.map((st) => st.tool))];
+  const loop = steps.some((st) => st.forEach) ? ' (including the per-item calls)' : '';
+  return `Use this instead of calling ${names.join(', ')} one by one${loop}.`;
 }
 
 /** Kebab-case registry name for a composite. */
@@ -161,13 +174,21 @@ export function patternToComposite(
   });
 
   const tools = pattern.elements.flatMap((e) => (e.kind === 'call' ? [e.tool] : e.tools));
-  const base = nameOverride ?? compositeName(tools);
+  // Plans that write run strictly in the recorded order: parallelising a
+  // read with the write it preceded would change what the read observes.
+  const firstWrite = steps.find((st) => lookup(st.tool)?.access !== 'read');
+  if (firstWrite) {
+    steps.forEach((st, i) => {
+      if (i > 0) st.after = [...new Set([...(st.after ?? []), steps[i - 1]!.id])];
+    });
+  }
+  const base = nameOverride ?? compositeName(tools, firstWrite?.tool);
   const stages = planStages(steps);
   const flow = steps.map((st) => `${st.id}${st.forEach ? ' (for each item)' : ''}`).join(' → ');
   const parallel = stages.some((st) => st.length > 1)
     ? ` Independent steps run in parallel (${stages.length} stages for ${steps.length} steps).`
     : '';
-  const description = `Runs ${flow} in one call.${parallel} Discovered from ${pattern.support} observed sessions (confidence ${pattern.confidence}). Returns each step's result under "results"; "partial" is true if any step failed.`;
+  const description = `${useInsteadOf(steps)} Runs ${flow} in one call.${parallel}${firstWrite ? ' Changes data; steps run in order.' : ''} Discovered from ${pattern.support} observed sessions (confidence ${pattern.confidence}). Returns each step's result under "results"; "partial" is true if any step failed.`;
 
   const examples = pattern.exampleArgs
     .map((a) => {

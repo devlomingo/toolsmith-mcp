@@ -103,8 +103,10 @@ stateDiagram-v2
    granted tools are present.
 3. It validates the arguments against the input schema (Ajv). Unknown
    arguments are rejected.
-4. **Policy:** a destructive tool needs a matching, unused per-call approval.
-   Otherwise the dispatcher creates a pending approval and returns
+4. **Policy:** a destructive tool needs a matching, unused per-call approval
+   from the same session. This covers API DELETE operations, and upstream
+   tools that are annotated destructive or not annotated at all. Otherwise
+   the dispatcher creates a pending approval and returns
    `approval_required` with its id.
 5. The **observer** starts a trace and runs the executor:
    - **OpenAPI:** build the URL, with path parameters percent-encoded and an

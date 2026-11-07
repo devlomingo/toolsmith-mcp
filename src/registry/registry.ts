@@ -42,6 +42,12 @@ const TRANSITIONS: Record<Status, Status[]> = {
 export interface Permissions {
   allowWrite: boolean;
   allowDestructive: boolean;
+  /**
+   * Description written by the approving human; replaces the generated one
+   * (composites). Stored with the approval because the definition itself is
+   * content-hashed and immutable.
+   */
+  description?: string;
 }
 
 export interface Evaluation {

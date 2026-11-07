@@ -65,6 +65,12 @@ const chainGain = chain.map(
   (s) => 1 - v(s, 'composite').latency.p50 / v(s, 'sequential').latency.p50,
 );
 const pct = (x) => `${Math.round(x * 100)}%`;
+const pctRange = (xs) =>
+  pct(Math.min(...xs)) === pct(Math.max(...xs))
+    ? `about ${pct(xs[0])}`
+    : `${pct(Math.min(...xs))}–${pct(Math.max(...xs))}`;
+// Positive = composite faster.
+const signed = (x) => `${x >= 0 ? '+' : '−'}${Math.abs(Math.round(x * 100))}%`;
 const parGain = lats
   .filter((l) => l >= 10)
   .map((l) => 1 - v(od(l), 'composite').latency.p50 / v(od(l), 'parallel-client').latency.p50);
@@ -207,7 +213,7 @@ footer{border-top:1px solid var(--line);padding:40px 0 60px;color:var(--mute);fo
 <header class="hero" id="top"><div class="wrap">
 <div class="eyebrow reveal">Open source · MCP gateway · v${esc(pkg.version)}</div>
 <h1 class="reveal d1">Give any AI agent the tools it <em>needs</em>.</h1>
-<p class="lede reveal d2">Discover APIs, generate MCP integrations, identify repeated workflows, and create optimized tools for AI agents. Every generated tool is verified, evaluated and approved by a human before an agent sees it.</p>
+<p class="lede reveal d2">Discover APIs, generate MCP integrations, identify repeated workflows, and create optimized tools for AI agents. Every generated tool is evaluated and approved by a human before an agent sees it.</p>
 <div class="cta reveal d3">
 <div class="install" aria-label="Install command"><b>$</b><code>npm install -g github:devlomingo/toolsmith-mcp &amp;&amp; toolsmith-mcp demo</code></div>
 <a class="btn primary" href="${REPO}">View on GitHub</a>
@@ -282,7 +288,7 @@ Review, then approve: <span class="k">toolsmith-mcp approve shop</span></pre>
 <caption class="sr-only" style="position:absolute;left:-999px">Median latency of the order-details workflow</caption>
 <thead><tr><th>Demo API latency</th><th>Sequential agent (${seq.mcpCalls} calls)</th><th>Best-case parallel client (${par.mcpCalls} calls)</th><th>Composite (${comp.mcpCalls} call)</th></tr></thead>
 <tbody>${perfRows}</tbody></table></div>
-<p class="note">Against a client that already parallelizes perfectly, the composite gains only ${pct(Math.min(...parGain))}–${pct(Math.max(...parGain))} in latency. The real saving is ${par.mcpCalls - comp.mcpCalls} fewer MCP round-trips, which in a real agent are model turns this benchmark does not include. A strictly sequential 3-step chain gains ${pct(Math.min(...chainGain))}–${pct(Math.max(...chainGain))}. LLM tokens were not measured, and no token claim is made.</p>
+<p class="note">Against a client that already parallelizes perfectly, the composite's latency is the same within run-to-run noise (this run: ${signed(Math.min(...parGain))} to ${signed(Math.max(...parGain))}; an independent re-run measured it slightly slower). The real saving is ${par.mcpCalls - comp.mcpCalls} fewer MCP round-trips, which in a real agent are model turns this benchmark does not include. A strictly sequential 3-step chain gains ${pctRange(chainGain)}. LLM tokens were not measured, and no token claim is made.</p>
 <div class="grid g2 charts" style="margin-top:28px">
 <figure style="margin:0"><img src="assets/latency-order-details.svg" alt="Bar chart: median latency of the order-details workflow for sequential, parallel-client and composite variants at each API latency" loading="lazy" width="760" height="320"></figure>
 <figure style="margin:0"><img src="assets/patterns-f1.svg" alt="Bar chart: workflow discovery F1 per condition for the shipped miner, without AWO rules, and the first contiguous version" loading="lazy" width="760" height="800"></figure>
@@ -321,7 +327,7 @@ toolsmith-mcp client-config</pre>
 <section id="security"><div class="wrap grid g2">
 <div><div class="eyebrow">Security</div><h2>Guardrails are the product</h2><p class="sub">Security is built in, not added later. <a href="${doc('docs/SECURITY.md')}">Threat model →</a></p></div>
 <div class="card"><ul style="margin:0;padding-left:18px;color:var(--ink2)">
-<li>Nothing generated runs as code</li><li>SSRF guard: allow-list, connect-time private-address block, no redirects</li><li>Secrets only from the environment, redacted everywhere</li><li>Traces keep keyed hashes, never tool results</li><li>Write and destructive tools hidden until granted</li><li>Per-call approval for destructive actions, bound to exact arguments</li><li>Composites can never exceed their steps' permissions</li><li>Tool-poisoning text in specs blocks approval</li></ul></div>
+<li>Nothing generated runs as code</li><li>SSRF guard: allow-list, connect-time private-address block, no redirects</li><li>Secrets only from the environment, redacted everywhere</li><li>Traces keep keyed hashes, never tool results</li><li>Write and destructive tools hidden until granted</li><li>Per-call approval for destructive actions, including those of connected MCP servers, bound to exact arguments and session</li><li>Approvals only by a person: dashboard or interactive terminal</li><li>Composites can never exceed their steps' permissions, and writing composites need their own write grant</li><li>Tool-poisoning text in specs blocks approval</li></ul></div>
 </div></section>
 
 <section id="docs"><div class="wrap">

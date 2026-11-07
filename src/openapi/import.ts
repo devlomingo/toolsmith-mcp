@@ -82,7 +82,7 @@ export async function importOpenApi(
     throw new ToolsmithError(
       'This document is not an OpenAPI or Swagger specification (no "openapi" or "swagger" field).',
       'validation',
-      'Provide an OpenAPI 3.x / Swagger 2.0 document, or describe the endpoints with `toolsmith-mcp import --endpoints`.',
+      'Provide an OpenAPI 3.x / Swagger 2.0 document, or list the endpoints in a .endpoints file (one `METHOD /path  description` per line) and import that.',
     );
   }
 

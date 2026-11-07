@@ -78,7 +78,7 @@ export class Toolsmith {
         captureArguments: cfg.traces.captureArguments,
       },
     );
-    this.upstreams = new UpstreamManager(() => this.refresh());
+    this.upstreams = new UpstreamManager(() => this.refresh(), this.redactor);
     this.discovery = new DiscoveryEngine(
       this.db,
       this.registry,

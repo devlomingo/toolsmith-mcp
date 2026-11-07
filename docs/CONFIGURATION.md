@@ -37,7 +37,7 @@ from or wherever `--config <path>` points.
     }
   ],
   "upstreams": [
-    { "name": "files", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"] },
+    { "name": "files", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"], "trustedTools": ["write_file"] },
     { "name": "remote", "url": "https://mcp.example.com/mcp", "headers": { "Authorization": "Bearer ${env:REMOTE_TOKEN}" } }
   ],
   "traces": { "retentionDays": 14, "captureArguments": "redacted" },
@@ -79,8 +79,15 @@ from or wherever `--config <path>` points.
 
 Other MCP servers whose tools are re-exposed as `<name>__<tool>`. Either
 `command` / `args` / `env` / `cwd` (stdio) or `url` / `headers`
-(Streamable HTTP). Both protocol eras are negotiated automatically. Their
-tools are trusted by configuration and do not go through approval.
+(Streamable HTTP). Both protocol eras are negotiated automatically.
+
+Adding a server to the config is the approval: its tools appear without a
+review step. Destructive calls are still checked:
+
+| Field | Default | Meaning |
+|---|---|---|
+| `approval` | `destructive` | Tools whose MCP annotations mark them destructive need a human per call. Under the MCP spec a tool **without annotations counts as destructive**. `none` trusts the server completely. |
+| `trustedTools` | `[]` | Tool names (as the server names them) exempt from per-call approval. |
 
 ### `traces`
 

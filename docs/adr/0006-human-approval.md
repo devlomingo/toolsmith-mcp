@@ -16,7 +16,16 @@ explicit approval.
 - A destructive call also needs a per-call approval. It is bound to the
   exact tool and arguments by hash and is single-use.
 - A composite is only exposed while every tool it calls is exposed, so it
-  can never exceed the permissions of its steps.
+  can never exceed the permissions of its steps. A composite that writes
+  also needs its own write grant.
+- Destructive tools of upstream MCP servers need per-call approval too,
+  unless the operator opts out per server or tool. An unannotated tool counts
+  as destructive, following the MCP default.
+- Approvals are bound to the requesting session.
+- CLI commands that grant access require an interactive terminal and a
+  typed confirmation, so an agent with shell access cannot approve itself
+  by running a command. This raises the bar; it is not a boundary against
+  code running as the same OS user.
 
 ## Consequences
 

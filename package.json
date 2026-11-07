@@ -11,7 +11,7 @@
   "files": [
     "dist",
     "dashboard",
-    "examples",
+    "benchmarks/results/latest.json",
     "README.md",
     "LICENSE"
   ],

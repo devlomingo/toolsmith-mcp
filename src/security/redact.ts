@@ -55,6 +55,33 @@ export class Redactor {
     if (value && value.length >= 4) this.secrets.add(value);
   }
 
+  /**
+   * Replace exact occurrences of known secrets anywhere in a value, leaving
+   * everything else untouched. Used on data returned to the agent, where the
+   * pattern rules would mangle legitimate content but an echoed credential
+   * must never get through.
+   */
+  scrubSecrets<T>(value: T): T {
+    if (this.secrets.size === 0) return value;
+    const walk = (v: unknown): unknown => {
+      if (typeof v === 'string') {
+        let out = v;
+        for (const secret of this.secrets)
+          if (out.includes(secret)) out = out.split(secret).join('[REDACTED_SECRET]');
+        return out;
+      }
+      if (Array.isArray(v)) return v.map(walk);
+      if (v && typeof v === 'object') {
+        const out: Record<string, unknown> = {};
+        for (const [k, child] of Object.entries(v as Record<string, unknown>))
+          out[walk(k) as string] = walk(child);
+        return out;
+      }
+      return v;
+    };
+    return walk(value) as T;
+  }
+
   redactString(input: string): string {
     let out = input;
     for (const secret of this.secrets) {

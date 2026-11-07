@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Toolsmith } from '../app.js';
 import { ToolsmithError } from '../core/errors.js';
 import type { JsonObject } from '../core/types.js';
@@ -102,6 +103,9 @@ export async function handleAdminApi(
                 {
                   allowWrite: b.allowWrite === true,
                   allowDestructive: b.allowDestructive === true,
+                  ...(typeof b.description === 'string' && b.description.trim()
+                    ? { description: b.description.trim().slice(0, 2000) }
+                    : {}),
                 },
                 ACTOR,
                 b.publish !== false,
@@ -200,7 +204,13 @@ export async function handleAdminApi(
     if (method === 'GET' && parts[0] === 'events')
       return json(res, 200, app.registry.events(undefined, 200));
     if (method === 'GET' && parts[0] === 'benchmarks') {
-      const file = resolve(app.loaded.baseDir, 'benchmarks/results/latest.json');
+      // Results next to the config (a checkout that ran `npm run benchmark`),
+      // else the results shipped with the package.
+      const local = resolve(app.loaded.baseDir, 'benchmarks/results/latest.json');
+      const shipped = fileURLToPath(
+        new URL('../../benchmarks/results/latest.json', import.meta.url),
+      );
+      const file = existsSync(local) ? local : shipped;
       return json(res, 200, existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null);
     }
     json(res, 404, { error: `No admin endpoint ${method} ${url.pathname}` });

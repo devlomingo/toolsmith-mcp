@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { ToolsmithError } from '../core/errors.js';
 import type { JsonObject, JsonValue } from '../core/types.js';
 import { stableStringify } from '../registry/registry.js';
 import type { Redactor } from '../security/redact.js';
@@ -33,22 +34,26 @@ export class CallApprovals {
       .digest('hex');
   }
 
-  /** Consume an approved approval for this exact call, if one exists. */
-  consume(tool: string, args: JsonObject, approvalId?: string): boolean {
+  /**
+   * Consume an approved approval for this exact call, if one exists. It must
+   * have been requested by the same session, so one agent cannot spend an
+   * approval a human granted to another.
+   */
+  consume(tool: string, args: JsonObject, sessionId: string, approvalId?: string): boolean {
     const hash = CallApprovals.hashArgs(tool, args);
     return transaction(this.db, () => {
       const row = (
         approvalId
           ? this.db
               .prepare(
-                "SELECT id FROM call_approvals WHERE id = ? AND tool = ? AND args_hash = ? AND status = 'approved'",
+                "SELECT id FROM call_approvals WHERE id = ? AND tool = ? AND args_hash = ? AND status = 'approved' AND (session_id IS NULL OR session_id = ?)",
               )
-              .get(approvalId, tool, hash)
+              .get(approvalId, tool, hash, sessionId)
           : this.db
               .prepare(
-                "SELECT id FROM call_approvals WHERE tool = ? AND args_hash = ? AND status = 'approved' ORDER BY created_at LIMIT 1",
+                "SELECT id FROM call_approvals WHERE tool = ? AND args_hash = ? AND status = 'approved' AND (session_id IS NULL OR session_id = ?) ORDER BY created_at LIMIT 1",
               )
-              .get(tool, hash)
+              .get(tool, hash, sessionId)
       ) as { id: string } | undefined;
       if (!row) return false;
       this.db.prepare("UPDATE call_approvals SET status = 'used' WHERE id = ?").run(row.id);
@@ -61,9 +66,9 @@ export class CallApprovals {
     const hash = CallApprovals.hashArgs(tool, args);
     const existing = this.db
       .prepare(
-        "SELECT * FROM call_approvals WHERE tool = ? AND args_hash = ? AND status = 'pending'",
+        "SELECT * FROM call_approvals WHERE tool = ? AND args_hash = ? AND status = 'pending' AND session_id = ?",
       )
-      .get(tool, hash) as Record<string, unknown> | undefined;
+      .get(tool, hash, sessionId) as Record<string, unknown> | undefined;
     if (existing) return toApproval(existing);
     const id = randomUUID().slice(0, 8);
     this.db
@@ -94,7 +99,12 @@ export class CallApprovals {
         "UPDATE call_approvals SET status = ?, decided_at = ?, actor = ? WHERE id = ? AND status = 'pending'",
       )
       .run(approve ? 'approved' : 'rejected', nowIso(), actor, id);
-    if (Number(res.changes) === 0) throw new Error(`No pending approval with id ${id}`);
+    if (Number(res.changes) === 0)
+      throw new ToolsmithError(
+        `No pending approval with id ${id}`,
+        'not_found',
+        'List pending ones with `toolsmith-mcp list`.',
+      );
     return this.get(id)!;
   }
 

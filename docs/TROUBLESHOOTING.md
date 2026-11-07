@@ -14,7 +14,9 @@ fix.
 | Evaluation `failed` | `toolsmith-mcp show <name>` lists the failing checks. A failed version cannot be approved. Fix the cause and run `toolsmith-mcp evaluate <name>`. |
 | Composite fails with "no example input" | Run `toolsmith-mcp evaluate <name> --input '{"userId": 1}'` with a real value. |
 | A tool isn't visible to the agent | It is not published, or it is a write/destructive operation that wasn't granted (`approve --allow-writes`). `toolsmith-mcp list` shows the status; the dashboard **Overview** lists catalog problems. |
-| A composite disappeared | One of its step tools was disabled or lost its grant. Composites hide themselves rather than exceed their steps' permissions. |
+| A composite disappeared | One of its step tools was disabled or lost its grant. Or it writes data and was approved without `--allow-writes`. `toolsmith-mcp list` shows the reason under catalog problems. |
+| Every call to an upstream tool needs approval | The server doesn't annotate its tools, so they count as destructive. Add read-only tools to `trustedTools`, or set `"approval": "none"` for a server you fully trust. |
+| `This action grants access and needs a person at an interactive terminal` | `approve`, `approve-call`, `publish`, `enable` and `rollback` ask you to type `yes`. They don't run from scripts or agents. Use the dashboard for remote or scripted approval. |
 | `approval_required` on every call | The tool is destructive. Approve each call with `toolsmith-mcp approve-call <id>`; approvals are single-use and bound to the exact arguments. |
 | No workflows found | Fewer than `minSupport` (3) sessions ran it, or calls aren't linked by data flow. Over HTTP, send `X-Toolsmith-Session` so one agent's calls group together. |
 | `Refusing to listen on 0.0.0.0 without server.mcpToken` | Binding beyond loopback requires a token. Run `toolsmith-mcp init` or set `server.mcpToken`. |

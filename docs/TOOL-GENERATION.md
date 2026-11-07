@@ -8,9 +8,9 @@ an MCP round-trip.
 
 Toolsmith watches these sequences in its traces. When one repeats, it
 proposes a single **composite tool** that does the same work in one call,
-with independent steps running in parallel. A composite is published only
-after it is shown to return exactly what the individual calls return, and
-after a human approves it.
+with independent steps running in parallel. A read-only composite is published only
+after it is shown to return exactly what the individual calls return. Every
+composite needs a human's approval.
 
 ## Workflow
 
@@ -18,7 +18,8 @@ after a human approves it.
 toolsmith-mcp patterns     # repeated workflows found so far
 toolsmith-mcp discover     # turn them into proposed composites and evaluate them
 toolsmith-mcp show flow-get-user-orders-details
-toolsmith-mcp approve flow-get-user-orders-details
+toolsmith-mcp approve flow-get-user-orders-details \
+  --description "Use when the user asks about a customer's orders, items or payments."
 toolsmith-mcp usage        # after a while: is it used? how many round-trips saved?
 ```
 
@@ -66,6 +67,35 @@ It is a declarative plan. Nothing generated is ever run as code:
 - If a step fails, the steps that depend on it are skipped, the rest still
   run, and `partial` is `true`.
 
+## Telling the agent when to use it
+
+AWO found that agents often ignore meta-tools, so each description carries
+two pieces of guidance:
+
+- **What it replaces.** Every generated description starts with a "use
+  this instead of" line, for example: *"Use this instead of calling
+  shop__getUser, shop__getOrders, shop__getOrderItems, shop__getPayments one
+  by one (including the per-item calls)."*
+- **When to use it.** Only you know your users' phrasing. Write it at
+  approval and it replaces the generated text:
+  - CLI: `--description "Use when …"`;
+  - dashboard: the editable description box in the approval form.
+
+  It is stored with the approval, so the plan itself is unchanged.
+
+## Composites that change data
+
+A plan with a write step:
+
+- **runs strictly in the order it was recorded.** A read is never
+  parallelised with the write it preceded;
+- **is named after its write**, for example `flow__updateProductFlow`;
+- **is never executed by the evaluator**, because that would change real
+  data. It is flagged for manual review;
+- **stays hidden from agents unless its own approval grants write access**
+  (`--allow-writes`), even if its steps were granted. Destructive steps
+  still need a human per call.
+
 ## Evaluation
 
 Before anyone is asked to approve, the evaluator checks four things:
@@ -79,7 +109,7 @@ Before anyone is asked to approve, the evaluator checks four things:
    sequential interpreter, then runs the composite. The per-step results
    must be identical.
    - Plans that **write** are never executed by the evaluator; they are
-     flagged for manual review.
+     flagged for manual review and need `--allow-writes` at approval.
    - If no example input was observed, supply one:
      `toolsmith-mcp evaluate <name> --input '{"userId": 42}'`.
 4. **Performance.** It records sequential versus composite latency and the

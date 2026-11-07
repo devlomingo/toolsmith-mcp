@@ -93,6 +93,7 @@ const I18N = {
     done: 'Done',
     steps: 'Steps',
     usageTitle: 'Published composite tools',
+    descriptionLabel: 'Description agents will see (say when to use it)',
     discovered: 'Discovered workflows',
     callsCol: 'Calls',
     saved: 'Round-trips saved',
@@ -191,6 +192,7 @@ const I18N = {
     done: 'تم',
     steps: 'الخطوات',
     usageTitle: 'الأدوات المركّبة المنشورة',
+    descriptionLabel: 'الوصف الذي يراه الوكيل (اذكر متى يُستخدم)',
     discovered: 'سير العمل المكتشف',
     callsCol: 'الاستدعاءات',
     saved: 'الجولات الموفَّرة',
@@ -465,19 +467,29 @@ const views = {
     if (latest.status === 'awaiting_approval') {
       const w = h('input', { type: 'checkbox', id: 'allow-w' });
       const dd = h('input', { type: 'checkbox', id: 'allow-d' });
+      // Reviewers can rewrite a composite's description, e.g. to say when an
+      // agent should prefer it; the generated text is the starting point.
+      const desc =
+        def.kind === 'composite'
+          ? h(
+              'textarea',
+              { id: 'desc', 'aria-label': t('descriptionLabel'), rows: '4' },
+              def.description,
+            )
+          : null;
       out.push(
         h(
           'div',
           { class: 'card' },
-          def.kind === 'openapi'
-            ? h(
-                'div',
-                {},
-                h('label', {}, w, ' ', t('allowWrite')),
-                h('br'),
-                h('label', {}, dd, ' ', t('allowDestructive')),
-              )
-            : null,
+          h(
+            'div',
+            {},
+            h('label', {}, w, ' ', t('allowWrite')),
+            h('br'),
+            h('label', {}, dd, ' ', t('allowDestructive')),
+          ),
+          desc ? h('label', { for: 'desc' }, t('descriptionLabel')) : null,
+          desc,
           h(
             'div',
             { class: 'row' },
@@ -489,6 +501,9 @@ const views = {
                     version: latest.version,
                     allowWrite: w.checked,
                     allowDestructive: dd.checked,
+                    ...(desc && desc.value.trim() !== def.description
+                      ? { description: desc.value }
+                      : {}),
                   }),
               },
               t('approve'),

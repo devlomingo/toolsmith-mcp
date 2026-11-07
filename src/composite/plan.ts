@@ -23,6 +23,8 @@ export interface PlanStep {
   forEach?: string;
   /** A failure here does not fail dependent-free siblings; result is partial. */
   optional?: boolean;
+  /** Ordering-only dependencies (no data flows): run after these steps. */
+  after?: string[];
 }
 
 export interface CompositeDef {
@@ -67,6 +69,7 @@ export function stepDependencies(step: PlanStep): string[] {
   };
   visit(step.args);
   if (step.forEach) visit({ $ref: step.forEach });
+  for (const a of step.after ?? []) deps.add(a);
   return [...deps];
 }
 

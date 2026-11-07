@@ -3,6 +3,7 @@ import {
   COMPOSITE_NAMESPACE,
   COMPOSITE_OUTPUT_SCHEMA,
   compositeArtifactName,
+  useInsteadOf,
 } from '../composite/generator.js';
 import type { CompositeDef, PlanStep } from '../composite/plan.js';
 import { camelCase, toolName } from '../core/naming.js';
@@ -488,7 +489,7 @@ function chainToComposite(request: string, chain: ChainLink[], modifiers: string
     kind: 'composite',
     name: compositeArtifactName(base),
     toolName: toolName(COMPOSITE_NAMESPACE, base),
-    description: `Answers requests like "${request.slice(0, 160)}" by running ${steps.map((s) => s.id + (s.forEach ? ' (for each)' : '')).join(' → ')} in one call.${modifiers.length ? ` Does not apply "${modifiers.join(', ')}"; filter the result.` : ''} Returns each step's result under "results".`,
+    description: `${useInsteadOf(steps)} Answers requests like "${request.slice(0, 160)}" by running ${steps.map((s) => s.id + (s.forEach ? ' (for each)' : '')).join(' → ')} in one call.${modifiers.length ? ` Does not apply "${modifiers.join(', ')}"; filter the result.` : ''} Returns each step's result under "results".`,
     inputSchema: {
       type: 'object',
       properties: inputProps,

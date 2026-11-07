@@ -3,7 +3,8 @@ import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import type { UpstreamConfig } from '../config/config.js';
 import { errorMessage } from '../core/errors.js';
 import type { AccessLevel, JsonObject, JsonValue, ToolCallResult } from '../core/types.js';
-import { resolveEnvRefs } from '../security/secrets.js';
+import type { Redactor } from '../security/redact.js';
+import { envRefNames, resolveEnvRefs } from '../security/secrets.js';
 
 export interface UpstreamTool {
   upstream: string;
@@ -40,7 +41,15 @@ class UpstreamConnection {
   constructor(
     readonly cfg: UpstreamConfig,
     private readonly onToolsChanged: () => void,
+    private readonly redactor?: Redactor,
   ) {}
+
+  /** Resolve a `${env:...}` value and remember it as a secret to scrub. */
+  secret(value: string): string {
+    const resolved = resolveEnvRefs(value);
+    if (envRefNames(value).length > 0) this.redactor?.registerSecret(resolved);
+    return resolved;
+  }
 
   get transportKind(): 'stdio' | 'http' {
     return 'command' in this.cfg ? 'stdio' : 'http';
@@ -73,7 +82,7 @@ class UpstreamConnection {
             env: {
               ...(process.env as Record<string, string>),
               ...Object.fromEntries(
-                Object.entries(this.cfg.env).map(([k, v]) => [k, resolveEnvRefs(v)]),
+                Object.entries(this.cfg.env).map(([k, v]) => [k, this.secret(v)]),
               ),
             },
             stderr: 'pipe',
@@ -81,7 +90,7 @@ class UpstreamConnection {
         : new StreamableHTTPClientTransport(new URL(this.cfg.url), {
             requestInit: {
               headers: Object.fromEntries(
-                Object.entries(this.cfg.headers).map(([k, v]) => [k, resolveEnvRefs(v)]),
+                Object.entries(this.cfg.headers).map(([k, v]) => [k, this.secret(v)]),
               ),
             },
           });
@@ -119,12 +128,15 @@ class UpstreamConnection {
 export class UpstreamManager {
   private readonly conns = new Map<string, UpstreamConnection>();
 
-  constructor(private readonly onToolsChanged: () => void = () => undefined) {}
+  constructor(
+    private readonly onToolsChanged: () => void = () => undefined,
+    private readonly redactor?: Redactor,
+  ) {}
 
   async connectAll(configs: UpstreamConfig[]): Promise<UpstreamStatus[]> {
     await Promise.all(
       configs.map(async (cfg) => {
-        const conn = new UpstreamConnection(cfg, this.onToolsChanged);
+        const conn = new UpstreamConnection(cfg, this.onToolsChanged, this.redactor);
         this.conns.set(cfg.name, conn);
         try {
           await conn.connect();
@@ -172,8 +184,11 @@ export class UpstreamManager {
     }
     try {
       const res = await conn.client.callTool({ name: toolName, arguments: args }, { signal });
-      const content = (res.content as unknown[]) ?? [];
-      const data = (res.structuredContent as JsonValue | undefined) ?? contentToData(content);
+      const scrub = <T>(v: T): T => (this.redactor ? this.redactor.scrubSecrets(v) : v);
+      const content = scrub((res.content as unknown[]) ?? []);
+      const data = scrub(
+        (res.structuredContent as JsonValue | undefined) ?? contentToData(content),
+      );
       if (res.isError) {
         return {
           ok: false,

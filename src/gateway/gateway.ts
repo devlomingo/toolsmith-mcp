@@ -17,7 +17,7 @@ import { HttpIntegrationClient } from '../openapi/http-executor.js';
 import type { OpenApiIntegrationDef, OperationDef } from '../openapi/types.js';
 import { describeParamSources } from '../openapi/verify.js';
 import type { UsageObserver } from '../observer/observer.js';
-import type { Registry } from '../registry/registry.js';
+import type { Permissions, Registry } from '../registry/registry.js';
 import type { Redactor } from '../security/redact.js';
 import type { UpstreamManager } from '../upstream/upstream-manager.js';
 import { CallApprovals } from './approvals.js';
@@ -37,6 +37,8 @@ type Exec =
 export interface CatalogEntry {
   def: ToolDefinition;
   exec: Exec;
+  /** Each call needs its own human approval (destructive operations). */
+  perCallApproval: boolean;
 }
 
 export interface BuiltinTool {
@@ -72,7 +74,15 @@ export class Catalog {
   rebuild(): void {
     const next = new Map<string, CatalogEntry>();
     const problems: CatalogProblem[] = [];
-    const add = (entry: CatalogEntry): void => {
+    const add = (
+      input: Omit<CatalogEntry, 'perCallApproval'> & { perCallApproval?: boolean },
+    ): void => {
+      const entry: CatalogEntry = {
+        ...input,
+        perCallApproval:
+          input.perCallApproval ??
+          (input.def.access === 'destructive' && input.def.source === 'openapi'),
+      };
       if (next.has(entry.def.name)) {
         problems.push({
           artifact: entry.def.artifactId,
@@ -99,7 +109,13 @@ export class Catalog {
     }
 
     const integrationCfg = new Map(this.config.integrations.map((i) => [i.name, i]));
-    const composites: Array<{ def: CompositeDef; artifactId: string; version: number }> = [];
+    const composites: Array<{
+      def: CompositeDef;
+      artifactId: string;
+      version: number;
+      permissions: Permissions;
+    }> = [];
+    const upstreamCfg = new Map(this.config.upstreams.map((u) => [u.name, u]));
 
     for (const { artifact, version } of this.registry.publishedVersions()) {
       if (artifact.kind === 'openapi') {
@@ -141,12 +157,21 @@ export class Catalog {
           def: version.definition as unknown as CompositeDef,
           artifactId: artifact.id,
           version: version.version,
+          permissions: version.permissions,
         });
       }
     }
 
     for (const ut of this.upstreams.tools()) {
+      const ucfg = upstreamCfg.get(ut.upstream);
       add({
+        // Upstream servers are trusted to exist by configuration, but their
+        // destructive tools still need a human per call unless the operator
+        // opted out for that server or tool.
+        perCallApproval:
+          ut.access === 'destructive' &&
+          (ucfg?.approval ?? 'destructive') === 'destructive' &&
+          !(ucfg?.trustedTools ?? []).includes(ut.tool.name),
         def: {
           name: toolName(ut.upstream, ut.tool.name),
           title: ut.tool.title,
@@ -180,13 +205,26 @@ export class Catalog {
         });
         continue;
       }
+      const access = maxAccess(c.def.steps.map((s) => next.get(s.tool)!.def.access));
+      // A composite that writes is exposed only if its own approval granted
+      // that level, independently of what its steps were granted.
+      if (
+        (access === 'write' && !c.permissions.allowWrite) ||
+        (access === 'destructive' && !c.permissions.allowDestructive)
+      ) {
+        problems.push({
+          artifact: c.def.name,
+          problem: `hidden: it performs ${access} operations but was approved without --allow-${access === 'write' ? 'writes' : 'destructive'}`,
+        });
+        continue;
+      }
       add({
         def: {
           name: c.def.toolName,
-          description: c.def.description,
+          description: c.permissions.description ?? c.def.description,
           inputSchema: c.def.inputSchema,
           outputSchema: c.def.outputSchema ?? COMPOSITE_OUTPUT_SCHEMA,
-          access: maxAccess(c.def.steps.map((s) => next.get(s.tool)!.def.access)),
+          access,
           source: 'composite',
           artifactId: c.artifactId,
           artifactVersion: c.version,
@@ -277,13 +315,13 @@ export class Dispatcher {
     const check = validateAgainst(def.inputSchema, args);
     if (!check.valid) return fail('validation', `Invalid arguments for ${name}: ${check.message}`);
 
-    if (def.access === 'destructive' && def.source !== 'upstream' && def.source !== 'builtin') {
-      if (!this.approvals.consume(name, args, ctx.approvalId)) {
+    if (entry.perCallApproval) {
+      if (!this.approvals.consume(name, args, ctx.sessionId, ctx.approvalId)) {
         const pending = this.approvals.request(name, args, ctx.sessionId);
         return {
           ...fail(
             'approval_required',
-            `${name} is destructive and needs a human to approve this exact call. Approval id: ${pending.id}. Ask the user to approve it in the toolsmith dashboard or with \`toolsmith-mcp approve-call ${pending.id}\`, then call the tool again with the same arguments.`,
+            `${name} is destructive and needs a human to approve this exact call. Approval id: ${pending.id}. Ask the user to approve it themselves in the toolsmith dashboard (Approvals) or in their own terminal; you cannot approve it. Then call the tool again with the same arguments.`,
           ),
           approvalId: pending.id,
         };

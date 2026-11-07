@@ -81,12 +81,22 @@ Results come back as `structuredContent` plus a JSON text block.
 
 1. A destructive call returns `isError: true` with a message such as *"needs
    a human to approve this exact call. Approval id: 3f2a9c1e…"*.
-2. The agent should ask its user to approve it, either with
-   `toolsmith-mcp approve-call 3f2a9c1e` or in the dashboard under
-   **Approvals**.
-3. The agent then retries the same call with the same arguments.
+2. The agent should ask its user to approve it. The user does that in the
+   dashboard under **Approvals**, or in their own terminal with
+   `toolsmith-mcp approve-call 3f2a9c1e`. The command asks for a typed
+   confirmation and refuses to run without an interactive terminal, so an
+   agent cannot approve its own request.
+3. The agent then retries the same call with the same arguments, from the
+   same session.
 
-An approval works once, for those exact arguments.
+An approval works once, for those exact arguments and that session. This
+applies to destructive tools of connected MCP servers too (see
+[CONFIGURATION.md](CONFIGURATION.md#upstreams)).
+
+**Which tools are destructive:**
+- **API tools:** DELETE operations.
+- **Upstream tools:** ones annotated `destructiveHint`, or with no
+  annotations at all.
 
 ### Asking for a missing capability
 
@@ -111,4 +121,5 @@ can miss.
 Add them under `upstreams` in the config (see
 [CONFIGURATION.md](CONFIGURATION.md#upstreams)). Their tools are re-exposed
 with a prefix, traced like any other tool, and usable as composite steps.
-Upstream servers of either protocol era work.
+Upstream servers of either protocol era work. Their destructive tools need
+per-call approval unless you opt out per server or per tool.

@@ -65,5 +65,26 @@ First public release.
   Each produces a generated report and charts.
 - Docker image, CI (lint, types, tests on Node 22 and 24, audit, CodeQL,
   Docker, benchmark regression), and the GitHub Pages site.
+- Composite descriptions start with a "use this instead of …" line, and
+  reviewers can replace a description at approval (`--description`, or the
+  dashboard).
+
+### Security
+
+Fixed before release, after independent validation (see
+`docs/validation/ROUND-1.md`):
+
+- SSRF: IPv4-embedding IPv6 spellings such as `::ffff:7f00:1`, NAT64, 6to4
+  and Teredo are now blocked.
+- Known credentials are scrubbed from successful responses, not only from
+  errors, for both APIs and upstream MCP servers.
+- Destructive tools of upstream MCP servers now need per-call approval.
+  Opt-outs: `approval: "none"`, `trustedTools`.
+- Composites that write need their own write grant, and run in recorded
+  order.
+- Per-call approvals are bound to the requesting session.
+- CLI granting commands need an interactive terminal and confirmation.
+- The admin token is no longer printed to non-interactive output.
+- Timeouts are no longer retried.
 
 [0.1.0]: https://github.com/devlomingo/toolsmith-mcp/releases/tag/v0.1.0

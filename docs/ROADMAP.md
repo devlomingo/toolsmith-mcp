@@ -15,6 +15,9 @@ Items are listed by expected value. Nothing here is implemented yet.
 - **Session-prefix mining.** A prefix tree over session starts would surface
   "session init" composites, such as login then search (AWO's state graph).
 - **Postman collection import.**
+- **Tool-list filtering for large catalogs.** Aggregating many servers grows
+  the agent's tool list. Per-client tool profiles or a "search for a tool"
+  meta tool would load tools on demand.
 
 ## Later
 

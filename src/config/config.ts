@@ -54,11 +54,27 @@ export const UpstreamSchema = z.union([
     args: z.array(z.string()).default([]),
     env: z.record(z.string(), z.string()).default({}),
     cwd: z.string().optional(),
+    /**
+     * 'destructive' (default): tools that are destructive per their MCP
+     * annotations (an unannotated tool counts as destructive, as the spec
+     * says) need a per-call human approval. 'none' trusts the server fully.
+     */
+    approval: z.enum(['destructive', 'none']).default('destructive'),
+    /** Tool names exempt from per-call approval. */
+    trustedTools: z.array(z.string()).default([]),
   }),
   z.object({
     name: namespace,
     url: z.string().url(),
     headers: z.record(z.string(), z.string()).default({}),
+    /**
+     * 'destructive' (default): tools that are destructive per their MCP
+     * annotations (an unannotated tool counts as destructive, as the spec
+     * says) need a per-call human approval. 'none' trusts the server fully.
+     */
+    approval: z.enum(['destructive', 'none']).default('destructive'),
+    /** Tool names exempt from per-call approval. */
+    trustedTools: z.array(z.string()).default([]),
   }),
 ]);
 export type UpstreamConfig = z.infer<typeof UpstreamSchema>;

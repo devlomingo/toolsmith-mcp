@@ -80,6 +80,8 @@ export class HttpIntegrationClient {
           retryable &&
           attempt < this.cfg.maxRetries &&
           out.errorCode !== 'policy' &&
+          // A timeout is not retried: three silent attempts would triple the wait.
+          out.errorCode !== 'timeout' &&
           !signal?.aborted
         ) {
           retries++;
@@ -89,7 +91,15 @@ export class HttpIntegrationClient {
         return { ...out, requests, retries };
       }
       if (res.status >= 200 && res.status < 300) {
-        return { ok: true, status: res.status, data: parseBody(res), requests, retries };
+        // An API that echoes the credential (debug endpoints, reflected
+        // headers) must not hand it to the agent.
+        return {
+          ok: true,
+          status: res.status,
+          data: this.redactor.scrubSecrets(parseBody(res)),
+          requests,
+          retries,
+        };
       }
       const transient =
         res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504;

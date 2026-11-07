@@ -5,7 +5,7 @@ services:
     build: .
     image: toolsmith-mcp:local
     ports:
-      - "127.0.0.1:7420:7420"
+      - '127.0.0.1:7420:7420'
     volumes:
       - ./:/work
     env_file:

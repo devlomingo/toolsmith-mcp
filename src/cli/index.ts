@@ -36,7 +36,7 @@ ${c.bold('Get started')}
 
 ${c.bold('Review and approve')}
   list | show <name> | evaluate <name> [--input JSON] [--no-live]
-  approve <name>[@v] [--allow-writes] [--allow-destructive]
+  approve <name>[@v] [--allow-writes] [--allow-destructive] [--description "Use when …"]
   reject | publish | disable | enable | rollback <name>[@v]
   approve-call <id> | reject-call <id>    decide a pending destructive call
 
@@ -75,6 +75,7 @@ async function main(argv: string[]): Promise<number> {
       tool: { type: 'string' },
       limit: { type: 'string' },
       reason: { type: 'string' },
+      description: { type: 'string' },
       json: { type: 'boolean' },
       yes: { type: 'boolean', short: 'y' },
       help: { type: 'boolean', short: 'h' },
@@ -108,6 +109,7 @@ async function main(argv: string[]): Promise<number> {
     'rollback',
     'approve-call',
     'reject-call',
+    'usage',
     'patterns',
     'discover',
     'ask',
@@ -144,11 +146,18 @@ async function main(argv: string[]): Promise<number> {
         return (printEvaluation(app, v), v.status === 'failed' ? 1 : 0);
       }
       case 'approve': {
+        await confirmHuman(
+          describeGrant(app, need(rest[0], 'approve <name>'), {
+            allowWrite: values['allow-writes'] === true,
+            allowDestructive: values['allow-destructive'] === true,
+          }),
+        );
         const v = app.approve(
           need(rest[0], 'approve <name>'),
           {
             allowWrite: values['allow-writes'] === true,
             allowDestructive: values['allow-destructive'] === true,
+            ...(values.description ? { description: String(values.description) } : {}),
           },
           ACTOR,
           !values['no-publish'],
@@ -171,15 +180,27 @@ async function main(argv: string[]): Promise<number> {
       case 'reject':
         return report(app.reject(need(rest[0], 'reject <name>'), ACTOR, values.reason));
       case 'publish':
-        return report(app.publish(need(rest[0], 'publish <name>'), ACTOR));
+        await confirmHuman(`Publish ${need(rest[0], 'publish <name>')} to agents?`);
+        return report(app.publish(rest[0]!, ACTOR));
       case 'disable':
         return report(app.disable(need(rest[0], 'disable <name>'), ACTOR, values.reason));
       case 'enable':
-        return report(app.enable(need(rest[0], 'enable <name>'), ACTOR));
+        await confirmHuman(`Re-enable ${need(rest[0], 'enable <name>')} for agents?`);
+        return report(app.enable(rest[0]!, ACTOR));
       case 'rollback':
-        return report(app.rollback(need(rest[0], 'rollback <name>'), ACTOR));
+        await confirmHuman(
+          `Republish the previous approved version of ${need(rest[0], 'rollback <name>')}?`,
+        );
+        return report(app.rollback(rest[0]!, ACTOR));
       case 'approve-call':
       case 'reject-call': {
+        if (cmd === 'approve-call') {
+          const pending = app.approvals.get(need(rest[0], `${cmd} <id>`));
+          if (!pending) throw new ToolsmithError(`No approval request ${rest[0]}`, 'not_found');
+          await confirmHuman(
+            `Allow ONE call to ${pending.tool} with ${JSON.stringify(pending.args)}?`,
+          );
+        }
         const a = app.approvals.decide(need(rest[0], `${cmd} <id>`), cmd === 'approve-call', ACTOR);
         app.audit.write(ACTOR, cmd, a.id);
         say(
@@ -191,7 +212,7 @@ async function main(argv: string[]): Promise<number> {
       case 'patterns':
         return patterns(app);
       case 'discover':
-        return discover(app);
+        return await discover(app);
       case 'ask':
         return ask(app, need(rest.join(' ') || undefined, 'ask "<what you need>"'));
       case 'traces':
@@ -226,6 +247,47 @@ async function main(argv: string[]): Promise<number> {
   } finally {
     if (cmd !== 'start') await app.close();
   }
+}
+
+/**
+ * Granting actions (approve, approve-call, publish, enable, rollback) need a
+ * person at an interactive terminal. An agent that can run shell commands
+ * would otherwise approve its own requests; non-interactive automation goes
+ * through the dashboard / admin API instead. This raises the bar; it is not
+ * a boundary against code running as the same OS user (docs/SECURITY.md).
+ */
+async function confirmHuman(question: string): Promise<void> {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    throw new ToolsmithError(
+      'This action grants access and needs a person at an interactive terminal.',
+      'policy',
+      'Run it yourself in a terminal, or use the dashboard (Approvals). Agents cannot approve their own requests.',
+    );
+  }
+  const { createInterface } = await import('node:readline/promises');
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = (await rl.question(`${question} Type "yes" to confirm: `)).trim().toLowerCase();
+    if (answer !== 'yes') throw new ToolsmithError('Cancelled; nothing changed.', 'policy');
+  } finally {
+    rl.close();
+  }
+}
+
+function describeGrant(
+  app: Toolsmith,
+  ref: string,
+  perms: { allowWrite: boolean; allowDestructive: boolean },
+): string {
+  const { artifact, version } = app.registry.resolve(ref);
+  const v = version
+    ? app.registry.getVersion(artifact.id, version)
+    : app.registry.versionsByStatus('awaiting_approval').find((x) => x.artifactId === artifact.id);
+  const grant =
+    [perms.allowWrite && 'WRITE', perms.allowDestructive && 'DESTRUCTIVE']
+      .filter(Boolean)
+      .join(' + ') || 'read-only';
+  return `Approve and publish ${artifact.name}${v ? ` v${v.version}` : ''} (${artifact.kind}, ${grant} access)?`;
 }
 
 function need(v: string | undefined, usage: string): string {
@@ -365,12 +427,20 @@ async function importCmd(
   }
   if (values['allow-private-network']) entry.allowPrivateNetwork = true;
   if (!existing) raw.integrations.push(entry);
+  const previousConfig = readFileSync(cfgPath, 'utf8');
   writeFileSync(cfgPath, `${JSON.stringify(raw, null, 2)}\n`);
 
   const app = new Toolsmith(loadConfig(cfgPath));
   try {
     say(`Importing ${c.bold(source)} as ${c.bold(name)}…`);
-    const v = await app.importIntegration(name, ACTOR, { live: !values['no-live'] });
+    let v: VersionRow;
+    try {
+      v = await app.importIntegration(name, ACTOR, { live: !values['no-live'] });
+    } catch (err) {
+      // A spec that could not be imported must not leave a half-configured entry behind.
+      writeFileSync(cfgPath, previousConfig);
+      throw err;
+    }
     const def = v.definition as unknown as OpenApiIntegrationDef;
     const counts = { read: 0, write: 0, destructive: 0 };
     for (const op of def.operations) counts[op.access]++;
@@ -436,7 +506,9 @@ async function start(
   say(
     `${c.green('✓')} toolsmith-mcp ${VERSION} running`,
     `  MCP endpoint:  ${c.cyan(`${http.url}/mcp`)}  ${c.dim('(Streamable HTTP, protocol 2025-11-25 and 2026-07-28)')}`,
-    `  Dashboard:     ${c.cyan(`${http.url}/dashboard/${admin ? `#token=${admin}` : ''}`)}`,
+    // The sign-in link embeds the admin token: only show it on an interactive
+    // terminal, never in logs (docker logs, systemd, CI).
+    `  Dashboard:     ${c.cyan(`${http.url}/dashboard/${admin && process.stdout.isTTY ? `#token=${admin}` : ''}`)}${admin && !process.stdout.isTTY ? c.dim('  (sign in with TOOLSMITH_ADMIN_TOKEN)') : ''}`,
     `  Tools:         ${app.catalog.list().length} exposed`,
   );
   for (const u of app.upstreams.status())
