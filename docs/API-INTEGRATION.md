@@ -83,6 +83,51 @@ toolsmith-mcp import ./shop.endpoints --name shop --base-url https://api.shop.ex
 - Bodies are untyped objects.
 - These tools are weaker than spec-based ones: no types, no output schema.
 
+## From a Postman collection
+
+Export the collection (v2.0 or v2.1) and import the JSON file like a spec:
+
+```sh
+toolsmith-mcp import ./shop.postman_collection.json --name shop
+```
+
+- Folders are flattened.
+- `{{variables}}` are resolved from the collection's variables.
+- `:param` and `{{param}}` path segments become path parameters.
+- Request bodies and response shapes are inferred from the collection's
+  raw JSON bodies and saved example responses. A finding reminds you to
+  review them.
+
+## From a GraphQL API
+
+```json
+{ "name": "gql", "type": "graphql", "spec": "https://api.example.com/graphql", "auth": { "type": "bearer", "token": "${env:GQL_TOKEN}" } }
+```
+
+Toolsmith introspects the endpoint through the same guarded HTTP client as
+everything else, or reads a saved introspection JSON, then:
+
+- every **query** field becomes a read tool;
+- every **mutation** field becomes a write tool, or a destructive one when
+  its name starts with delete, remove, destroy, purge or drop;
+- arguments become a typed input schema, with enums and input objects;
+- a selection set is generated: scalars plus one nested level;
+- arguments are sent as GraphQL **variables**, never spliced into the
+  document;
+- GraphQL `errors` come back as readable tool errors.
+
+## From free-text documentation (optional LLM stage)
+
+With `"llm": { "enabled": true }` and an integration of `"type": "docs"`,
+Toolsmith sends the documentation (HTML, Markdown or text) to the model.
+The model extracts endpoints into a fixed schema, as ToolFactory does. The
+result is then imported like any spec:
+- every read operation is verified with a live call;
+- nothing is published until you approve it;
+- a finding marks the integration as LLM-extracted.
+
+Documentation larger than 400,000 characters is refused, not truncated.
+
 ## Authentication
 
 | Type | Flags | Config |
@@ -90,6 +135,15 @@ toolsmith-mcp import ./shop.endpoints --name shop --base-url https://api.shop.ex
 | Bearer | `--token-env NAME` | `{ "type": "bearer", "token": "${env:NAME}" }` |
 | API key | `--api-key-env NAME [--api-key-header X-API-Key]` | `{ "type": "apiKey", "in": "header", "name": "X-API-Key", "value": "${env:NAME}" }` |
 | Basic | (config only) | `{ "type": "basic", "username": "${env:U}", "password": "${env:P}" }` |
+| OAuth 2.0 client credentials | (config only) | `{ "type": "oauth2ClientCredentials", "tokenUrl": "https://auth.example.com/token", "clientId": "${env:ID}", "clientSecret": "${env:SECRET}", "scope": "read" }` |
+
+For OAuth:
+- The token is fetched through the same guarded client and cached until a
+  minute before it expires.
+- After a 401 it is refreshed once and the request retried; that's safe,
+  because the API rejected the request.
+- The client secret and the access tokens are scrubbed like any other
+  secret.
 
 Credentials are read from the environment when a request is sent, never
 stored, and redacted wherever they could appear. A 401 is reported as "the

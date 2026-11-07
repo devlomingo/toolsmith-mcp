@@ -24,5 +24,8 @@ Every default stage is deterministic:
 - Unstructured documentation is not supported, and capability matching
   only understands vocabulary it has synonyms for. Both are stated in
   the docs and the tool output.
-- An optional, pluggable LLM stage is roadmap work. Its output would still
-  have to pass the same verification and human approval.
+- The optional LLM stage now exists (`llm.enabled`, off by default): it
+  extracts endpoints from free-text documentation and provides a
+  capability-matching fallback. Its output passes the same verification and
+  human approval as everything else, and tool names it suggests are
+  checked against the real catalog.

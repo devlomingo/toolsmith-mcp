@@ -131,6 +131,34 @@ The answer is one of four verdicts:
 Analysis is keyword- and synonym-based, with no LLM, so unusual vocabulary
 can miss.
 
+### In-client approval (opt-in)
+
+With `"approvals": { "inClient": true }`, a destructive call from a client
+that supports elicitation asks for confirmation in that client: *"Allow ONE
+call to shop__deleteProduct with {"id":3}?"*.
+- On the 2026-07-28 protocol, this uses the `input_required` round trip.
+- On 2025-era connections such as stdio, it uses `elicitation/create`.
+- Accepting runs that one call. The approval is recorded in the audit log
+  as `human:client-elicitation`.
+- Declining falls back to the dashboard flow.
+
+It is off by default because you then trust the client app to show the
+prompt to a person.
+
+### Large catalogs
+
+When many servers are aggregated, give agents `"list": "search"` in
+`exposure`. They then see only the meta tools plus pinned tools, and find
+the rest on demand:
+
+```json
+{ "name": "toolsmith__search_tools", "arguments": { "query": "payments for an order" } }
+```
+
+The result lists matching tools with their descriptions and input schemas,
+and the agent calls them directly. Allow-lists still apply: a client can
+neither find nor call a tool outside its `exposure.tools`.
+
 ## Aggregating other MCP servers
 
 Add them under `upstreams` in the config (see

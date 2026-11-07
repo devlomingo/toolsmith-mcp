@@ -65,6 +65,21 @@ First public release.
   Each produces a generated report and charts.
 - Docker image, CI (lint, types, tests on Node 22 and 24, audit, CodeQL,
   Docker, benchmark regression), and the GitHub Pages site.
+- **Sources:** Postman collections (v2.0/v2.1); GraphQL via introspection;
+  free-text documentation through the optional LLM stage.
+- **OAuth 2.0 client-credentials** auth for APIs.
+- **Per-client tool exposure:** allow-lists enforced on calls, a search
+  listing mode, and the `toolsmith__search_tools` meta tool.
+- **Declarative transform steps** in composites (filter, sort, pick, limit,
+  first, last, count). "Latest" and "oldest" requests select the item
+  themselves.
+- **Baked constants** in mined composites, and session-prefix statistics.
+- **Opt-in in-client approval** of destructive calls through MCP
+  elicitation (both protocol eras).
+- **OpenTelemetry OTLP/HTTP export** of tool-call spans.
+- **Optional LLM stage** (Anthropic SDK, off by default): endpoint extraction
+  from docs, and a capability-matching fallback.
+- **High-traffic load benchmark** with charts.
 - Composite descriptions start with a "use this instead of …" line, and
   reviewers can replace a description at approval (`--description`, or the
   dashboard).

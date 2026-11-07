@@ -1,8 +1,8 @@
 # Benchmark report
 
-Generated 2026-11-07T22:11:15.943Z from the JSON files in `benchmarks/results/`. Nothing in this report is estimated or hand-edited.
+Generated 2026-11-07T22:17:50.960Z from the JSON files in `benchmarks/results/`. Nothing in this report is estimated or hand-edited.
 
-**Environment:** toolsmith-mcp 0.1.0 (commit `8a4fd8b`), Node v22.13.1, darwin 27.2.0 arm64, Apple M1 Pro (10 cores, 17 GB), MCP SDK server 2.4.0 / client 2.4.0, developer workstation.
+**Environment:** toolsmith-mcp 0.1.0 (commit `085fb68`), Node v22.13.1, darwin 27.2.0 arm64, Apple M1 Pro (10 cores, 17 GB), MCP SDK server 2.4.0 / client 2.4.0, developer workstation.
 
 ## Workflow latency: baseline vs composite
 
@@ -22,18 +22,18 @@ Customer + orders + items and payments of every order (fan-out, parallelizable)
 
 | API latency | Variant | p50 ms | p95 ms | p99 ms | MCP calls | API requests | Correct | Success | CPU ms/run | Result bytes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 0 ms | sequential | 7.97 | 10.59 | 12.09 | 8 | 8 | 100% | 100% | 26.03 | 1796 |
-| 0 ms | parallel-client | 4.52 | 6.67 | 7.68 | 8 | 8 | 100% | 100% | 18.01 | 1796 |
-| 0 ms | composite | 1.96 | 2.91 | 4.07 | 1 | 8 | 100% | 100% | 11.58 | 2157 |
-| 10 ms | sequential | 120.46 | 132.7 | 137.56 | 8 | 8 | 100% | 100% | 75.06 | 1796 |
-| 10 ms | parallel-client | 36.01 | 41.89 | 42.86 | 8 | 8 | 100% | 100% | 50.55 | 1796 |
-| 10 ms | composite | 32.74 | 37.82 | 38.79 | 1 | 8 | 100% | 100% | 43.03 | 2157 |
-| 25 ms | sequential | 251.07 | 260.22 | 260.75 | 8 | 8 | 100% | 100% | 86.93 | 1796 |
-| 25 ms | parallel-client | 67.48 | 74.11 | 76.98 | 8 | 8 | 100% | 100% | 63.49 | 1796 |
-| 25 ms | composite | 63.31 | 67.59 | 69.59 | 1 | 8 | 100% | 100% | 52.94 | 2157 |
-| 50 ms | sequential | 458.43 | 467.68 | 479.18 | 8 | 8 | 100% | 100% | 113.44 | 1796 |
-| 50 ms | parallel-client | 120.91 | 126.67 | 126.92 | 8 | 8 | 100% | 100% | 82.71 | 1796 |
-| 50 ms | composite | 115.34 | 120.64 | 124.25 | 1 | 8 | 100% | 100% | 67.03 | 2157 |
+| 0 ms | sequential | 8.34 | 10.78 | 15.04 | 8 | 8 | 100% | 100% | 27.17 | 1796 |
+| 0 ms | parallel-client | 4.66 | 7.37 | 8.04 | 8 | 8 | 100% | 100% | 17.28 | 1796 |
+| 0 ms | composite | 2.06 | 3.34 | 3.5 | 1 | 8 | 100% | 100% | 11.59 | 2157 |
+| 10 ms | sequential | 118.14 | 135.18 | 150.24 | 8 | 8 | 100% | 100% | 69.81 | 1796 |
+| 10 ms | parallel-client | 35.09 | 40.75 | 44.24 | 8 | 8 | 100% | 100% | 47.48 | 1796 |
+| 10 ms | composite | 30.77 | 35.37 | 38.73 | 1 | 8 | 100% | 100% | 40.85 | 2157 |
+| 25 ms | sequential | 247.09 | 255.9 | 258.42 | 8 | 8 | 100% | 100% | 83.63 | 1796 |
+| 25 ms | parallel-client | 68.46 | 74.78 | 75.17 | 8 | 8 | 100% | 100% | 58.02 | 1796 |
+| 25 ms | composite | 62.97 | 68.52 | 70.53 | 1 | 8 | 100% | 100% | 47.93 | 2157 |
+| 50 ms | sequential | 451.94 | 464.1 | 467.07 | 8 | 8 | 100% | 100% | 103.03 | 1796 |
+| 50 ms | parallel-client | 124.15 | 129.33 | 131.55 | 8 | 8 | 100% | 100% | 94.47 | 1796 |
+| 50 ms | composite | 117.24 | 120.27 | 122.32 | 1 | 8 | 100% | 100% | 81.46 | 2157 |
 
 ### dependent-chain
 
@@ -43,20 +43,21 @@ Order → its customer → that customer’s orders (strictly sequential, nothin
 
 | API latency | Variant | p50 ms | p95 ms | p99 ms | MCP calls | API requests | Correct | Success | CPU ms/run | Result bytes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 0 ms | sequential | 1.94 | 4.63 | 5.74 | 3 | 3 | 100% | 100% | 5.48 | 735 |
-| 0 ms | composite | 1.18 | 1.39 | 2.36 | 1 | 3 | 100% | 100% | 4.05 | 960 |
-| 10 ms | sequential | 44.73 | 49.68 | 55.41 | 3 | 3 | 100% | 100% | 24.72 | 735 |
-| 10 ms | composite | 42.25 | 47.25 | 48.73 | 1 | 3 | 100% | 100% | 21.4 | 960 |
-| 25 ms | sequential | 92.83 | 98.55 | 99.72 | 3 | 3 | 100% | 100% | 30.64 | 735 |
-| 25 ms | composite | 88.54 | 92.87 | 94.49 | 1 | 3 | 100% | 100% | 27.13 | 960 |
-| 50 ms | sequential | 171.46 | 176.16 | 178.32 | 3 | 3 | 100% | 100% | 36.8 | 735 |
-| 50 ms | composite | 167.09 | 172.19 | 177.39 | 1 | 3 | 100% | 100% | 30.75 | 960 |
+| 0 ms | sequential | 1.83 | 2.63 | 2.96 | 3 | 3 | 100% | 100% | 5.55 | 735 |
+| 0 ms | composite | 1.26 | 2.19 | 26.06 | 1 | 3 | 100% | 100% | 6.33 | 960 |
+| 10 ms | sequential | 43.98 | 49.81 | 52.18 | 3 | 3 | 100% | 100% | 23.33 | 735 |
+| 10 ms | composite | 40.74 | 46.19 | 46.35 | 1 | 3 | 100% | 100% | 20.15 | 960 |
+| 25 ms | sequential | 92.27 | 97.98 | 99.16 | 3 | 3 | 100% | 100% | 29.35 | 735 |
+| 25 ms | composite | 87.62 | 93.87 | 97.4 | 1 | 3 | 100% | 100% | 22.9 | 960 |
+| 50 ms | sequential | 171.99 | 177.63 | 178.95 | 3 | 3 | 100% | 100% | 45.52 | 735 |
+| 50 ms | composite | 166.18 | 170.53 | 171.99 | 1 | 3 | 100% | 100% | 35.49 | 960 |
 
 ## High traffic
 
-- Each agent runs the order-details workflow 3 times back to back; all agents start together. The demo API adds 20 ms per request.
+- Each agent runs the order-details workflow 10 times back to back; all agents start together. The demo API adds 20 ms per request.
 - Clients, gateway and demo API share one Node process on one machine, so CPU and memory figures cover all three and throughput is bounded by that single process.
 - No LLM is involved; agent reasoning time between calls is excluded.
+- Errors in this run are client-side connection resets (`fetch failed` / ECONNRESET), not tool failures: on macOS the TCP accept queue is capped at kern.ipc.somaxconn (128 here), and parallel clients open many new connections at once. Linux defaults are usually 4096; on macOS, raise it with `sudo sysctl kern.ipc.somaxconn=4096`. The composite variant opens one connection per agent run and did not hit the limit.
 
 ![Throughput under load](../charts/load-throughput.svg)
 
@@ -64,12 +65,18 @@ Order → its customer → that customer’s orders (strictly sequential, nothin
 
 | Agents | Variant | Workflows/s | p50 ms | p95 ms | p99 ms | MCP calls/run | MCP requests/s | API requests/run | Errors | CPU s/run (whole process) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | sequential | 4.7 | 212.34 | 224.33 | 224.33 | 8 | 37 | 8 | 0 | 0.0599 |
-| 1 | parallel-client | 16.6 | 60.75 | 61.87 | 61.87 | 8 | 133 | 8 | 0 | 0.0221 |
-| 1 | composite | 19.6 | 51.09 | 53.29 | 53.29 | 1 | 20 | 8 | 0 | 0.0149 |
-| 10 | sequential | 40.9 | 237.39 | 259.78 | 260.01 | 8 | 327 | 8 | 0 | 0.0136 |
-| 10 | parallel-client | 130.3 | 70.21 | 99.53 | 104.38 | 8 | 1042 | 8 | 0 | 0.0133 |
-| 10 | composite | 147.4 | 68.29 | 71.01 | 73.14 | 1 | 147 | 8 | 0 | 0.0038 |
+| 1 | sequential | 4.6 | 215.1 | 229.87 | 229.87 | 8 | 37 | 8 | 0 | 0.0539 |
+| 1 | parallel-client | 18.2 | 54.42 | 57.78 | 57.78 | 8 | 145 | 8 | 0 | 0.0184 |
+| 1 | composite | 18.6 | 54.29 | 62.34 | 62.34 | 1 | 19 | 8 | 0 | 0.0148 |
+| 10 | sequential | 40.7 | 242.9 | 259.72 | 259.99 | 8 | 325 | 8 | 0 | 0.0129 |
+| 10 | parallel-client | 159.8 | 57.94 | 83.06 | 89.85 | 8 | 1278 | 8 | 0 | 0.008 |
+| 10 | composite | 154 | 65.12 | 68.11 | 68.23 | 1 | 154 | 8 | 0 | 0.0027 |
+| 50 | sequential | 173.6 | 260.01 | 357.37 | 367.96 | 8 | 1389 | 8 | 0 | 0.0057 |
+| 50 | parallel-client | 242.7 | 109.37 | 336.7 | 1227.46 | 7.9 | 1992 | 7.8 | 17 | 0.0053 |
+| 50 | composite | 454.3 | 104.1 | 128.81 | 142.52 | 1 | 454 | 8 | 0 | 0.0023 |
+| 100 | sequential | 252.8 | 372.38 | 511.51 | 516.09 | 8 | 2022 | 8 | 0 | 0.005 |
+| 100 | parallel-client | 236.6 | 152.27 | 1155.07 | 2039.41 | 7.2 | 2358 | 6.1 | 275 | 0.004 |
+| 100 | composite | 476.1 | 172.6 | 339.9 | 372.17 | 1 | 476 | 8 | 0 | 0.0026 |
 
 ## Workflow discovery accuracy
 
@@ -81,44 +88,44 @@ Order → its customer → that customer’s orders (strictly sequential, nothin
 
 | Condition | Miner | Precision | Recall | F1 (mean ± sd) | Mining ms (p50) |
 |---|---|---|---|---|---|
-| clean | default | 1 | 1 | 1 ± 0 | 5.14 |
-| clean | no AWO rules | 1 | 1 | 1 ± 0 | 3.27 |
-| clean | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 2.81 |
-| boundary noise 80% | default | 1 | 1 | 1 ± 0 | 4.92 |
-| boundary noise 80% | no AWO rules | 1 | 1 | 1 ± 0 | 2.48 |
-| boundary noise 80% | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 2.87 |
-| rare workflows (10% of sessions) | default | 1 | 1 | 1 ± 0 | 0.87 |
-| rare workflows (10% of sessions) | no AWO rules | 1 | 1 | 1 ± 0 | 0.74 |
-| rare workflows (10% of sessions) | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.54 |
-| block-style loops | default | 1 | 1 | 1 ± 0 | 1.66 |
-| block-style loops | no AWO rules | 1 | 1 | 1 ± 0 | 1.7 |
-| block-style loops | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.54 |
-| noise between steps 10% | default | 1 | 1 | 1 ± 0 | 1.94 |
-| noise between steps 10% | no AWO rules | 1 | 1 | 1 ± 0 | 1.71 |
-| noise between steps 10% | contiguous (v0 baseline) | 0.63 | 1 | 0.76 ± 0.1 | 2.03 |
-| noise between steps 30% | default | 1 | 1 | 1 ± 0 | 2.05 |
-| noise between steps 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.71 |
-| noise between steps 30% | contiguous (v0 baseline) | 0.33 | 1 | 0.5 ± 0 | 2.37 |
-| abandoned runs 30% | default | 1 | 1 | 1 ± 0 | 2.16 |
-| abandoned runs 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.92 |
-| abandoned runs 30% | contiguous (v0 baseline) | 0.68 | 1 | 0.8 ± 0.05 | 1.56 |
-| colliding small ids (1..50) | default | 1 | 1 | 1 ± 0 | 1.85 |
-| colliding small ids (1..50) | no AWO rules | 1 | 1 | 1 ± 0 | 1.76 |
-| colliding small ids (1..50) | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.89 |
-| colliding small ids (1..10) | default | 0.63 | 1 | 0.76 ± 0.1 | 2.4 |
-| colliding small ids (1..10) | no AWO rules | 0.55 | 1 | 0.71 ± 0.04 | 2.25 |
-| colliding small ids (1..10) | contiguous (v0 baseline) | 0.5 | 1 | 0.67 ± 0 | 2.13 |
-| two agents share a session key 30% | default | 1 | 1 | 1 ± 0 | 2.21 |
-| two agents share a session key 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.98 |
-| two agents share a session key 30% | contiguous (v0 baseline) | 0.51 | 1 | 0.68 ± 0.07 | 2.47 |
-| independent reads in random order 50% | default | 1 | 1 | 1 ± 0 | 1.84 |
-| independent reads in random order 50% | no AWO rules | 0.75 | 1 | 0.86 ± 0 | 1.64 |
-| independent reads in random order 50% | contiguous (v0 baseline) | 0.75 | 1 | 0.86 ± 0 | 2.21 |
-| all of the above (moderate) | default | 1 | 1 | 1 ± 0 | 1.85 |
-| all of the above (moderate) | no AWO rules | 1 | 1 | 1 ± 0 | 1.62 |
-| all of the above (moderate) | contiguous (v0 baseline) | 0.6 | 1 | 0.75 ± 0 | 2.12 |
+| clean | default | 1 | 1 | 1 ± 0 | 3.34 |
+| clean | no AWO rules | 1 | 1 | 1 ± 0 | 2.11 |
+| clean | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.59 |
+| boundary noise 80% | default | 1 | 1 | 1 ± 0 | 2.47 |
+| boundary noise 80% | no AWO rules | 1 | 1 | 1 ± 0 | 1.88 |
+| boundary noise 80% | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 2.29 |
+| rare workflows (10% of sessions) | default | 1 | 0.83 | 0.9 ± 0.1 | 0.75 |
+| rare workflows (10% of sessions) | no AWO rules | 1 | 0.83 | 0.9 ± 0.1 | 0.7 |
+| rare workflows (10% of sessions) | contiguous (v0 baseline) | 1 | 0.83 | 0.9 ± 0.1 | 1.13 |
+| block-style loops | default | 1 | 1 | 1 ± 0 | 1.82 |
+| block-style loops | no AWO rules | 1 | 1 | 1 ± 0 | 1.47 |
+| block-style loops | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.41 |
+| noise between steps 10% | default | 1 | 1 | 1 ± 0 | 1.56 |
+| noise between steps 10% | no AWO rules | 1 | 1 | 1 ± 0 | 1.36 |
+| noise between steps 10% | contiguous (v0 baseline) | 0.71 | 1 | 0.81 ± 0.14 | 1.81 |
+| noise between steps 30% | default | 1 | 1 | 1 ± 0 | 1.81 |
+| noise between steps 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.5 |
+| noise between steps 30% | contiguous (v0 baseline) | 0.35 | 1 | 0.51 ± 0.02 | 2.21 |
+| abandoned runs 30% | default | 1 | 1 | 1 ± 0 | 1.33 |
+| abandoned runs 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.16 |
+| abandoned runs 30% | contiguous (v0 baseline) | 0.73 | 1 | 0.83 ± 0.1 | 1.3 |
+| colliding small ids (1..50) | default | 0.95 | 1 | 0.97 ± 0.06 | 1.97 |
+| colliding small ids (1..50) | no AWO rules | 0.95 | 1 | 0.97 ± 0.06 | 1.69 |
+| colliding small ids (1..50) | contiguous (v0 baseline) | 0.98 | 1 | 0.99 ± 0.04 | 1.46 |
+| colliding small ids (1..10) | default | 0.69 | 1 | 0.81 ± 0.08 | 1.77 |
+| colliding small ids (1..10) | no AWO rules | 0.67 | 1 | 0.79 ± 0.13 | 1.3 |
+| colliding small ids (1..10) | contiguous (v0 baseline) | 0.67 | 1 | 0.79 ± 0.11 | 1.65 |
+| two agents share a session key 30% | default | 1 | 1 | 1 ± 0 | 2.31 |
+| two agents share a session key 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.35 |
+| two agents share a session key 30% | contiguous (v0 baseline) | 0.59 | 1 | 0.73 ± 0.12 | 1.69 |
+| independent reads in random order 50% | default | 1 | 1 | 1 ± 0 | 1.4 |
+| independent reads in random order 50% | no AWO rules | 0.75 | 1 | 0.86 ± 0 | 1.29 |
+| independent reads in random order 50% | contiguous (v0 baseline) | 0.75 | 1 | 0.86 ± 0 | 1.39 |
+| all of the above (moderate) | default | 0.95 | 1 | 0.97 ± 0.06 | 1.52 |
+| all of the above (moderate) | no AWO rules | 0.98 | 1 | 0.99 ± 0.04 | 1.26 |
+| all of the above (moderate) | contiguous (v0 baseline) | 0.49 | 1 | 0.65 ± 0.07 | 1.7 |
 
-Overall mean across conditions (shipped miner): precision 0.97, recall 1, F1 0.98. v0 baseline: F1 0.84.
+Overall mean across conditions (shipped miner): precision 0.97, recall 0.99, F1 0.97. v0 baseline: F1 0.84.
 
 ## Scalability
 
@@ -130,24 +137,24 @@ RSS is the resident memory of the single benchmark process, which hosts the MCP 
 
 | Concurrent clients | Calls | Errors | Calls/s | p50 ms | p95 ms | p99 ms | RSS MB (whole process) |
 |---|---|---|---|---|---|---|---|
-| 1 | 100 | 0 | 112 | 8.63 | 10.17 | 13.59 | 450 |
-| 10 | 1000 | 0 | 731 | 13.66 | 17.31 | 21.95 | 553 |
-| 50 | 5000 | 0 | 1642 | 30 | 39.4 | 50.98 | 896 |
-| 100 | 10000 | 0 | 1994 | 48 | 58.61 | 95.05 | 1018 |
+| 1 | 100 | 0 | 109 | 8.87 | 11.95 | 16.58 | 455 |
+| 10 | 1000 | 0 | 861 | 11.72 | 15.4 | 18.03 | 559 |
+| 50 | 5000 | 0 | 1724 | 28.33 | 37.73 | 49.15 | 825 |
+| 100 | 10000 | 0 | 1918 | 50.13 | 72.44 | 95.77 | 1078 |
 
 | Traces mined | Sessions | Mining ms (p50) |
 |---|---|---|
-| 872 | 200 | 5.78 |
-| 4390 | 1000 | 13.72 |
-| 21908 | 5000 | 71.95 |
-| 87862 | 20000 | 300.01 |
+| 872 | 200 | 6.95 |
+| 4390 | 1000 | 14.99 |
+| 21908 | 5000 | 80.55 |
+| 87862 | 20000 | 330.83 |
 
 | Operations in spec | Tools listed | Import ms | Catalog rebuild ms | tools/list p50 ms |
 |---|---|---|---|---|
-| 50 | 51 | 59 | 1 | 1.16 |
-| 200 | 201 | 54 | 1.9 | 2.96 |
-| 1000 | 1001 | 145 | 8.7 | 11.84 |
-| 2000 | 2001 | 217 | 18.8 | 37.62 |
+| 50 | 52 | 54 | 1 | 1.59 |
+| 200 | 202 | 51 | 2 | 3.12 |
+| 1000 | 1002 | 145 | 8.6 | 12.48 |
+| 2000 | 2002 | 211 | 19 | 21.68 |
 
 ## What these numbers do not show
 

@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 268" width="760" height="268" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
-<title id="t">High traffic: p95 workflow latency</title><desc id="d">Per-run latency at the MCP client while all agents run at once</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 388" width="760" height="388" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+<title id="t">High traffic: p95 workflow latency</title><desc id="d">Latency of successful runs at the MCP client while all agents run at once</desc>
 <style>
   .bg{fill:#fcfcfb}.ttl{fill:#1b1b1a;font-size:16px;font-weight:600}.sub,.tick,.leg{fill:#5f5e58;font-size:12px}.lbl{fill:#2f2e2b;font-size:12.5px}.val{fill:#2f2e2b;font-size:11.5px;font-variant-numeric:tabular-nums}
   .grid{stroke:#e6e5e0;stroke-width:1}.s1{fill:#2a78d6}.s2{fill:#eb6834}.s3{fill:#1baf7a}
@@ -7,22 +7,36 @@
 </style>
 <rect class="bg" width="100%" height="100%" rx="8"/>
 <text class="ttl" x="20" y="28">High traffic: p95 workflow latency</text>
-<text class="sub" x="20" y="44">Per-run latency at the MCP client while all agents run at once</text>
+<text class="sub" x="20" y="44">Latency of successful runs at the MCP client while all agents run at once</text>
 <rect class="s1" x="20" y="52" width="12" height="12" rx="3"/><text class="leg" x="38" y="62">Sequential agents</text><rect class="s2" x="20" y="70" width="12" height="12" rx="3"/><text class="leg" x="38" y="80">Best-case parallel clients</text><rect class="s3" x="20" y="88" width="12" height="12" rx="3"/><text class="leg" x="38" y="98">Composite tool</text>
-<line class="grid" x1="280" x2="280" y1="108" y2="238"/><text class="tick" x="280" y="254" text-anchor="middle">0</text><line class="grid" x1="382.5" x2="382.5" y1="108" y2="238"/><text class="tick" x="382.5" y="254" text-anchor="middle">80</text><line class="grid" x1="485" x2="485" y1="108" y2="238"/><text class="tick" x="485" y="254" text-anchor="middle">160</text><line class="grid" x1="587.5" x2="587.5" y1="108" y2="238"/><text class="tick" x="587.5" y="254" text-anchor="middle">240</text><line class="grid" x1="690" x2="690" y1="108" y2="238"/><text class="tick" x="690" y="254" text-anchor="middle">320</text>
+<line class="grid" x1="280" x2="280" y1="108" y2="358"/><text class="tick" x="280" y="374" text-anchor="middle">0</text><line class="grid" x1="382.5" x2="382.5" y1="108" y2="358"/><text class="tick" x="382.5" y="374" text-anchor="middle">300</text><line class="grid" x1="485" x2="485" y1="108" y2="358"/><text class="tick" x="485" y="374" text-anchor="middle">600</text><line class="grid" x1="587.5" x2="587.5" y1="108" y2="358"/><text class="tick" x="587.5" y="374" text-anchor="middle">900</text><line class="grid" x1="690" x2="690" y1="108" y2="358"/><text class="tick" x="690" y="374" text-anchor="middle">1200</text>
 <text class="lbl" x="270" y="141" text-anchor="end">1 agent</text>
-<path class="s1" d="M280,114 h283.42281249999996 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-283.42281249999996 z"><title>1 agent — Sequential agents: 224 ms, p95 (lower is better)</title></path>
-<text class="val" x="573.4228125" y="125">224</text>
-<path class="s2" d="M280,130 h75.2709375 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-75.2709375 z"><title>1 agent — Best-case parallel clients: 61.9 ms, p95 (lower is better)</title></path>
-<text class="val" x="365.2709375" y="141">61.9</text>
-<path class="s3" d="M280,146 h64.27781249999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-64.27781249999998 z"><title>1 agent — Composite tool: 53.3 ms, p95 (lower is better)</title></path>
-<text class="val" x="354.2778125" y="157">53.3</text>
+<path class="s1" d="M280,114 h74.53891666666664 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-74.53891666666664 z"><title>1 agent — Sequential agents: 230 ms, p95 (lower is better)</title></path>
+<text class="val" x="364.53891666666664" y="125">230</text>
+<path class="s2" d="M280,130 h15.741499999999974 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-15.741499999999974 z"><title>1 agent — Best-case parallel clients: 57.8 ms, p95 (lower is better)</title></path>
+<text class="val" x="305.7415" y="141">57.8</text>
+<path class="s3" d="M280,146 h17.299500000000023 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-17.299500000000023 z"><title>1 agent — Composite tool: 62.3 ms, p95 (lower is better)</title></path>
+<text class="val" x="307.2995" y="157">62.3</text>
 <text class="lbl" x="270" y="201" text-anchor="end">10 agents</text>
-<path class="s1" d="M280,174 h328.843125 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-328.843125 z"><title>10 agents — Sequential agents: 260 ms, p95 (lower is better)</title></path>
-<text class="val" x="618.843125" y="185">260</text>
-<path class="s2" d="M280,190 h123.52281249999999 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-123.52281249999999 z"><title>10 agents — Best-case parallel clients: 99.5 ms, p95 (lower is better)</title></path>
-<text class="val" x="413.5228125" y="201">99.5</text>
-<path class="s3" d="M280,206 h86.9815625 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-86.9815625 z"><title>10 agents — Composite tool: 71 ms, p95 (lower is better)</title></path>
-<text class="val" x="376.9815625" y="217">71</text>
-<text class="tick" x="20" y="254">ms, p95 (lower is better)</text>
+<path class="s1" d="M280,174 h84.73766666666666 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-84.73766666666666 z"><title>10 agents — Sequential agents: 260 ms, p95 (lower is better)</title></path>
+<text class="val" x="374.73766666666666" y="185">260</text>
+<path class="s2" d="M280,190 h24.37883333333332 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-24.37883333333332 z"><title>10 agents — Best-case parallel clients: 83.1 ms, p95 (lower is better)</title></path>
+<text class="val" x="314.3788333333333" y="201">83.1</text>
+<path class="s3" d="M280,206 h19.270916666666665 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-19.270916666666665 z"><title>10 agents — Composite tool: 68.1 ms, p95 (lower is better)</title></path>
+<text class="val" x="309.27091666666666" y="217">68.1</text>
+<text class="lbl" x="270" y="261" text-anchor="end">50 agents</text>
+<path class="s1" d="M280,234 h118.10141666666664 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-118.10141666666664 z"><title>50 agents — Sequential agents: 357 ms, p95 (lower is better)</title></path>
+<text class="val" x="408.10141666666664" y="245">357</text>
+<path class="s2" d="M280,250 h111.03916666666669 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-111.03916666666669 z"><title>50 agents — Best-case parallel clients: 337 ms, p95 (lower is better)</title></path>
+<text class="val" x="401.0391666666667" y="261">337</text>
+<path class="s3" d="M280,266 h40.01008333333334 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-40.01008333333334 z"><title>50 agents — Composite tool: 129 ms, p95 (lower is better)</title></path>
+<text class="val" x="330.01008333333334" y="277">129</text>
+<text class="lbl" x="270" y="321" text-anchor="end">100 agents</text>
+<path class="s1" d="M280,294 h170.76591666666667 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-170.76591666666667 z"><title>100 agents — Sequential agents: 512 ms, p95 (lower is better)</title></path>
+<text class="val" x="460.76591666666667" y="305">512</text>
+<path class="s2" d="M280,310 h390.64891666666665 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-390.64891666666665 z"><title>100 agents — Best-case parallel clients: 1155 ms, p95 (lower is better)</title></path>
+<text class="val" x="680.6489166666667" y="321">1155</text>
+<path class="s3" d="M280,326 h112.1325 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-112.1325 z"><title>100 agents — Composite tool: 340 ms, p95 (lower is better)</title></path>
+<text class="val" x="402.1325" y="337">340</text>
+<text class="tick" x="20" y="374">ms, p95 (lower is better)</text>
 </svg>

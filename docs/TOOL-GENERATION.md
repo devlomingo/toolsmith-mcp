@@ -67,6 +67,26 @@ It is a declarative plan. Nothing generated is ever run as code:
 - If a step fails, the steps that depend on it are skipped, the rest still
   run, and `partial` is `true`.
 
+## Constants and data transforms
+
+- **Constants.** An argument that had the same value in every observed run
+  (`category: "books"`) is baked into the plan as a literal. The agent no
+  longer has to supply it. Values that were redacted are never baked.
+- **Transforms.** A `$transform` step reshapes another step's result with a
+  fixed vocabulary: `filter` (eq, ne, gt, gte, lt, lte, contains, in,
+  exists), `sort`, `pick`, `limit`, `first`, `last` and `count`. Nothing is
+  evaluated as code, and inputs are capped at 10,000 items.
+
+  Capability requests that say "latest" or "oldest" get a transform
+  automatically when the list has a date field. For example, "a customer's
+  latest order and its payment status" sorts the orders by `createdAt`,
+  takes the first, and fetches only its payments.
+
+```json
+{ "id": "latestOrder", "tool": "$transform", "args": {},
+  "transform": { "from": "steps.getOrders.result", "ops": [{ "sort": { "field": "createdAt", "order": "desc" } }, { "first": true }] } }
+```
+
 ## Telling the agent when to use it
 
 AWO found that agents often ignore meta-tools, so each description carries

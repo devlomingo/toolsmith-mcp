@@ -1,38 +1,20 @@
 # Roadmap
 
-Items are listed by expected value. Nothing here is implemented yet.
+Released items moved to the [changelog](../CHANGELOG.md).
 
-## Next
+## Not built yet
 
-- **npm registry release**, so that `npx toolsmith-mcp` works without the
-  GitHub install.
-- **In-band approval through MCP elicitation.** Destructive calls would be
-  approved in the client instead of the dashboard, for clients that support
-  multi-round-trip input.
-- **Baked constants in composites.** When an argument's fingerprint is the
-  same in every occurrence, store it as a literal instead of an input (from
-  AWO's argument normalization).
-- **Session-prefix mining.** A prefix tree over session starts would surface
-  "session init" composites, such as login then search (AWO's state graph).
-- **Postman collection import.**
-- **Tool-list filtering for large catalogs.** Aggregating many servers grows
-  the agent's tool list. Per-client tool profiles or a "search for a tool"
-  meta tool would load tools on demand.
+| Item | Why it is not in this release |
+|---|---|
+| **PostgreSQL storage** for multi-node deployments | The storage classes (`Registry`, `TraceStore`, `CallApprovals`, `AuditLog`) use synchronous SQLite calls throughout. A networked store means making them, and every caller, async. That is a careful refactor of the security-critical paths, not an add-on. |
+| **The gateway as an OAuth 2.1 resource server** (MCP authorization spec: protected-resource metadata, JWT validation, audience checks) | Needs JWKS-based token validation and testing against real authorization servers. Today, clients authenticate with per-client bearer tokens (`server.clients`). |
+| **gRPC sources** | Needs protobuf descriptor parsing (reflection or `.proto` files) and a gRPC client. That's a dependency and a test surface on the scale of the OpenAPI importer. |
+| **Sandboxed general-purpose transforms** (arbitrary expressions) | The declarative transform vocabulary covers filter, sort and pick by design. General expressions would need a real sandbox. |
+| **Mining across non-contiguous calls** inside one data-flow component | The miner already splits sessions by data flow. Patterns inside a component are still contiguous n-grams. |
 
-## Later
+## Ideas
 
-- **Optional LLM stage, off by default:**
-  - extract endpoints from free-text HTML docs into the same descriptor,
-    following ToolFactory's minimal schema;
-  - richer capability matching;
-  - proposed normalization rules.
-
-  All of it would still have to pass live verification, the equivalence
-  test and human approval.
-- **A sandboxed transform step for composites** (filter, sort, pick
-  latest), using a restricted expression language, not general code.
-- **PostgreSQL storage**, for multi-node deployments.
-- **OAuth 2.0 client-credentials and authorization-code flows** for APIs,
-  and OAuth resource-server mode for the gateway itself.
-- **OpenTelemetry export** of traces, following the MCP semantic conventions.
-- **GraphQL and gRPC sources.**
+- Ranking composites by measured benefit (`usage`) and suggesting to
+  disable unused ones automatically.
+- Per-client rate limits.
+- Importing AsyncAPI and gRPC-gateway annotations.

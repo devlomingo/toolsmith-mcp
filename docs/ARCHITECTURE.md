@@ -60,6 +60,10 @@ The brief's component list maps to code as follows.
 | MCP server generator | `src/gateway/gateway.ts` (Catalog) + `src/registry/registry.ts` | Group operations of one spec into one integration (an artifact) with versions; expose the published version; rollback |
 | Tool evaluator | `src/evaluator/evaluator.ts`, `src/openapi/verify.ts` | Static checks, security checks, live verification of read operations, equivalence test for composites, performance comparison |
 | Tool registry | `src/registry/registry.ts` | Lifecycle states, transitions, human-only approval, permissions, versions, audit events |
+| Other tool sources | `src/openapi/postman.ts`, `src/graphql/graphql.ts`, `src/openapi/endpoints.ts` | Postman collections, GraphQL introspection and plain endpoint lists, all turned into the same operation descriptors |
+| Exposure policy | `Toolsmith.allowed` / `listedTools` / `searchTools` in `src/app.ts` | Per-client allow-lists (enforced on calls), search listing mode, `toolsmith__search_tools` |
+| Optional LLM stage | `src/llm/llm.ts` | Off by default. Extracts endpoints from free-text docs into a schema that is then verified like any spec, and suggests existing tools when keyword matching fails |
+| Telemetry | `src/observer/otel.ts` | OTLP/HTTP span export, with composite steps as child spans |
 | Developer dashboard | `dashboard/`, `src/server/admin-api.ts` | Overview, approvals, integrations, tools, workflows and usage, capability requests, traces, benchmarks, audit log (English and Arabic, RTL) |
 
 The brief also lists an "MCP server generator". There is no per-API

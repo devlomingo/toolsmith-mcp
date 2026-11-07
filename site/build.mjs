@@ -81,6 +81,17 @@ const weakest = pat.grid
 const thr = bench.scalability.throughput;
 const maxThr = thr[thr.length - 1];
 const env = bench.environment;
+const ld = bench.load;
+const loadNote = (() => {
+  if (!ld) return '';
+  const top = Math.max(...ld.rows.map((r) => r.concurrency));
+  const at = (v) => ld.rows.find((r) => r.concurrency === top && r.variant === v);
+  const c = at('composite');
+  const p = at('parallel-client');
+  const s = at('sequential');
+  if (!c || !p || !s) return '';
+  return `<h3 style="margin-top:36px">Under high traffic (${top} concurrent agents)</h3><p class="sub">The composite completed ${c.workflowsPerSec} workflows/s vs ${p.workflowsPerSec} for best-case parallel clients and ${s.workflowsPerSec} for sequential agents, at p95 ${r1(c.latency.p95)} ms vs ${r1(p.latency.p95)} ms and ${r1(s.latency.p95)} ms, while the gateway handled ${c.mcpRequestsPerSec} MCP requests/s instead of ${p.mcpRequestsPerSec}. ${p.errors ? ` ${p.errors} of ${p.runs} parallel-client runs failed with connection resets (the macOS accept queue is ${ld.somaxconn ?? 128}); the composite had ${c.errors}.` : ''} Successful runs only; one process on one machine.</p>`;
+})();
 const envLine = `${esc(env.cpu)}, ${env.cores} cores · Node ${esc(env.node)} · MCP SDK ${esc(env.mcpSdk.server)} · commit ${esc(env.commit)}`;
 
 const archSvg = `<svg viewBox="0 0 960 430" role="img" aria-labelledby="arch-t arch-d" class="arch">
@@ -289,7 +300,12 @@ Review, then approve: <span class="k">toolsmith-mcp approve shop</span></pre>
 <thead><tr><th>Demo API latency</th><th>Sequential agent (${seq.mcpCalls} calls)</th><th>Best-case parallel client (${par.mcpCalls} calls)</th><th>Composite (${comp.mcpCalls} call)</th></tr></thead>
 <tbody>${perfRows}</tbody></table></div>
 <p class="note">Against a client that already parallelizes perfectly, this run measured the composite ${signed(Math.min(...parGain))} to ${signed(Math.max(...parGain))} faster, but an independent re-run measured it slightly slower at 25 ms, so treat the latency difference as noise. The real saving is ${par.mcpCalls - comp.mcpCalls} fewer MCP round-trips, which in a real agent are model turns this benchmark does not include. A strictly sequential 3-step chain gains ${pctRange(chainGain)}. LLM tokens were not measured, and no token claim is made.</p>
+${loadNote}
 <div class="grid g2 charts" style="margin-top:28px">
+<figure style="margin:0"><img src="assets/load-throughput.svg" alt="Bar chart: workflows completed per second at 1 to 100 concurrent agents for sequential agents, parallel clients and the composite tool" loading="lazy" width="760" height="320"></figure>
+<figure style="margin:0"><img src="assets/load-p95.svg" alt="Bar chart: p95 workflow latency at 1 to 100 concurrent agents for the three variants" loading="lazy" width="760" height="320"></figure>
+</div>
+<div class="grid g2 charts" style="margin-top:18px">
 <figure style="margin:0"><img src="assets/latency-order-details.svg" alt="Bar chart: median latency of the order-details workflow for sequential, parallel-client and composite variants at each API latency" loading="lazy" width="760" height="320"></figure>
 <figure style="margin:0"><img src="assets/patterns-f1.svg" alt="Bar chart: workflow discovery F1 per condition for the shipped miner, without AWO rules, and the first contiguous version" loading="lazy" width="760" height="800"></figure>
 </div>
@@ -320,6 +336,10 @@ toolsmith-mcp client-config</pre>
 <div class="card"><h3>Lifecycle &amp; rollback</h3><p>Versioned integrations and composites, human-only approval, disable, enable, rollback, audit log.</p></div>
 <div class="card"><h3>Usage tracking</h3><p>Calls, round-trips saved, and how often agents still do the workflow by hand. Unused tools are flagged.</p></div>
 <div class="card"><h3>Dashboard</h3><p>No build step. Approvals, traces, workflows, benchmarks. English and Arabic, with right-to-left layout.</p></div>
+<div class="card"><h3>More sources</h3><p>OpenAPI, Swagger, Postman collections, GraphQL introspection, plain endpoint lists, and (optionally, via an LLM) free-text docs.</p></div>
+<div class="card"><h3>Large catalogs</h3><p>Per-client allow-lists enforced on every call, a search listing mode, and a tool-search meta tool.</p></div>
+<div class="card"><h3>Transforms &amp; constants</h3><p>Composites can filter, sort and pick ("the latest order") with a fixed vocabulary, and bake in arguments that never change.</p></div>
+<div class="card"><h3>OAuth &amp; telemetry</h3><p>OAuth 2.0 client credentials for APIs; OpenTelemetry span export; opt-in in-client approval via MCP elicitation.</p></div>
 </div>
 <img class="shot" style="margin-top:36px" src="assets/dashboard-composite.png" alt="Dashboard showing an evaluated composite tool with passed equivalence checks and its plan" loading="lazy" width="1280" height="1100">
 </div></section>
@@ -343,7 +363,7 @@ toolsmith-mcp client-config</pre>
 
 <section id="roadmap"><div class="wrap grid g2">
 <div><div class="eyebrow">Roadmap</div><h2>What's next</h2><p class="sub">Not built yet; tracked in the <a href="${doc('docs/ROADMAP.md')}">roadmap</a>.</p></div>
-<ul class="roadmap"><li>npm registry release for <code>npx</code></li><li>In-band approval through MCP elicitation</li><li>Baked constants and session-prefix mining (AWO)</li><li>Optional, off-by-default LLM extraction from free-text docs</li><li>Sandboxed transform steps in composites</li><li>PostgreSQL storage, OAuth flows, OpenTelemetry export</li></ul>
+<ul class="roadmap"><li>PostgreSQL storage for multi-node deployments</li><li>The gateway as an OAuth 2.1 resource server</li><li>gRPC sources</li><li>Mining non-contiguous calls inside a workflow</li></ul>
 </div></section>
 
 <section id="community"><div class="wrap">

@@ -89,6 +89,15 @@ model got more expensive.
   needs human approval. AWO's own preliminary automated merger produced rules
   it could not verify.
 
+**Also adopted (after the first release candidate)**
+
+- **Argument normalization's "constant" case:** an argument with the same
+  fingerprint in every occurrence is baked into the plan as a literal.
+- **Shared session prefixes:** each pattern records how often it starts a
+  run, and composites that usually start a session say so.
+- **AWO's "auto-login" style meta-tools:** these fall out of the same mining
+  when the steps are data-linked.
+
 **Not adopted, and why**
 
 - **Domain-expert horizontal merging rules and regex argument normalization.**

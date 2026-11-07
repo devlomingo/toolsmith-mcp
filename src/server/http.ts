@@ -132,7 +132,9 @@ export async function startHttpServer(
 
   await new Promise<void>((resolvePromise, reject) => {
     server.once('error', reject);
-    server.listen(port, host, () => resolvePromise());
+    // A deep accept queue absorbs bursts of new connections from many agents.
+    // The OS caps it (Linux net.core.somaxconn, often 4096; macOS kern.ipc.somaxconn, 128).
+    server.listen({ port, host, backlog: 4096 }, () => resolvePromise());
   });
   const addr = server.address() as AddressInfo;
   const shownHost = addr.family === 'IPv6' ? `[${addr.address}]` : addr.address;

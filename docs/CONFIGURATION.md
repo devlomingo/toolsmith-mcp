@@ -64,9 +64,10 @@ from or wherever `--config <path>` points.
 | Field | Default | Meaning |
 |---|---|---|
 | `name` | required | Namespace: lowercase letters, digits and `-`. Tools are named `<name>__<operation>`. |
+| `type` | `openapi` | `openapi` (OpenAPI, Swagger, Postman collection or endpoint list, detected automatically), `graphql` (`spec` is the endpoint URL, or a saved introspection JSON with `baseUrl` set), or `docs` (free-text documentation; needs the optional LLM stage). |
 | `spec` | required | Path or URL of an OpenAPI 3.x / Swagger 2.0 document (JSON or YAML), or a `.txt` / `.endpoints` endpoint list. |
 | `baseUrl` | the spec's first server | Required when the spec has none. Toolsmith never guesses it. |
-| `auth` | `{ "type": "none" }` | `bearer` (`token`), `apiKey` (`in`: `header`/`query`, `name`, `value`), or `basic` (`username`, `password`). |
+| `auth` | `{ "type": "none" }` | `bearer` (`token`), `apiKey` (`in`: `header`/`query`, `name`, `value`), `basic` (`username`, `password`), or `oauth2ClientCredentials` (`tokenUrl`, `clientId`, `clientSecret`, optional `scope`, `audience`). |
 | `allowedHosts` | `[]` | Extra hosts besides the base URL's. Rarely needed. |
 | `allowPrivateNetwork` | `false` | Allow loopback and private addresses, for local APIs only. |
 | `timeoutMs` | `15000` | Per-request timeout. |
@@ -117,8 +118,49 @@ review step. Destructive calls are still checked:
 
 ### `metaTools`
 
-When `true`, agents also see `toolsmith__request_capability`, which they
-call to describe a need no tool covers.
+When `true`, agents also see two meta tools:
+- `toolsmith__request_capability`, to describe a need no tool covers;
+- `toolsmith__search_tools`, to find tools by description.
+
+### `exposure` (and `server.clients[].exposure`)
+
+Which tools a client sees and may call. Set it at the top level, or per
+client to override.
+
+| Field | Default | Meaning |
+|---|---|---|
+| `tools` | `[]` | Allow-list of glob patterns, for example `["shop__get*", "flow__*"]`. Empty means every published tool. **Enforced on calls, not just on listing.** A composite is allowed only if every tool it calls is allowed. |
+| `list` | `all` | `search` keeps `tools/list` short for large catalogs: only meta tools and `pinned` patterns are listed, and the agent finds the rest with `toolsmith__search_tools` and calls them directly. |
+| `pinned` | `[]` | Patterns always listed in `search` mode. |
+
+### `approvals`
+
+| Field | Default | Meaning |
+|---|---|---|
+| `inClient` | `false` | Ask for per-call approval of destructive operations inside the MCP client (elicitation), when the client supports it. The client app shows the prompt, so you trust it to put the prompt in front of a person. A declined prompt falls back to the dashboard flow. |
+
+### `telemetry`
+
+| Field | Default | Meaning |
+|---|---|---|
+| `otlpEndpoint` | none | OTLP/HTTP collector base URL, for example `http://localhost:4318`. Spans go to `/v1/traces`. Export is off when this is unset. |
+| `headers` | `{}` | Headers for the collector, for example an API key. `${env:...}` is allowed. |
+| `serviceName` | `toolsmith-mcp` | The `service.name` resource attribute. |
+| `exportArguments` | `false` | Also export redacted tool arguments. Results are never exported. |
+
+### `llm`
+
+The optional LLM stage, **off by default**. Enabling it sends documentation
+text (for `docs` integrations), or tool names and descriptions plus the
+request (for the capability fallback), to Anthropic. Credentials come from
+`ANTHROPIC_API_KEY` or an `ant auth login` profile, never from this file.
+
+| Field | Default | Meaning |
+|---|---|---|
+| `enabled` | `false` | Turn the stage on. |
+| `model` | `claude-opus-5-5` | Model id. |
+| `effort` | `medium` | `low`, `medium` or `high`. |
+| `capabilityFallback` | `true` | When keyword matching finds nothing for a capability request, ask the model which existing tools fit. Names it invents are dropped. |
 
 ## Environment variables
 

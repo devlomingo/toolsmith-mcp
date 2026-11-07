@@ -3,7 +3,13 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const extra = process.argv.slice(2);
-for (const script of ['performance.mjs', 'load.mjs', 'patterns.mjs', 'scalability.mjs', 'report.mjs']) {
+for (const script of [
+  'performance.mjs',
+  'load.mjs',
+  'patterns.mjs',
+  'scalability.mjs',
+  'report.mjs',
+]) {
   const r = spawnSync(
     process.execPath,
     [fileURLToPath(new URL(script, import.meta.url)), ...extra],

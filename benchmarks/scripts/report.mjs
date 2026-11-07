@@ -173,34 +173,56 @@ if (perf) {
 }
 
 if (loadRes) {
-  const label = { sequential: 'Sequential agents', 'parallel-client': 'Best-case parallel clients', composite: 'Composite tool' };
+  const label = {
+    sequential: 'Sequential agents',
+    'parallel-client': 'Best-case parallel clients',
+    composite: 'Composite tool',
+  };
   const variants = [...new Set(loadRes.rows.map((r) => r.variant))];
   const conc = [...new Set(loadRes.rows.map((r) => r.concurrency))];
   const get = (c, v) => loadRes.rows.find((r) => r.concurrency === c && r.variant === v);
   const thr = groupedBars({
-    title: 'High traffic: workflows completed per second',
+    title: 'High traffic: successful workflows per second',
     subtitle: `Concurrent agents running order-details; demo API ${loadRes.apiLatencyMs} ms per request`,
     unit: 'workflows/s (higher is better)',
     series: variants.map((v) => label[v] ?? v),
-    groups: conc.map((c) => ({ label: `${c} agent${c > 1 ? 's' : ''}`, values: variants.map((v) => get(c, v)?.workflowsPerSec ?? null) })),
+    groups: conc.map((c) => ({
+      label: `${c} agent${c > 1 ? 's' : ''}`,
+      values: variants.map((v) => get(c, v)?.workflowsPerSec ?? null),
+    })),
     fmt: (v) => String(Math.round(v * 10) / 10),
   });
   writeFileSync(join(CHARTS, 'load-throughput.svg'), thr);
   const p95 = groupedBars({
     title: 'High traffic: p95 workflow latency',
-    subtitle: 'Per-run latency at the MCP client while all agents run at once',
+    subtitle: 'Latency of successful runs at the MCP client while all agents run at once',
     unit: 'ms, p95 (lower is better)',
     series: variants.map((v) => label[v] ?? v),
-    groups: conc.map((c) => ({ label: `${c} agent${c > 1 ? 's' : ''}`, values: variants.map((v) => get(c, v)?.latency.p95 ?? null) })),
+    groups: conc.map((c) => ({
+      label: `${c} agent${c > 1 ? 's' : ''}`,
+      values: variants.map((v) => get(c, v)?.latency.p95 ?? null),
+    })),
     fmt: fmtMs,
   });
   writeFileSync(join(CHARTS, 'load-p95.svg'), p95);
   charts.push('load-throughput.svg', 'load-p95.svg');
   md.push('## High traffic', '');
   for (const n of loadRes.notes) md.push(`- ${n}`);
-  md.push('', '![Throughput under load](../charts/load-throughput.svg)', '', '![p95 latency under load](../charts/load-p95.svg)', '');
-  md.push('| Agents | Variant | Workflows/s | p50 ms | p95 ms | p99 ms | MCP calls/run | MCP requests/s | API requests/run | Errors | CPU s/run (whole process) |', '|---|---|---|---|---|---|---|---|---|---|---|');
-  for (const r of loadRes.rows) md.push(`| ${r.concurrency} | ${r.variant} | ${r.workflowsPerSec} | ${r.latency.p50} | ${r.latency.p95} | ${r.latency.p99} | ${r.mcpCallsPerRun} | ${r.mcpRequestsPerSec} | ${r.apiRequestsPerRun} | ${r.errors} | ${r.cpuSecondsPerRun} |`);
+  md.push(
+    '',
+    '![Throughput under load](../charts/load-throughput.svg)',
+    '',
+    '![p95 latency under load](../charts/load-p95.svg)',
+    '',
+  );
+  md.push(
+    '| Agents | Variant | Workflows/s | p50 ms | p95 ms | p99 ms | MCP calls/run | MCP requests/s | API requests/run | Errors | CPU s/run (whole process) |',
+    '|---|---|---|---|---|---|---|---|---|---|---|',
+  );
+  for (const r of loadRes.rows)
+    md.push(
+      `| ${r.concurrency} | ${r.variant} | ${r.workflowsPerSec} | ${r.latency.p50} | ${r.latency.p95} | ${r.latency.p99} | ${r.mcpCallsPerRun} | ${r.mcpRequestsPerSec} | ${r.apiRequestsPerRun} | ${r.errors} | ${r.cpuSecondsPerRun} |`,
+    );
   md.push('');
 }
 
