@@ -18,7 +18,7 @@ import { OtlpExporter } from './observer/otel.js';
 import { resolveEnvRefs } from './security/secrets.js';
 import { TraceStore } from './observer/trace-store.js';
 import { endpointsToOpenApi, parseEndpointText } from './openapi/endpoints.js';
-import { importOpenApi } from './openapi/import.js';
+import { fetchSpec, importOpenApi } from './openapi/import.js';
 import { LlmStage, extractedToOpenApi } from './llm/llm.js';
 import { HttpIntegrationClient } from './openapi/http-executor.js';
 import { INTROSPECTION_QUERY, introspectionToDef, isIntrospection } from './graphql/graphql.js';
@@ -78,6 +78,8 @@ export class Toolsmith {
   readonly discovery: DiscoveryEngine;
   private readonly observer: UsageObserver;
   readonly otel?: OtlpExporter;
+  /** In-client approval prompts sent and not yet answered (principal, tool, args). */
+  readonly inClientAsks = new Set<string>();
   private changeListeners = new Set<() => void>();
   private lastRevision = -1;
   private pollTimer?: NodeJS.Timeout;
@@ -361,7 +363,10 @@ export class Toolsmith {
   ): Promise<VersionRow> {
     const cfg = this.integrationConfig(name);
     let source: string | Record<string, unknown> = resolvePath(this.loaded, cfg.spec);
-    if (cfg.spec.endsWith('.endpoints') || cfg.spec.endsWith('.txt') || opts.endpointsText) {
+    if (
+      cfg.type === 'openapi' &&
+      (cfg.spec.endsWith('.endpoints') || cfg.spec.endsWith('.txt') || opts.endpointsText)
+    ) {
       const text = opts.endpointsText ?? readFileSync(source as string, 'utf8');
       if (!cfg.baseUrl)
         throw new ToolsmithError(
@@ -413,8 +418,9 @@ export class Toolsmith {
         'Set "llm": { "enabled": true } in toolsmith.config.json (it sends the documentation to Anthropic), or provide an OpenAPI spec or an endpoint list instead.',
       );
     }
+    // Same SSRF rules as spec downloads; the page is about to be sent to the LLM.
     const raw = /^https?:\/\//.test(source)
-      ? await (await fetch(source, { signal: AbortSignal.timeout(20_000) })).text()
+      ? await (await fetchSpec(source, cfg.allowPrivateNetwork)).text()
       : readFileSync(source, 'utf8');
     const text = /<html|<body|<div/i.test(raw) ? htmlToText(raw) : raw;
     const extracted = await llm.extractEndpoints(text, { name: cfg.name, baseUrl: cfg.baseUrl });
@@ -452,7 +458,22 @@ export class Toolsmith {
    * the tools this client may call; invented names are dropped.
    */
   async analyzeCapability(request: string, sessionId?: string, principal?: string) {
-    const analysis = this.discovery.analyze(request, sessionId);
+    const raw = this.discovery.analyze(request, sessionId);
+    // Answer in terms of what this client may actually call.
+    const ok = (tool: string) => this.allowed(principal ?? sessionId, tool);
+    const analysis = { ...raw, matches: raw.matches.filter((m) => ok(m.tool)) };
+    if (
+      (raw.verdict === 'available' || raw.verdict === 'composable') &&
+      ((raw.chain ?? []).some((c) => !ok(c.tool)) ||
+        (raw.verdict === 'available' && analysis.matches.length === 0))
+    ) {
+      Object.assign(analysis, {
+        verdict: 'unsupported' as const,
+        chain: undefined,
+        explanation:
+          'The connected APIs may be able to do this, but not with the tools available to this client. Ask an administrator to extend its access.',
+      });
+    }
     const llm = this.llmStage();
     if (analysis.verdict !== 'unsupported' || !llm || !this.config.llm.capabilityFallback)
       return analysis;

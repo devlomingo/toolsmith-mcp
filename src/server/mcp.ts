@@ -10,6 +10,9 @@ import type { JsonObject, JsonValue, ToolCallResult, ToolDefinition } from '../c
 
 const MAX_TEXT = 200_000;
 
+const askKey = (principal: string, tool: string, args: JsonObject): string =>
+  `${principal}\n${tool}\n${JSON.stringify(args)}`;
+
 const INSTRUCTIONS =
   'Toolsmith is a gateway: its tools come from imported APIs (prefixed by integration name), connected MCP servers, and approved composite workflows (prefixed "flow__"). If no tool fits the task, call toolsmith__request_capability instead of guessing. Destructive tools need a human to approve each call; if a call returns an approval id, ask the user to approve it and then retry the same call.';
 
@@ -133,19 +136,31 @@ export function createServerFactory(app: Toolsmith, opts: ServerFactoryOptions =
         if (canElicit && app.allowed(principal, params.name)) {
           const answer = acceptedContent(ctx.mcpReq.inputResponses, 'approve') as
             { approve?: unknown } | undefined;
-          if (answer?.approve === true) {
+          // Only an answer to a prompt this gateway actually sent counts: a
+          // client cannot pre-fill an approval without being asked.
+          if (
+            answer?.approve === true &&
+            app.inClientAsks.delete(askKey(principal, params.name, params.arguments ?? {}))
+          ) {
             // The person confirmed in the client: record it like a dashboard approval.
             const req = app.approvals.request(params.name, params.arguments ?? {}, principal);
             app.approvals.decide(req.id, true, 'human:client-elicitation');
             app.audit.write('human:client-elicitation', 'approve-call', req.id, {
               tool: params.name,
             });
-          } else if (!ctx.mcpReq.inputResponses || !('approve' in ctx.mcpReq.inputResponses)) {
-            // Not asked yet. (Declined or cancelled answers fall through to the dashboard flow below.)
+          } else if (
+            (!ctx.mcpReq.inputResponses || !('approve' in ctx.mcpReq.inputResponses)) &&
+            JSON.stringify(params.arguments ?? {}, null, 2).length <= 1500
+          ) {
+            // Not asked yet. (Declined or cancelled answers fall through to the
+            // dashboard flow below.) The prompt shows the complete arguments,
+            // never a cut-off prefix: calls too large to show in full go to the
+            // dashboard instead, so padding cannot hide the real target.
+            app.inClientAsks.add(askKey(principal, params.name, params.arguments ?? {}));
             return inputRequired({
               inputRequests: {
                 approve: inputRequired.elicit({
-                  message: `Allow ONE call to ${params.name} with ${JSON.stringify(params.arguments ?? {}).slice(0, 400)}? It is marked destructive.`,
+                  message: `Allow ONE call to ${params.name}? It is marked destructive. Complete arguments:\n${JSON.stringify(params.arguments ?? {}, null, 2)}`,
                   requestedSchema: {
                     type: 'object',
                     properties: { approve: { type: 'boolean', title: 'Approve this call' } },

@@ -103,8 +103,20 @@ Fixed before release, after independent validation (see
   guards against accidents and is not a boundary.
 - Basic-auth credentials, including the encoded header, are scrubbed from
   responses. Trace paths are redacted.
-- Spec downloads use the same SSRF rules as tool calls. IPv4-translated IPv6
-  is blocked.
+- Spec and documentation downloads refuse private addresses on every
+  redirect hop and fail closed when a host can't be resolved. They are
+  checked before connecting, so unlike tool calls they are not protected
+  against DNS rebinding; these URLs come from the operator. IPv4-translated
+  IPv6 is blocked.
+- Instruction-like text is detected in every description an agent reads,
+  including parameter, body-field, GraphQL argument and output-schema
+  descriptions, and fails evaluation.
+- In-client approval prompts show the complete arguments, and only answers
+  to prompts the gateway sent count.
+- Capability answers only offer tools the calling client may use. Postman
+  path variables stay parameters instead of baking values into tools.
+  Entity ids are never baked into composites. OAuth tokens are fetched once
+  for parallel calls and rotated out of the redactor.
 - Install from the release tarball: a global install from git cannot build
   the package.
 - The admin token is no longer printed to non-interactive output.

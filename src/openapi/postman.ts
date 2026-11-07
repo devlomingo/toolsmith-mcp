@@ -89,18 +89,37 @@ function flatten(items: unknown[], prefix: string[] = [], out: FlatRequest[] = [
   return out;
 }
 
-/** Normalise a Postman URL into { origin, path segments, query keys }. */
+/**
+ * Normalise a Postman URL into { origin, path segments, query keys }.
+ * Variables are resolved only in the origin. In the path they stay as
+ * `{{name}}` and become parameters: substituting them would bake values
+ * (ids, tokens) into the tool definition the agent reads.
+ */
 function splitUrl(
   url: Doc | string,
   vars: Record<string, string>,
 ): { origin?: string; segments: string[]; query: string[] } {
-  const sub = (s: string) => s.replace(/\{\{([^}]+)\}\}/g, (m, k: string) => vars[k.trim()] ?? m);
+  const subHost = (s: string) =>
+    s.replace(/\{\{([^}]+)\}\}/g, (m, k: string) => vars[k.trim()] ?? m);
   if (typeof url === 'string' || typeof url.raw === 'string') {
-    const raw = sub(typeof url === 'string' ? url : String(url.raw));
-    const m = raw.match(/^(https?:\/\/[^/?#]+)?([^?#]*)(\?[^#]*)?/);
-    const origin = m?.[1];
-    const segments = (m?.[2] ?? '').split('/').filter(Boolean);
-    const query = (m?.[3] ?? '')
+    let raw = typeof url === 'string' ? url : String(url.raw);
+    let origin: string | undefined;
+    const lead = raw.match(/^\{\{([^}]+)\}\}/);
+    if (lead) {
+      const value = vars[lead[1]!.trim()];
+      raw = raw.slice(lead[0].length);
+      if (value && /^https?:\/\//.test(value)) origin = value.replace(/\/+$/, '');
+      // An unresolved {{baseUrl}} is the origin, not a path parameter: --base-url supplies it.
+    } else {
+      const m = raw.match(/^(https?:\/\/[^/?#]+)/);
+      if (m) {
+        origin = subHost(m[1]!);
+        raw = raw.slice(m[1]!.length);
+      }
+    }
+    const m = raw.match(/^([^?#]*)(\?[^#]*)?/);
+    const segments = (m?.[1] ?? '').split('/').filter(Boolean);
+    const query = (m?.[2] ?? '')
       .slice(1)
       .split('&')
       .map((q) => q.split('=')[0]!)
@@ -113,16 +132,12 @@ function splitUrl(
   const protocol = String(url.protocol ?? 'https');
   const segments = (
     Array.isArray(url.path) ? (url.path as string[]) : String(url.path ?? '').split('/')
-  )
-    .map(sub)
-    .filter(Boolean);
+  ).filter(Boolean);
   const query = Array.isArray(url.query) ? (url.query as Doc[]).map((q) => String(q.key)) : [];
-  const h = sub(host);
-  return {
-    origin: h ? (/^https?:\/\//.test(h) ? h : `${protocol}://${h}`) : undefined,
-    segments,
-    query,
-  };
+  const h = subHost(host);
+  const origin =
+    h && !h.includes('{{') ? (/^https?:\/\//.test(h) ? h : `${protocol}://${h}`) : undefined;
+  return { origin, segments, query };
 }
 
 export function postmanToOpenApi(collection: Doc, baseUrlOverride?: string): Doc {

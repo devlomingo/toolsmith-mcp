@@ -56,6 +56,19 @@ export class Redactor {
     return [...this.secrets].sort((a, b) => b.length - a.length);
   }
 
+  /** Forget a secret that has been rotated out (and its encoded forms). */
+  unregisterSecret(value: string): void {
+    for (const form of [
+      value,
+      encodeURIComponent(value),
+      encodeURIComponent(value).replace(/%[0-9A-F]{2}/g, (m) => m.toLowerCase()),
+      new URLSearchParams({ k: value }).toString().slice(2),
+      Buffer.from(value).toString('base64').replace(/=+$/, ''),
+    ]) {
+      this.secrets.delete(form);
+    }
+  }
+
   registerSecret(value: string | undefined): void {
     if (!value || value.length < 4) return;
     // A secret can come back encoded: in a reflected URL (percent-encoding,
@@ -63,6 +76,7 @@ export class Redactor {
     for (const form of [
       value,
       encodeURIComponent(value),
+      encodeURIComponent(value).replace(/%[0-9A-F]{2}/g, (m) => m.toLowerCase()),
       new URLSearchParams({ k: value }).toString().slice(2),
       Buffer.from(value).toString('base64').replace(/=+$/, ''),
     ]) {

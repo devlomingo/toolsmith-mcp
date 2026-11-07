@@ -232,7 +232,17 @@ export class HttpIntegrationClient {
   private async oauthToken(signal?: AbortSignal): Promise<string> {
     const auth = this.cfg.auth;
     if (auth.type !== 'oauth2ClientCredentials') throw new Error('not an OAuth integration');
-    if (this.token && this.token.expiresAt > Date.now() + 60_000) return this.token.value;
+    if (this.token && this.token.expiresAt > Date.now()) return this.token.value;
+    // One fetch at a time: parallel cold calls share it.
+    this.tokenFetch ??= this.fetchToken(signal).finally(() => (this.tokenFetch = undefined));
+    return this.tokenFetch;
+  }
+
+  private tokenFetch?: Promise<string>;
+
+  private async fetchToken(signal?: AbortSignal): Promise<string> {
+    const auth = this.cfg.auth;
+    if (auth.type !== 'oauth2ClientCredentials') throw new Error('not an OAuth integration');
     const form = new URLSearchParams({
       grant_type: 'client_credentials',
       client_id: this.secret(auth.clientId),
@@ -261,9 +271,13 @@ export class HttpIntegrationClient {
         'auth',
       );
     }
+    // Keep only the live token in the redactor; old ones would pile up and slow every scrub.
+    if (this.token) this.redactor.unregisterSecret(this.token.value);
     this.redactor.registerSecret(parsed.access_token);
     const ttl = typeof parsed.expires_in === 'number' ? parsed.expires_in * 1000 : 3_600_000;
-    this.token = { value: parsed.access_token, expiresAt: Date.now() + ttl };
+    // Refresh a little early, but never so early that short-lived tokens are refetched on every call.
+    const margin = Math.min(60_000, ttl / 4);
+    this.token = { value: parsed.access_token, expiresAt: Date.now() + ttl - margin };
     return this.token.value;
   }
 

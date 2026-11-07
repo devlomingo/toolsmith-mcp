@@ -197,8 +197,13 @@ endpoint:
 
 ## Status
 
-Version 0.1. It is tested (unit, integration, end-to-end over MCP, and
-security suites) and benchmarked. It is **not** yet hardened by production
-use. Single host, SQLite storage. See the [roadmap](docs/ROADMAP.md) for
-what's missing, including npm registry publication and an optional LLM
-stage.
+Version 0.1.0:
+- **Tested:** unit, integration, end-to-end over MCP, and security suites.
+- **Benchmarked:** see above.
+- **Independently validated:** four rounds; the reports are in
+  [docs/validation](docs/validation).
+
+It is **not** yet hardened by production use. It runs on a single host
+with SQLite storage. The [roadmap](docs/ROADMAP.md) lists what isn't built
+yet: PostgreSQL storage, the gateway as an OAuth resource server, and gRPC
+sources.

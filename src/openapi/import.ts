@@ -40,7 +40,7 @@ export interface ImportOptions {
  * tool executor's connect-time check does not; spec URLs come from the
  * operator, not the agent.)
  */
-async function fetchSpec(url: string, allowPrivateNetwork: boolean): Promise<Response> {
+export async function fetchSpec(url: string, allowPrivateNetwork: boolean): Promise<Response> {
   let current = new URL(url);
   for (let hop = 0; hop < 5; hop++) {
     if (current.protocol !== 'https:' && current.protocol !== 'http:') {

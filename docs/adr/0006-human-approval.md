@@ -31,6 +31,8 @@ explicit approval.
 
 - Destructive operations are slower for agents: they ask the user, and the
   user approves in the dashboard or CLI. That is the intent.
-- MCP elicitation could make per-call approval in-band. It is not used
-  yet, because its 2026-07-28 form needs multi-round-trip support in
-  clients. It is on the roadmap.
+- In-band approval through MCP elicitation exists, but is opt-in
+  (`approvals.inClient`). The client app shows the prompt, so the trust
+  moves to that app. The prompt always shows the complete arguments, and
+  calls too large to show in full go to the dashboard. An answer only counts
+  if the gateway actually sent the prompt.

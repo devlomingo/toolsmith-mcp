@@ -1,3 +1,4 @@
+import { detectInjection } from '../openapi/import.js';
 import type { IntegrationConfig } from '../config/config.js';
 import {
   isTransform,
@@ -76,7 +77,28 @@ export async function evaluateIntegration(
     severity: 'error',
   });
 
-  const injection = def.findings.filter((f) => f.code === 'suspicious_description');
+  // Scan everything the agent will read, not just operation descriptions:
+  // parameter and body-field descriptions, titles, enum labels and output
+  // schemas reach the agent verbatim through the tool's schemas.
+  const injection = [
+    ...def.findings.filter((f) => f.code === 'suspicious_description'),
+    ...def.operations.flatMap((op) =>
+      [
+        ...schemaTexts(op.inputSchema),
+        ...schemaTexts(op.outputSchema),
+        ...op.params.map((p) => p.description ?? ''),
+      ].flatMap((text) => {
+        const hit = detectInjection(text);
+        return hit
+          ? [
+              {
+                message: `${op.name}: a parameter or schema description contains instruction-like text ("${hit}")`,
+              },
+            ]
+          : [];
+      }),
+    ),
+  ];
   checks.push({
     name: 'no instruction-like text in descriptions',
     passed: injection.length === 0,
@@ -201,6 +223,27 @@ export async function evaluateIntegration(
   }
 
   return finish(checks, metrics);
+}
+
+/** Every human-readable string in a JSON Schema (descriptions, titles, enum values, defaults). */
+export function schemaTexts(schema: unknown, depth = 0, out: string[] = []): string[] {
+  if (!schema || typeof schema !== 'object' || depth > 12) return out;
+  for (const [k, v] of Object.entries(schema as Record<string, unknown>)) {
+    if (
+      (k === 'description' || k === 'title' || k === 'default' || k === 'example') &&
+      typeof v === 'string'
+    )
+      out.push(v);
+    else if (k === 'enum' && Array.isArray(v))
+      out.push(...v.filter((x): x is string => typeof x === 'string'));
+    else if (k === 'properties' && v && typeof v === 'object') {
+      for (const [name, child] of Object.entries(v as Record<string, unknown>)) {
+        out.push(name);
+        schemaTexts(child, depth + 1, out);
+      }
+    } else if (v && typeof v === 'object') schemaTexts(v, depth + 1, out);
+  }
+  return out;
 }
 
 function authRefs(cfg: IntegrationConfig): string[] {
