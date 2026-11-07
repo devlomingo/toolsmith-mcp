@@ -127,8 +127,10 @@ What this shows:
 
 - **About 1.9× the successful throughput** of the best alternative at 50
   and 100 agents.
-- **A p95 that stays 1.5–3.4× lower**, depending on the comparison.
-- **3–5× less MCP traffic**, because each task is one request.
+- **A p95 1.5–3.4× lower** at 50 and 100 agents, depending on the
+  comparison (1.2–3.8× at 10 agents).
+- **3–5× less MCP traffic** at 50 and 100 agents (2–8× at 10), because
+  each task is one request.
 - **At 10 agents a perfectly parallel client keeps up**, with slightly
   higher throughput but a worse p95.
 
@@ -200,7 +202,8 @@ endpoint:
 Version 0.1.0:
 - **Tested:** unit, integration, end-to-end over MCP, and security suites.
 - **Benchmarked:** see above.
-- **Independently validated:** four rounds; the reports are in
+- **Independently validated:** eight rounds by a separate agent; the
+  reports are in
   [docs/validation](docs/validation).
 
 It is **not** yet hardened by production use. It runs on a single host
