@@ -226,7 +226,7 @@ footer{border-top:1px solid var(--line);padding:40px 0 60px;color:var(--mute);fo
 <h1 class="reveal d1">Give any AI agent the tools it <em>needs</em>.</h1>
 <p class="lede reveal d2">Discover APIs, generate MCP integrations, identify repeated workflows, and create optimized tools for AI agents. Every generated tool is evaluated and approved by a human before an agent sees it.</p>
 <div class="cta reveal d3">
-<div class="install" aria-label="Install command"><b>$</b><code>npm install -g ${REPO}/releases/download/v${pkg.version}/toolsmith-mcp-${pkg.version}.tgz &amp;&amp; toolsmith-mcp demo</code></div>
+<div class="install" aria-label="Install command"><b>$</b><code>npm install -g toolsmith-mcp &amp;&amp; toolsmith-mcp demo</code></div>
 <a class="btn primary" href="${REPO}">View on GitHub</a>
 <a class="btn" href="${doc('docs/INSTALLATION.md')}">Install guide</a>
 </div>
@@ -316,7 +316,7 @@ ${loadNote}
 <div><div class="eyebrow">Installation</div><h2>Running in a minute</h2><p class="sub">Node 22.13+. No database or service to set up. Or use the Docker image.</p>
 <p><a href="${doc('docs/INSTALLATION.md')}">Installation guide</a> · <a href="${doc('docs/MCP-INTEGRATION.md')}">Connect a client</a></p></div>
 <pre aria-label="Quick start"><span class="c"># install and try the full lifecycle</span>
-npm install -g ${REPO}/releases/download/v${pkg.version}/toolsmith-mcp-${pkg.version}.tgz
+npm install -g toolsmith-mcp
 toolsmith-mcp demo
 
 <span class="c"># your own API</span>

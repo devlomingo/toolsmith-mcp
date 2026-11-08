@@ -19,7 +19,7 @@ MCP servers, need a human per call.
 · Website: <https://devlomingo.github.io/toolsmith-mcp/> · MIT licensed
 
 ```sh
-npm install -g https://github.com/devlomingo/toolsmith-mcp/releases/download/v0.1.0/toolsmith-mcp-0.1.0.tgz
+npm install -g toolsmith-mcp
 toolsmith-mcp demo
 ```
 
