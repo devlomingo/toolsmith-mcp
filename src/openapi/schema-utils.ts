@@ -58,12 +58,26 @@ const ALLOWED_KEYWORDS = new Set([
  * Visible characters are never rewritten: no Unicode normalization here, so
  * `m²`, ligatures and enum values reach the agent exactly as the API spells
  * them. ZWNJ and ZWJ are kept because Persian, Indic scripts and emoji need
- * them; the scanner (scanText) removes them too.
+ * them, as do emoji (U+FE0E/U+FE0F); the scanner (scanText) removes them
+ * too. Bidi marks (RLM, ALM) are still removed.
  */
+// Needed by Persian and Indic text (ZWNJ, ZWJ) and emoji sequences
+// (text/emoji presentation selectors). Prompts still show them as escapes.
+const KEEP_VISIBLE = new Set(['\u200C', '\u200D', '\uFE0E', '\uFE0F']);
+
 export function cleanText(text: string): string {
-  return text
-    .replace(/[\u2028\u2029]/g, '\n')
-    .replace(INVISIBLE, (ch) => (ch === '\u200C' || ch === '\u200D' ? ch : ''));
+  return text.replace(/[\u2028\u2029]/g, '\n').replace(INVISIBLE, (ch, at: number, all: string) => {
+    if (!KEEP_VISIBLE.has(ch)) return '';
+    // A presentation selector only means something right after an emoji;
+    // anywhere else it is just a hidden character.
+    if (ch === '\uFE0E' || ch === '\uFE0F') {
+      const prev = String.fromCodePoint(
+        all.codePointAt(at - 1 - (at >= 2 && /[\uDC00-\uDFFF]/.test(all[at - 1]!) ? 1 : 0)) ?? 0,
+      );
+      return /\p{Emoji}/u.test(prev) ? ch : '';
+    }
+    return ch;
+  });
 }
 
 /**

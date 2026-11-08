@@ -113,8 +113,8 @@ Fixed before release, after independent validation (see
   - Invisible characters (every Unicode format character, which includes
     tag characters, plus control, private-use and filler characters) are
     removed from every string and key an agent can read. Visible text is
-    never rewritten; the joiners Persian, Indic scripts and emoji need are
-    kept, and only the scanner's private copy is NFKC-folded.
+    never rewritten; the joiners and emoji selectors Persian, Indic
+    scripts and emoji need are kept (bidi marks are still removed), and only the scanner's private copy is NFKC-folded.
   - The title, paths and all schema strings are scanned (a best-effort
     tripwire). A tool with more than 5,000 schema strings fails evaluation
     as unreviewable.
