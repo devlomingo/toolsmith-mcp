@@ -1,5 +1,5 @@
 import type { AccessLevel, ErrorCode, JsonValue, ToolSource } from '../core/types.js';
-import type { Db } from '../store/db.js';
+import type { SqlDb } from '../store/db.js';
 
 export interface TraceRecord {
   id: string;
@@ -36,16 +36,14 @@ export interface TraceQuery {
 }
 
 export class TraceStore {
-  constructor(private readonly db: Db) {}
+  constructor(private readonly db: SqlDb) {}
 
-  insert(t: TraceRecord): void {
-    this.db
-      .prepare(
-        `INSERT INTO traces (id, session_id, parent_id, tool, artifact_id, source, access, started_at, duration_ms, ok,
+  async insert(t: TraceRecord): Promise<void> {
+    await this.db.run(
+      `INSERT INTO traces (id, session_id, parent_id, tool, artifact_id, source, access, started_at, duration_ms, ok,
           error_code, error, upstream_requests, retries, args, arg_fingerprints, result_fingerprints, result_bytes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+      [
         t.id,
         t.sessionId,
         t.parentId,
@@ -64,10 +62,11 @@ export class TraceStore {
         JSON.stringify(t.argFingerprints),
         JSON.stringify(t.resultFingerprints),
         t.resultBytes,
-      );
+      ],
+    );
   }
 
-  query(q: TraceQuery = {}): TraceRecord[] {
+  async query(q: TraceQuery = {}): Promise<TraceRecord[]> {
     const where: string[] = [];
     const params: Array<string | number> = [];
     const add = (clause: string, value: string | number): void => {
@@ -82,59 +81,56 @@ export class TraceStore {
     if (q.topLevelOnly) where.push('parent_id IS NULL');
     const sql = `SELECT * FROM traces ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY started_at DESC, rowid DESC LIMIT ? OFFSET ?`;
     params.push(q.limit ?? 200, q.offset ?? 0);
-    return (this.db.prepare(sql).all(...params) as Record<string, unknown>[]).map(toTrace);
+    return (await this.db.all(sql, params)).map(toTrace);
   }
 
   /** All top-level traces in chronological order, for pattern mining. */
-  chronological(since?: number): TraceRecord[] {
-    const rows = this.db
-      .prepare(
-        `SELECT * FROM traces WHERE parent_id IS NULL ${since !== undefined ? 'AND started_at >= ?' : ''} ORDER BY session_id, started_at, rowid`,
-      )
-      .all(...(since !== undefined ? [since] : [])) as Record<string, unknown>[];
+  async chronological(since?: number): Promise<TraceRecord[]> {
+    const rows = await this.db.all(
+      `SELECT * FROM traces WHERE parent_id IS NULL ${since !== undefined ? 'AND started_at >= ?' : ''} ORDER BY session_id, started_at, rowid`,
+      since !== undefined ? [since] : [],
+    );
     return rows.map(toTrace);
   }
 
-  get(id: string): TraceRecord | undefined {
-    const r = this.db.prepare('SELECT * FROM traces WHERE id = ?').get(id) as
-      Record<string, unknown> | undefined;
+  async get(id: string): Promise<TraceRecord | undefined> {
+    const r = await this.db.get('SELECT * FROM traces WHERE id = ?', [id]);
     return r ? toTrace(r) : undefined;
   }
 
-  children(parentId: string): TraceRecord[] {
+  async children(parentId: string): Promise<TraceRecord[]> {
     return (
-      this.db
-        .prepare('SELECT * FROM traces WHERE parent_id = ? ORDER BY started_at')
-        .all(parentId) as Record<string, unknown>[]
+      await this.db.all('SELECT * FROM traces WHERE parent_id = ? ORDER BY started_at', [parentId])
     ).map(toTrace);
   }
 
   /** Delete traces older than the retention window. Returns rows removed. */
-  applyRetention(retentionDays: number, now = Date.now()): number {
+  async applyRetention(retentionDays: number, now = Date.now()): Promise<number> {
     const cutoff = now - retentionDays * 86_400_000;
-    const res = this.db.prepare('DELETE FROM traces WHERE started_at < ?').run(cutoff);
-    return Number(res.changes);
+    const res = await this.db.run('DELETE FROM traces WHERE started_at < ?', [cutoff]);
+    return res.changes;
   }
 
-  stats(since?: number): Array<{
-    tool: string;
-    calls: number;
-    errors: number;
-    avgMs: number;
-    p50: number;
-    p95: number;
-    upstreamRequests: number;
-  }> {
-    const rows = this.db
-      .prepare(
-        `SELECT tool, duration_ms, ok, upstream_requests FROM traces WHERE parent_id IS NULL ${since ? 'AND started_at >= ?' : ''}`,
-      )
-      .all(...(since ? [since] : [])) as Array<{
+  async stats(since?: number): Promise<
+    Array<{
+      tool: string;
+      calls: number;
+      errors: number;
+      avgMs: number;
+      p50: number;
+      p95: number;
+      upstreamRequests: number;
+    }>
+  > {
+    const rows = await this.db.all<{
       tool: string;
       duration_ms: number;
       ok: number;
       upstream_requests: number;
-    }>;
+    }>(
+      `SELECT tool, duration_ms, ok, upstream_requests FROM traces WHERE parent_id IS NULL ${since ? 'AND started_at >= ?' : ''}`,
+      since ? [since] : [],
+    );
     const byTool = new Map<string, { d: number[]; errors: number; up: number }>();
     for (const r of rows) {
       const e = byTool.get(r.tool) ?? { d: [], errors: 0, up: 0 };
@@ -159,8 +155,8 @@ export class TraceStore {
       .sort((a, b) => b.calls - a.calls);
   }
 
-  count(): number {
-    return Number((this.db.prepare('SELECT COUNT(*) AS n FROM traces').get() as { n: number }).n);
+  async count(): Promise<number> {
+    return Number((await this.db.get<{ n: number }>('SELECT COUNT(*) AS n FROM traces'))!.n);
   }
 }
 

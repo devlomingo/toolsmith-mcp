@@ -104,9 +104,9 @@ async function setup(latencyMs) {
     },
     process.cwd(),
   );
-  const app = new Toolsmith(loaded, { dbPath: ':memory:' });
+  const app = await Toolsmith.open(loaded, { dbPath: ':memory:' });
   await app.importIntegration('shop', 'human:bench', { live: false });
-  app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:bench');
+  await app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:bench');
   for (const [name, sc] of Object.entries(SCENARIOS)) {
     const props = Object.fromEntries(Object.keys(sc.input(0)).map((k) => [k, { type: 'integer' }]));
     const def = {
@@ -119,14 +119,20 @@ async function setup(latencyMs) {
       provenance: { type: 'manual' },
       examples: [],
     };
-    const a = app.registry.ensureArtifact('composite', def.name);
-    const { version } = app.registry.addVersion(a.id, def, 'benchmark', 'proposed', 'human:bench');
+    const a = await app.registry.ensureArtifact('composite', def.name);
+    const { version } = await app.registry.addVersion(
+      a.id,
+      def,
+      'benchmark',
+      'proposed',
+      'human:bench',
+    );
     const v = await app.runEvaluation(a.id, version.version, 'human:bench', {
       inputs: [sc.input(0)],
     });
     if (v.status !== 'awaiting_approval')
       throw new Error(`composite ${name} failed evaluation: ${JSON.stringify(v.evaluation)}`);
-    app.approve(def.name, { allowWrite: false, allowDestructive: false }, 'human:bench');
+    await app.approve(def.name, { allowWrite: false, allowDestructive: false }, 'human:bench');
   }
   const http = await startHttpServer(app, {
     host: '127.0.0.1',

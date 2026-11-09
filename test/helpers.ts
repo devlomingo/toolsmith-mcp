@@ -42,7 +42,7 @@ export async function makeHarness(
     },
     process.cwd(),
   );
-  const app = new Toolsmith(loaded, { dbPath: ':memory:' });
+  const app = await Toolsmith.open(loaded, { dbPath: ':memory:' });
   if (opts.importNow !== false) await app.importIntegration('shop', 'human:test');
   return {
     shop,
@@ -58,7 +58,7 @@ export async function approveShop(
   app: Toolsmith,
   perms = { allowWrite: false, allowDestructive: false },
 ): Promise<void> {
-  app.approve('shop', perms, 'human:test');
+  await app.approve('shop', perms, 'human:test');
 }
 
 export async function connectClient(

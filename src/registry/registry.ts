@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { ToolsmithError } from '../core/errors.js';
 import type { JsonValue } from '../core/types.js';
-import { nowIso, transaction, type Db } from '../store/db.js';
+import { nowIso, type SqlDb } from '../store/db.js';
 
 export const STATUSES = [
   'discovered',
@@ -101,68 +101,73 @@ export function isHumanActor(actor: string): boolean {
 const HUMAN_ONLY: Status[] = ['approved'];
 
 export class Registry {
-  private listeners = new Set<() => void>();
+  private listeners = new Set<() => void | Promise<void>>();
 
-  constructor(private readonly db: Db) {}
+  constructor(private readonly db: SqlDb) {}
 
-  onChange(fn: () => void): () => void {
+  /** Listeners run after each catalog change and are awaited by the change. */
+  onChange(fn: () => void | Promise<void>): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   }
 
+  /** Run fn on a view of this registry bound to one transaction. */
+  private atomically<T>(fn: (r: Registry) => Promise<T>): Promise<T> {
+    return this.db.transaction((tx) => fn(new Registry(tx)));
+  }
+
   /** Monotonic counter other processes poll to notice catalog changes. */
-  revision(): number {
-    const row = this.db.prepare("SELECT value FROM settings WHERE key = 'catalog_rev'").get() as
-      { value: string } | undefined;
+  async revision(): Promise<number> {
+    const row = await this.db.get<{ value: string }>(
+      "SELECT value FROM settings WHERE key = 'catalog_rev'",
+    );
     return row ? Number(row.value) : 0;
   }
 
-  private bump(): void {
-    this.db
-      .prepare(
-        "INSERT INTO settings (key, value) VALUES ('catalog_rev', '1') ON CONFLICT(key) DO UPDATE SET value = CAST(value AS INTEGER) + 1",
-      )
-      .run();
-    for (const fn of this.listeners) fn();
+  private async bump(): Promise<void> {
+    await this.db.run(
+      "INSERT INTO settings (key, value) VALUES ('catalog_rev', '1') ON CONFLICT(key) DO UPDATE SET value = CAST(value AS INTEGER) + 1",
+    );
+    for (const fn of this.listeners) await fn();
   }
 
-  ensureArtifact(kind: ArtifactKind, name: string): ArtifactRow {
-    const existing = this.getArtifactByName(name);
-    if (existing) {
-      if (existing.kind !== kind) {
-        throw new ToolsmithError(
-          `"${name}" already exists as a ${existing.kind} artifact`,
-          'validation',
-        );
+  /** Atomic, so two concurrent callers cannot both try to create the same name. */
+  ensureArtifact(kind: ArtifactKind, name: string): Promise<ArtifactRow> {
+    return this.atomically(async (r) => {
+      const existing = await r.getArtifactByName(name);
+      if (existing) {
+        if (existing.kind !== kind) {
+          throw new ToolsmithError(
+            `"${name}" already exists as a ${existing.kind} artifact`,
+            'validation',
+          );
+        }
+        return existing;
       }
-      return existing;
-    }
-    const now = nowIso();
-    const id = randomUUID();
-    this.db
-      .prepare(
+      const now = nowIso();
+      const id = randomUUID();
+      await r.db.run(
         'INSERT INTO artifacts (id, kind, name, published_version, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)',
-      )
-      .run(id, kind, name, now, now);
-    return this.getArtifact(id)!;
+        [id, kind, name, now, now],
+      );
+      return (await r.getArtifact(id))!;
+    });
   }
 
-  getArtifact(id: string): ArtifactRow | undefined {
-    const r = this.db.prepare('SELECT * FROM artifacts WHERE id = ?').get(id) as
-      Record<string, unknown> | undefined;
+  async getArtifact(id: string): Promise<ArtifactRow | undefined> {
+    const r = await this.db.get('SELECT * FROM artifacts WHERE id = ?', [id]);
     return r ? toArtifact(r) : undefined;
   }
 
-  getArtifactByName(name: string): ArtifactRow | undefined {
-    const r = this.db.prepare('SELECT * FROM artifacts WHERE name = ?').get(name) as
-      Record<string, unknown> | undefined;
+  async getArtifactByName(name: string): Promise<ArtifactRow | undefined> {
+    const r = await this.db.get('SELECT * FROM artifacts WHERE name = ?', [name]);
     return r ? toArtifact(r) : undefined;
   }
 
   /** Resolve "name", "name@3", or an artifact id. */
-  resolve(ref: string): { artifact: ArtifactRow; version?: number } {
+  async resolve(ref: string): Promise<{ artifact: ArtifactRow; version?: number }> {
     const [name, v] = ref.split('@');
-    const artifact = this.getArtifactByName(name!) ?? this.getArtifact(name!);
+    const artifact = (await this.getArtifactByName(name!)) ?? (await this.getArtifact(name!));
     if (!artifact) {
       throw new ToolsmithError(
         `No integration or tool named "${name}"`,
@@ -173,12 +178,10 @@ export class Registry {
     return { artifact, version: v ? Number(v) : undefined };
   }
 
-  listArtifacts(kind?: ArtifactKind): ArtifactRow[] {
-    const rows = (
-      kind
-        ? this.db.prepare('SELECT * FROM artifacts WHERE kind = ? ORDER BY name').all(kind)
-        : this.db.prepare('SELECT * FROM artifacts ORDER BY kind, name').all()
-    ) as Record<string, unknown>[];
+  async listArtifacts(kind?: ArtifactKind): Promise<ArtifactRow[]> {
+    const rows = kind
+      ? await this.db.all('SELECT * FROM artifacts WHERE kind = ? ORDER BY name', [kind])
+      : await this.db.all('SELECT * FROM artifacts ORDER BY kind, name');
     return rows.map(toArtifact);
   }
 
@@ -192,10 +195,10 @@ export class Registry {
     origin: string,
     status: Status = 'proposed',
     actor = 'system',
-  ): { version: VersionRow; created: boolean } {
+  ): Promise<{ version: VersionRow; created: boolean }> {
     const hash = contentHash(definition);
-    return transaction(this.db, () => {
-      const latest = this.latestVersion(artifactId);
+    return this.atomically(async (r) => {
+      const latest = await r.latestVersion(artifactId);
       if (
         latest &&
         latest.contentHash === hash &&
@@ -206,11 +209,9 @@ export class Registry {
       }
       const version = (latest?.version ?? 0) + 1;
       const now = nowIso();
-      this.db
-        .prepare(
-          'INSERT INTO artifact_versions (artifact_id, version, status, definition, content_hash, permissions, evaluation, origin, created_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)',
-        )
-        .run(
+      await r.db.run(
+        'INSERT INTO artifact_versions (artifact_id, version, status, definition, content_hash, permissions, evaluation, origin, created_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)',
+        [
           artifactId,
           version,
           status,
@@ -219,59 +220,71 @@ export class Registry {
           JSON.stringify({ allowWrite: false, allowDestructive: false }),
           origin,
           now,
-        );
-      this.recordEvent(artifactId, version, null, status, actor, `created (${origin})`);
-      this.touch(artifactId);
-      return { version: this.getVersion(artifactId, version)!, created: true };
+        ],
+      );
+      await r.recordEvent(artifactId, version, null, status, actor, `created (${origin})`);
+      await r.touch(artifactId);
+      return { version: (await r.getVersion(artifactId, version))!, created: true };
     });
   }
 
-  getVersion(artifactId: string, version: number): VersionRow | undefined {
-    const r = this.db
-      .prepare('SELECT * FROM artifact_versions WHERE artifact_id = ? AND version = ?')
-      .get(artifactId, version) as Record<string, unknown> | undefined;
+  async getVersion(artifactId: string, version: number): Promise<VersionRow | undefined> {
+    const r = await this.db.get(
+      'SELECT * FROM artifact_versions WHERE artifact_id = ? AND version = ?',
+      [artifactId, version],
+    );
     return r ? toVersion(r) : undefined;
   }
 
-  latestVersion(artifactId: string): VersionRow | undefined {
-    const r = this.db
-      .prepare(
-        'SELECT * FROM artifact_versions WHERE artifact_id = ? ORDER BY version DESC LIMIT 1',
-      )
-      .get(artifactId) as Record<string, unknown> | undefined;
+  async latestVersion(artifactId: string): Promise<VersionRow | undefined> {
+    const r = await this.db.get(
+      'SELECT * FROM artifact_versions WHERE artifact_id = ? ORDER BY version DESC LIMIT 1',
+      [artifactId],
+    );
     return r ? toVersion(r) : undefined;
   }
 
-  listVersions(artifactId: string): VersionRow[] {
+  async listVersions(artifactId: string): Promise<VersionRow[]> {
     return (
-      this.db
-        .prepare('SELECT * FROM artifact_versions WHERE artifact_id = ? ORDER BY version DESC')
-        .all(artifactId) as Record<string, unknown>[]
+      await this.db.all(
+        'SELECT * FROM artifact_versions WHERE artifact_id = ? ORDER BY version DESC',
+        [artifactId],
+      )
     ).map(toVersion);
   }
 
   /** All versions in a given status across artifacts (e.g. the approval queue). */
-  versionsByStatus(status: Status): Array<VersionRow & { name: string; kind: ArtifactKind }> {
+  async versionsByStatus(
+    status: Status,
+  ): Promise<Array<VersionRow & { name: string; kind: ArtifactKind }>> {
     return (
-      this.db
-        .prepare(
-          'SELECT v.*, a.name AS name, a.kind AS kind FROM artifact_versions v JOIN artifacts a ON a.id = v.artifact_id WHERE v.status = ? ORDER BY v.created_at',
-        )
-        .all(status) as Record<string, unknown>[]
+      await this.db.all(
+        'SELECT v.*, a.name AS name, a.kind AS kind FROM artifact_versions v JOIN artifacts a ON a.id = v.artifact_id WHERE v.status = ? ORDER BY v.created_at',
+        [status],
+      )
     ).map((r) => ({ ...toVersion(r), name: String(r.name), kind: r.kind as ArtifactKind }));
   }
 
-  publishedVersions(): Array<{ artifact: ArtifactRow; version: VersionRow }> {
+  /**
+   * One statement, so the artifact and version rows are a consistent
+   * snapshot even while another caller publishes or disables.
+   */
+  async publishedVersions(): Promise<Array<{ artifact: ArtifactRow; version: VersionRow }>> {
     return (
-      this.db
-        .prepare(
-          "SELECT a.id AS a_id FROM artifacts a JOIN artifact_versions v ON v.artifact_id = a.id AND v.version = a.published_version WHERE v.status = 'published'",
-        )
-        .all() as Array<{ a_id: string }>
-    ).map(({ a_id }) => {
-      const artifact = this.getArtifact(a_id)!;
-      return { artifact, version: this.getVersion(a_id, artifact.publishedVersion!)! };
-    });
+      await this.db.all(
+        "SELECT v.*, a.id AS a_id, a.kind AS a_kind, a.name AS a_name, a.published_version AS a_published_version, a.created_at AS a_created_at, a.updated_at AS a_updated_at FROM artifacts a JOIN artifact_versions v ON v.artifact_id = a.id AND v.version = a.published_version WHERE v.status = 'published'",
+      )
+    ).map((r) => ({
+      artifact: toArtifact({
+        id: r.a_id,
+        kind: r.a_kind,
+        name: r.a_name,
+        published_version: r.a_published_version,
+        created_at: r.a_created_at,
+        updated_at: r.a_updated_at,
+      }),
+      version: toVersion(r),
+    }));
   }
 
   transition(
@@ -280,18 +293,19 @@ export class Registry {
     to: Status,
     actor: string,
     reason?: string,
-  ): VersionRow {
-    return transaction(this.db, () => this.transitionInTx(artifactId, version, to, actor, reason));
+  ): Promise<VersionRow> {
+    return this.atomically((r) => r.transitionInTx(artifactId, version, to, actor, reason));
   }
 
-  private transitionInTx(
+  /** Call only on a registry from `atomically`. */
+  private async transitionInTx(
     artifactId: string,
     version: number,
     to: Status,
     actor: string,
     reason?: string,
-  ): VersionRow {
-    const v = this.getVersion(artifactId, version);
+  ): Promise<VersionRow> {
+    const v = await this.getVersion(artifactId, version);
     if (!v) throw new ToolsmithError(`Version ${version} does not exist`, 'not_found');
     if (!TRANSITIONS[v.status].includes(to)) {
       throw new ToolsmithError(
@@ -303,31 +317,33 @@ export class Registry {
     if (HUMAN_ONLY.includes(to) && !isHumanActor(actor)) {
       throw new ToolsmithError(`Only a human can move a version to "${to}"`, 'policy');
     }
-    this.db
-      .prepare('UPDATE artifact_versions SET status = ? WHERE artifact_id = ? AND version = ?')
-      .run(to, artifactId, version);
-    this.recordEvent(artifactId, version, v.status, to, actor, reason ?? null);
-    this.touch(artifactId);
-    return this.getVersion(artifactId, version)!;
+    await this.db.run(
+      'UPDATE artifact_versions SET status = ? WHERE artifact_id = ? AND version = ?',
+      [to, artifactId, version],
+    );
+    await this.recordEvent(artifactId, version, v.status, to, actor, reason ?? null);
+    await this.touch(artifactId);
+    return (await this.getVersion(artifactId, version))!;
   }
 
-  setEvaluation(artifactId: string, version: number, evaluation: Evaluation): void {
-    this.db
-      .prepare('UPDATE artifact_versions SET evaluation = ? WHERE artifact_id = ? AND version = ?')
-      .run(JSON.stringify(evaluation), artifactId, version);
+  async setEvaluation(artifactId: string, version: number, evaluation: Evaluation): Promise<void> {
+    await this.db.run(
+      'UPDATE artifact_versions SET evaluation = ? WHERE artifact_id = ? AND version = ?',
+      [JSON.stringify(evaluation), artifactId, version],
+    );
   }
 
   /** Human approval. Write/destructive access must be granted explicitly. */
-  approve(
+  async approve(
     artifactId: string,
     version: number,
     permissions: Permissions,
     actor: string,
     reason?: string,
-  ): VersionRow {
+  ): Promise<VersionRow> {
     if (!isHumanActor(actor)) throw new ToolsmithError('Approval must come from a human', 'policy');
-    return transaction(this.db, () => {
-      const v = this.getVersion(artifactId, version);
+    return this.atomically(async (r) => {
+      const v = await r.getVersion(artifactId, version);
       if (!v) throw new ToolsmithError(`Version ${version} does not exist`, 'not_found');
       if (v.evaluation && !v.evaluation.passed) {
         throw new ToolsmithError(
@@ -336,16 +352,15 @@ export class Registry {
           'Inspect the failing checks with `toolsmith-mcp show <name>`, fix the cause, and re-run `toolsmith-mcp evaluate <name>`.',
         );
       }
-      this.db
-        .prepare(
-          'UPDATE artifact_versions SET permissions = ? WHERE artifact_id = ? AND version = ?',
-        )
-        .run(JSON.stringify(permissions), artifactId, version);
+      await r.db.run(
+        'UPDATE artifact_versions SET permissions = ? WHERE artifact_id = ? AND version = ?',
+        [JSON.stringify(permissions), artifactId, version],
+      );
       const grant =
         [permissions.allowWrite && 'write', permissions.allowDestructive && 'destructive']
           .filter(Boolean)
           .join('+') || 'read-only';
-      return this.transitionInTx(
+      return r.transitionInTx(
         artifactId,
         version,
         'approved',
@@ -355,13 +370,13 @@ export class Registry {
     });
   }
 
-  publish(artifactId: string, version: number, actor: string): VersionRow {
-    const out = transaction(this.db, () => {
-      const artifact = this.getArtifact(artifactId)!;
+  async publish(artifactId: string, version: number, actor: string): Promise<VersionRow> {
+    const out = await this.atomically(async (r) => {
+      const artifact = (await r.getArtifact(artifactId))!;
       if (artifact.publishedVersion && artifact.publishedVersion !== version) {
-        const prev = this.getVersion(artifactId, artifact.publishedVersion);
+        const prev = await r.getVersion(artifactId, artifact.publishedVersion);
         if (prev?.status === 'published') {
-          this.transitionInTx(
+          await r.transitionInTx(
             artifactId,
             prev.version,
             'approved',
@@ -370,38 +385,39 @@ export class Registry {
           );
         }
       }
-      const v = this.transitionInTx(artifactId, version, 'published', actor);
-      this.db
-        .prepare('UPDATE artifacts SET published_version = ? WHERE id = ?')
-        .run(version, artifactId);
+      const v = await r.transitionInTx(artifactId, version, 'published', actor);
+      await r.db.run('UPDATE artifacts SET published_version = ? WHERE id = ?', [
+        version,
+        artifactId,
+      ]);
       return v;
     });
-    this.bump();
+    await this.bump();
     return out;
   }
 
-  disable(artifactId: string, actor: string, reason?: string): VersionRow {
-    const out = transaction(this.db, () => {
-      const artifact = this.getArtifact(artifactId)!;
+  async disable(artifactId: string, actor: string, reason?: string): Promise<VersionRow> {
+    const out = await this.atomically(async (r) => {
+      const artifact = (await r.getArtifact(artifactId))!;
       if (!artifact.publishedVersion)
         throw new ToolsmithError(`"${artifact.name}" is not published`, 'validation');
-      const v = this.transitionInTx(
+      const v = await r.transitionInTx(
         artifactId,
         artifact.publishedVersion,
         'disabled',
         actor,
         reason,
       );
-      this.db.prepare('UPDATE artifacts SET published_version = NULL WHERE id = ?').run(artifactId);
+      await r.db.run('UPDATE artifacts SET published_version = NULL WHERE id = ?', [artifactId]);
       return v;
     });
-    this.bump();
+    await this.bump();
     return out;
   }
 
   /** Re-enable the most recently disabled version. */
-  enable(artifactId: string, actor: string): VersionRow {
-    const disabled = this.listVersions(artifactId).find((v) => v.status === 'disabled');
+  async enable(artifactId: string, actor: string): Promise<VersionRow> {
+    const disabled = (await this.listVersions(artifactId)).find((v) => v.status === 'disabled');
     if (!disabled) throw new ToolsmithError('Nothing to re-enable', 'validation');
     return this.publish(artifactId, disabled.version, actor);
   }
@@ -410,10 +426,10 @@ export class Registry {
    * Publish the newest approved version older than the current one. Only
    * versions a human approved before are eligible.
    */
-  rollback(artifactId: string, actor: string, toVersion?: number): VersionRow {
-    const artifact = this.getArtifact(artifactId)!;
+  async rollback(artifactId: string, actor: string, toVersion?: number): Promise<VersionRow> {
+    const artifact = (await this.getArtifact(artifactId))!;
     const current = artifact.publishedVersion;
-    const candidates = this.listVersions(artifactId).filter(
+    const candidates = (await this.listVersions(artifactId)).filter(
       (v) =>
         (v.status === 'approved' || v.status === 'disabled') &&
         v.version !== current &&
@@ -430,16 +446,13 @@ export class Registry {
     return this.publish(artifactId, target.version, actor);
   }
 
-  events(artifactId?: string, limit = 200): LifecycleEvent[] {
-    const rows = (
-      artifactId
-        ? this.db
-            .prepare(
-              'SELECT * FROM lifecycle_events WHERE artifact_id = ? ORDER BY id DESC LIMIT ?',
-            )
-            .all(artifactId, limit)
-        : this.db.prepare('SELECT * FROM lifecycle_events ORDER BY id DESC LIMIT ?').all(limit)
-    ) as Record<string, unknown>[];
+  async events(artifactId?: string, limit = 200): Promise<LifecycleEvent[]> {
+    const rows = artifactId
+      ? await this.db.all(
+          'SELECT * FROM lifecycle_events WHERE artifact_id = ? ORDER BY id DESC LIMIT ?',
+          [artifactId, limit],
+        )
+      : await this.db.all('SELECT * FROM lifecycle_events ORDER BY id DESC LIMIT ?', [limit]);
     return rows.map((r) => ({
       artifactId: String(r.artifact_id),
       version: Number(r.version),
@@ -451,23 +464,22 @@ export class Registry {
     }));
   }
 
-  private recordEvent(
+  private async recordEvent(
     artifactId: string,
     version: number,
     from: Status | null,
     to: Status,
     actor: string,
     reason: string | null,
-  ): void {
-    this.db
-      .prepare(
-        'INSERT INTO lifecycle_events (artifact_id, version, from_status, to_status, actor, reason, at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      )
-      .run(artifactId, version, from, to, actor, reason, nowIso());
+  ): Promise<void> {
+    await this.db.run(
+      'INSERT INTO lifecycle_events (artifact_id, version, from_status, to_status, actor, reason, at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [artifactId, version, from, to, actor, reason, nowIso()],
+    );
   }
 
-  private touch(artifactId: string): void {
-    this.db.prepare('UPDATE artifacts SET updated_at = ? WHERE id = ?').run(nowIso(), artifactId);
+  private async touch(artifactId: string): Promise<void> {
+    await this.db.run('UPDATE artifacts SET updated_at = ? WHERE id = ?', [nowIso(), artifactId]);
   }
 }
 

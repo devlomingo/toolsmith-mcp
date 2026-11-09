@@ -10,7 +10,8 @@ import { camelCase, toolName } from '../core/naming.js';
 import type { AccessLevel, JsonSchema, JsonValue } from '../core/types.js';
 import type { OpenApiIntegrationDef, OperationDef } from '../openapi/types.js';
 import type { Registry } from '../registry/registry.js';
-import { nowIso, type Db } from '../store/db.js';
+import { Mutex } from '../core/mutex.js';
+import { nowIso, type SqlDb } from '../store/db.js';
 
 /**
  * Missing-capability analysis. Deterministic and offline: the request and
@@ -152,18 +153,20 @@ export interface CapabilityAnalysis {
 }
 
 export class DiscoveryEngine {
+  private readonly proposing = new Mutex();
+
   constructor(
-    private readonly db: Db,
+    private readonly db: SqlDb,
     private readonly registry: Registry,
     /** Tools currently exposed (to know what is "published and granted"). */
     private readonly exposed: () => Set<string>,
   ) {}
 
-  private operations(): Op[] {
+  private async operations(): Promise<Op[]> {
     const exposed = this.exposed();
     const out: Op[] = [];
-    for (const artifact of this.registry.listArtifacts('openapi')) {
-      const versions = this.registry.listVersions(artifact.id);
+    for (const artifact of await this.registry.listArtifacts('openapi')) {
+      const versions = await this.registry.listVersions(artifact.id);
       const v =
         versions.find((x) => x.version === artifact.publishedVersion) ??
         versions.find((x) => !['rejected', 'failed'].includes(x.status));
@@ -206,11 +209,11 @@ export class DiscoveryEngine {
    * `allowed` limits the analysis to tools the calling client may use, so the
    * answer never names, suggests or proposes anything outside its allow-list.
    */
-  analyze(
+  async analyze(
     request: string,
     sessionId?: string,
     allowed: (tool: string) => boolean = () => true,
-  ): CapabilityAnalysis {
+  ): Promise<CapabilityAnalysis> {
     const words = terms(request);
     const intent = words.reduce<AccessLevel>(
       (acc, w) => (rank(VERBS[w]) > rank(acc) ? VERBS[w]! : acc),
@@ -218,7 +221,7 @@ export class DiscoveryEngine {
     );
     const modifiers = [...new Set(words.filter((w) => MODIFIERS.has(w)))];
     const concepts = [...new Set(words.filter((w) => !VERBS[w] && !MODIFIERS.has(w)))];
-    const ops = this.operations()
+    const ops = (await this.operations())
       .filter((o) => allowed(o.tool))
       .filter((o) => rank(o.op.access) <= rank(intent) || o.op.access === intent);
 
@@ -317,28 +320,35 @@ export class DiscoveryEngine {
       }
       const def = chainToComposite(request, chain, modifiers);
       // Agents can call request_capability freely; cap how many unreviewed
-      // proposals they can leave behind.
-      const open =
-        this.registry.versionsByStatus('proposed').length +
-        this.registry.versionsByStatus('awaiting_approval').length;
-      if (open >= MAX_OPEN_PROPOSALS && !this.registry.getArtifactByName(def.name)) {
+      // proposals they can leave behind. Count and create under one lock so
+      // concurrent requests cannot each pass the check.
+      const proposed = await this.proposing.run(async () => {
+        const open =
+          (await this.registry.versionsByStatus('proposed')).length +
+          (await this.registry.versionsByStatus('awaiting_approval')).length;
+        if (open >= MAX_OPEN_PROPOSALS && !(await this.registry.getArtifactByName(def.name)))
+          return { open };
+        const artifact = await this.registry.ensureArtifact('composite', def.name);
+        return (
+          await this.registry.addVersion(
+            artifact.id,
+            def as unknown as JsonValue,
+            `capability:${id}`,
+            'proposed',
+            'discovery',
+          )
+        ).version;
+      });
+      if ('open' in proposed) {
         return this.persist(sessionId, {
           ...base,
           verdict: 'composable',
-          explanation: `${chain.map((c) => c.op.tool).join(' → ')} can do this when called in order. No new tool was proposed: ${open} proposals already await review.`,
+          explanation: `${chain.map((c) => c.op.tool).join(' → ')} can do this when called in order. No new tool was proposed: ${proposed.open} proposals already await review.`,
           uncovered: [],
           matches,
           chain: chainView,
         });
       }
-      const artifact = this.registry.ensureArtifact('composite', def.name);
-      const { version } = this.registry.addVersion(
-        artifact.id,
-        def as unknown as JsonValue,
-        `capability:${id}`,
-        'proposed',
-        'discovery',
-      );
       return this.persist(sessionId, {
         ...base,
         verdict: 'composable',
@@ -346,7 +356,7 @@ export class DiscoveryEngine {
         uncovered: [],
         matches,
         chain: chainView,
-        proposal: { artifact: def.name, toolName: def.toolName, status: version.status },
+        proposal: { artifact: def.name, toolName: def.toolName, status: proposed.status },
       });
     }
 
@@ -367,27 +377,23 @@ export class DiscoveryEngine {
     });
   }
 
-  private persist(sessionId: string | undefined, a: CapabilityAnalysis): CapabilityAnalysis {
-    this.db
-      .prepare(
-        'INSERT INTO capability_requests (id, session_id, request, verdict, analysis, at) VALUES (?, ?, ?, ?, ?, ?)',
-      )
-      .run(
-        a.id,
-        sessionId ?? null,
-        a.request.slice(0, 2000),
-        a.verdict,
-        JSON.stringify(a),
-        nowIso(),
-      );
+  private async persist(
+    sessionId: string | undefined,
+    a: CapabilityAnalysis,
+  ): Promise<CapabilityAnalysis> {
+    await this.db.run(
+      'INSERT INTO capability_requests (id, session_id, request, verdict, analysis, at) VALUES (?, ?, ?, ?, ?, ?)',
+      [a.id, sessionId ?? null, a.request.slice(0, 2000), a.verdict, JSON.stringify(a), nowIso()],
+    );
     return a;
   }
 
-  list(limit = 100): CapabilityAnalysis[] {
+  async list(limit = 100): Promise<CapabilityAnalysis[]> {
     return (
-      this.db
-        .prepare('SELECT analysis FROM capability_requests ORDER BY at DESC LIMIT ?')
-        .all(limit) as Array<{ analysis: string }>
+      await this.db.all<{ analysis: string }>(
+        'SELECT analysis FROM capability_requests ORDER BY at DESC LIMIT ?',
+        [limit],
+      )
     ).map((r) => JSON.parse(r.analysis) as CapabilityAnalysis);
   }
 }

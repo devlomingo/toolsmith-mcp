@@ -178,36 +178,38 @@ describe('composite plans', () => {
 });
 
 describe('registry lifecycle', () => {
-  it('enforces the state machine and human-only approval', () => {
+  it('enforces the state machine and human-only approval', async () => {
     const reg = new Registry(openDb(':memory:'));
-    const a = reg.ensureArtifact('composite', 'x');
-    const { version } = reg.addVersion(a.id, { k: 1 }, 'manual');
+    const a = await reg.ensureArtifact('composite', 'x');
+    const { version } = await reg.addVersion(a.id, { k: 1 }, 'manual');
     expect(version.status).toBe('proposed');
-    expect(() => reg.transition(a.id, 1, 'published', 'human:x')).toThrow(/Cannot move/);
-    reg.transition(a.id, 1, 'generating', 'system');
-    reg.transition(a.id, 1, 'testing', 'system');
-    reg.transition(a.id, 1, 'awaiting_approval', 'system');
-    expect(() => reg.transition(a.id, 1, 'approved', 'system')).toThrow(/Only a human/);
-    reg.approve(a.id, 1, { allowWrite: false, allowDestructive: false }, 'human:x');
-    reg.publish(a.id, 1, 'human:x');
-    expect(reg.publishedVersions()).toHaveLength(1);
-    expect(reg.addVersion(a.id, { k: 1 }, 'manual').created).toBe(false); // identical content deduplicated
-    expect(
-      reg
-        .events(a.id)
-        .map((e) => e.toStatus)
-        .reverse(),
-    ).toEqual(['proposed', 'generating', 'testing', 'awaiting_approval', 'approved', 'published']);
+    await expect(reg.transition(a.id, 1, 'published', 'human:x')).rejects.toThrow(/Cannot move/);
+    await reg.transition(a.id, 1, 'generating', 'system');
+    await reg.transition(a.id, 1, 'testing', 'system');
+    await reg.transition(a.id, 1, 'awaiting_approval', 'system');
+    await expect(reg.transition(a.id, 1, 'approved', 'system')).rejects.toThrow(/Only a human/);
+    await reg.approve(a.id, 1, { allowWrite: false, allowDestructive: false }, 'human:x');
+    await reg.publish(a.id, 1, 'human:x');
+    expect(await reg.publishedVersions()).toHaveLength(1);
+    expect((await reg.addVersion(a.id, { k: 1 }, 'manual')).created).toBe(false); // identical content deduplicated
+    expect((await reg.events(a.id)).map((e) => e.toStatus).reverse()).toEqual([
+      'proposed',
+      'generating',
+      'testing',
+      'awaiting_approval',
+      'approved',
+      'published',
+    ]);
   });
 
-  it('refuses to approve a version that failed evaluation', () => {
+  it('refuses to approve a version that failed evaluation', async () => {
     const reg = new Registry(openDb(':memory:'));
-    const a = reg.ensureArtifact('openapi', 'y');
-    reg.addVersion(a.id, {}, 'x', 'awaiting_approval');
-    reg.setEvaluation(a.id, 1, { passed: false, ranAt: '', checks: [] });
-    expect(() =>
+    const a = await reg.ensureArtifact('openapi', 'y');
+    await reg.addVersion(a.id, {}, 'x', 'awaiting_approval');
+    await reg.setEvaluation(a.id, 1, { passed: false, ranAt: '', checks: [] });
+    await expect(
       reg.approve(a.id, 1, { allowWrite: false, allowDestructive: false }, 'human:x'),
-    ).toThrow(/failed evaluation/);
+    ).rejects.toThrow(/failed evaluation/);
   });
 });
 

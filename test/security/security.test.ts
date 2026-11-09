@@ -146,14 +146,16 @@ describe('secrets never reach the agent or the traces', () => {
     await h.app.call('shop__getOrder', { orderId: 1 }, { sessionId: 's' });
     const everything = JSON.stringify({
       tools: h.app.catalog.list(),
-      traces: h.app.traces.query({ limit: 1000 }),
-      versions: h.app.registry.listVersions(h.app.registry.getArtifactByName('shop')!.id),
-      audit: h.app.audit.list(),
+      traces: await h.app.traces.query({ limit: 1000 }),
+      versions: await h.app.registry.listVersions(
+        (await h.app.registry.getArtifactByName('shop'))!.id,
+      ),
+      audit: await h.app.audit.list(),
     });
     expect(everything).not.toContain(SHOP_TOKEN);
-    const dump = h.app.db
-      .prepare("SELECT group_concat(args, '') AS a, group_concat(error, '') AS e FROM traces")
-      .get();
+    const dump = await h.app.db.get(
+      "SELECT group_concat(args, '') AS a, group_concat(error, '') AS e FROM traces",
+    );
     expect(JSON.stringify(dump)).not.toContain(SHOP_TOKEN);
   });
 

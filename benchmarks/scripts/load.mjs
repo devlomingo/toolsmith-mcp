@@ -30,7 +30,7 @@ const RUNS_PER_AGENT = quick ? 3 : 10;
 const shop = new ShopApi({ token: 'load-token', latencyMs: API_LATENCY_MS, users: 100 });
 await shop.start();
 process.env.LOAD_SHOP_TOKEN = 'load-token';
-const app = new Toolsmith(
+const app = await Toolsmith.open(
   parseConfig(
     {
       integrations: [
@@ -49,7 +49,7 @@ const app = new Toolsmith(
   { dbPath: ':memory:' },
 );
 await app.importIntegration('shop', 'human:bench', { live: false });
-app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:bench');
+await app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:bench');
 const def = {
   kind: 'composite',
   name: 'flow-order-details',
@@ -79,13 +79,19 @@ const def = {
   provenance: { type: 'manual' },
   examples: [],
 };
-const art = app.registry.ensureArtifact('composite', def.name);
-const { version } = app.registry.addVersion(art.id, def, 'benchmark', 'proposed', 'human:bench');
+const art = await app.registry.ensureArtifact('composite', def.name);
+const { version } = await app.registry.addVersion(
+  art.id,
+  def,
+  'benchmark',
+  'proposed',
+  'human:bench',
+);
 const v = await app.runEvaluation(art.id, version.version, 'human:bench', {
   inputs: [{ userId: 1 }],
 });
 if (v.status !== 'awaiting_approval') throw new Error('composite failed evaluation');
-app.approve(def.name, { allowWrite: false, allowDestructive: false }, 'human:bench');
+await app.approve(def.name, { allowWrite: false, allowDestructive: false }, 'human:bench');
 const http = await startHttpServer(app, {
   host: '127.0.0.1',
   port: 0,

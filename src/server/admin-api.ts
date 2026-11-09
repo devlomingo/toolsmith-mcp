@@ -38,24 +38,24 @@ export async function handleAdminApi(
   const q = url.searchParams;
   try {
     if (method === 'GET' && parts[0] === 'overview') {
-      const artifacts = app.registry.listArtifacts();
+      const artifacts = await app.registry.listArtifacts();
       const statuses: Record<string, number> = {};
       for (const a of artifacts) {
-        const v = app.registry.latestVersion(a.id);
+        const v = await app.registry.latestVersion(a.id);
         if (v) statuses[v.status] = (statuses[v.status] ?? 0) + 1;
       }
       const since = Date.now() - 86_400_000;
-      const stats = app.traces.stats(since);
+      const stats = await app.traces.stats(since);
       return json(res, 200, {
         version: (await import('../app.js')).VERSION,
         tools: app.catalog.list().length,
         artifacts: artifacts.length,
         statuses,
-        awaitingApproval: app.registry.versionsByStatus('awaiting_approval').length,
-        pendingCallApprovals: app.approvals.list('pending').length,
+        awaitingApproval: (await app.registry.versionsByStatus('awaiting_approval')).length,
+        pendingCallApprovals: (await app.approvals.list('pending')).length,
         upstreams: app.upstreams.status(),
         problems: app.catalog.problems,
-        traces: app.traces.count(),
+        traces: await app.traces.count(),
         last24h: {
           calls: stats.reduce((s, x) => s + x.calls, 0),
           errors: stats.reduce((s, x) => s + x.errors, 0),
@@ -69,25 +69,27 @@ export async function handleAdminApi(
         return json(
           res,
           200,
-          app.registry.listArtifacts().map((a) => {
-            const latest = app.registry.latestVersion(a.id);
-            return {
-              ...a,
-              latestVersion: latest?.version,
-              latestStatus: latest?.status,
-              origin: latest?.origin,
-              evaluationPassed: latest?.evaluation?.passed ?? null,
-            };
-          }),
+          await Promise.all(
+            (await app.registry.listArtifacts()).map(async (a) => {
+              const latest = await app.registry.latestVersion(a.id);
+              return {
+                ...a,
+                latestVersion: latest?.version,
+                latestStatus: latest?.status,
+                origin: latest?.origin,
+                evaluationPassed: latest?.evaluation?.passed ?? null,
+              };
+            }),
+          ),
         );
       }
       const name = decodeURIComponent(parts[1] ?? '');
       if (method === 'GET' && parts.length === 2) {
-        const { artifact } = app.registry.resolve(name);
+        const { artifact } = await app.registry.resolve(name);
         return json(res, 200, {
           artifact,
-          versions: app.registry.listVersions(artifact.id),
-          events: app.registry.events(artifact.id),
+          versions: await app.registry.listVersions(artifact.id),
+          events: await app.registry.events(artifact.id),
         });
       }
       if (method === 'POST' && parts.length === 3) {
@@ -98,7 +100,7 @@ export async function handleAdminApi(
             return json(
               res,
               200,
-              app.approve(
+              await app.approve(
                 ref,
                 {
                   allowWrite: b.allowWrite === true,
@@ -115,20 +117,20 @@ export async function handleAdminApi(
             return json(
               res,
               200,
-              app.reject(ref, ACTOR, typeof b.reason === 'string' ? b.reason : undefined),
+              await app.reject(ref, ACTOR, typeof b.reason === 'string' ? b.reason : undefined),
             );
           case 'publish':
-            return json(res, 200, app.publish(ref, ACTOR));
+            return json(res, 200, await app.publish(ref, ACTOR));
           case 'disable':
             return json(
               res,
               200,
-              app.disable(name, ACTOR, typeof b.reason === 'string' ? b.reason : undefined),
+              await app.disable(name, ACTOR, typeof b.reason === 'string' ? b.reason : undefined),
             );
           case 'enable':
-            return json(res, 200, app.enable(name, ACTOR));
+            return json(res, 200, await app.enable(name, ACTOR));
           case 'rollback':
-            return json(res, 200, app.rollback(ref, ACTOR));
+            return json(res, 200, await app.rollback(ref, ACTOR));
           case 'evaluate': {
             const inputs = Array.isArray(b.inputs)
               ? (b.inputs as JsonObject[])
@@ -148,13 +150,13 @@ export async function handleAdminApi(
         return json(
           res,
           200,
-          app.traces.stats(q.get('since') ? Number(q.get('since')) : undefined),
+          await app.traces.stats(q.get('since') ? Number(q.get('since')) : undefined),
         );
-      if (parts[1]) return json(res, 200, { children: app.traces.children(parts[1]) });
+      if (parts[1]) return json(res, 200, { children: await app.traces.children(parts[1]) });
       return json(
         res,
         200,
-        app.traces.query({
+        await app.traces.query({
           tool: q.get('tool') ?? undefined,
           sessionId: q.get('session') ?? undefined,
           ok: q.get('ok') === null ? undefined : q.get('ok') === 'true',
@@ -165,9 +167,9 @@ export async function handleAdminApi(
       );
     }
     if (method === 'GET' && parts[0] === 'composites' && parts[1] === 'usage')
-      return json(res, 200, app.compositeUsage());
+      return json(res, 200, await app.compositeUsage());
     if (parts[0] === 'patterns') {
-      if (method === 'GET') return json(res, 200, app.mine());
+      if (method === 'GET') return json(res, 200, await app.mine());
       if (method === 'POST' && parts[1] === 'propose') {
         const out = await app.proposeComposites(ACTOR);
         return json(
@@ -183,7 +185,7 @@ export async function handleAdminApi(
       }
     }
     if (parts[0] === 'capabilities') {
-      if (method === 'GET') return json(res, 200, app.discovery.list());
+      if (method === 'GET') return json(res, 200, await app.discovery.list());
       if (method === 'POST') {
         const b = await body(req);
         if (typeof b.request !== 'string' || b.request.length < 3)
@@ -193,16 +195,16 @@ export async function handleAdminApi(
     }
     if (parts[0] === 'call-approvals') {
       if (method === 'GET')
-        return json(res, 200, app.approvals.list((q.get('status') as never) ?? undefined));
+        return json(res, 200, await app.approvals.list((q.get('status') as never) ?? undefined));
       if (method === 'POST' && parts[1]) {
         const b = await body(req);
-        app.audit.write(ACTOR, b.approve === true ? 'approve-call' : 'reject-call', parts[1]);
-        return json(res, 200, app.approvals.decide(parts[1], b.approve === true, ACTOR));
+        await app.audit.write(ACTOR, b.approve === true ? 'approve-call' : 'reject-call', parts[1]);
+        return json(res, 200, await app.approvals.decide(parts[1], b.approve === true, ACTOR));
       }
     }
-    if (method === 'GET' && parts[0] === 'audit') return json(res, 200, app.audit.list());
+    if (method === 'GET' && parts[0] === 'audit') return json(res, 200, await app.audit.list());
     if (method === 'GET' && parts[0] === 'events')
-      return json(res, 200, app.registry.events(undefined, 200));
+      return json(res, 200, await app.registry.events(undefined, 200));
     if (method === 'GET' && parts[0] === 'benchmarks') {
       // Results next to the config (a checkout that ran `npm run benchmark`),
       // else the results shipped with the package.

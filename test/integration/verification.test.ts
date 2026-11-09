@@ -31,7 +31,9 @@ describe('ToolFactory-style verification', () => {
 
   it('verifies every read operation of the demo API with live values and never calls writes', async () => {
     h = await makeHarness();
-    const v = h.app.registry.latestVersion(h.app.registry.getArtifactByName('shop')!.id)!;
+    const v = (await h.app.registry.latestVersion(
+      (await h.app.registry.getArtifactByName('shop'))!.id,
+    ))!;
     expect(v.evaluation!.metrics).toMatchObject({ verifiedOperations: 8, probedOperations: 8 });
     const checks = v.evaluation!.checks.filter((c) => c.name.startsWith('live: '));
     expect(checks.find((c) => c.name === 'live: getOrderItems')!.detail).toMatch(
@@ -43,7 +45,7 @@ describe('ToolFactory-style verification', () => {
 
   it('adds parameter-source hints to tool descriptions', async () => {
     h = await makeHarness();
-    h.app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:test');
+    await h.app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:test');
     expect(h.app.catalog.get('shop__getOrderItems')!.def.description).toMatch(
       /Tip: get "orderId" from shop__listOrders \(each item's id\)/,
     );

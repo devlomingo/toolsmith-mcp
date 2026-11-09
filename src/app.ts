@@ -12,7 +12,7 @@ import { oauthClientHash, oauthIdHash } from './server/oauth.js';
 import { resolvePath } from './config/config.js';
 import { patternToComposite } from './composite/generator.js';
 import type { CompositeDef } from './composite/plan.js';
-import { ToolsmithError } from './core/errors.js';
+import { ToolsmithError, errorMessage } from './core/errors.js';
 import type { CallContext, JsonObject, JsonValue, ToolDefinition } from './core/types.js';
 import { DiscoveryEngine, terms } from './discovery/discovery.js';
 import { globMatch } from './core/naming.js';
@@ -35,7 +35,7 @@ import { minePatterns, type Pattern } from './patterns/miner.js';
 import { Registry, type Permissions, type VersionRow } from './registry/registry.js';
 import { Fingerprinter, Redactor } from './security/redact.js';
 import { AuditLog } from './store/audit.js';
-import { openDb, type Db } from './store/db.js';
+import { openDb, type SqlDb } from './store/db.js';
 import { UpstreamManager } from './upstream/upstream-manager.js';
 
 export const VERSION: string = (() => {
@@ -74,7 +74,7 @@ function htmlToText(html: string): string {
 }
 
 export class Toolsmith {
-  readonly db: Db;
+  readonly db: SqlDb;
   readonly redactor = new Redactor();
   readonly registry: Registry;
   readonly traces: TraceStore;
@@ -92,13 +92,31 @@ export class Toolsmith {
   private lastRevision = -1;
   private pollTimer?: NodeJS.Timeout;
 
-  constructor(
+  /**
+   * Open the database and build the catalog. The only way to get a
+   * Toolsmith: storage is async, and an instance must never be seen before
+   * its catalog exists.
+   */
+  static async open(loaded: LoadedConfig, opts: ToolsmithOptions = {}): Promise<Toolsmith> {
+    const dbPath = opts.dbPath ?? resolve(loaded.baseDir, loaded.config.dataDir, 'toolsmith.db');
+    const db = openDb(dbPath);
+    try {
+      const app = new Toolsmith(loaded, db, await fingerprintKey(db));
+      await app.refresh();
+      return app;
+    } catch (err) {
+      await db.close();
+      throw err;
+    }
+  }
+
+  private constructor(
     readonly loaded: LoadedConfig,
-    opts: ToolsmithOptions = {},
+    db: SqlDb,
+    fingerprintKey: string,
   ) {
     const cfg = loaded.config;
-    const dbPath = opts.dbPath ?? resolve(loaded.baseDir, cfg.dataDir, 'toolsmith.db');
-    this.db = openDb(dbPath);
+    this.db = db;
     this.registry = new Registry(this.db);
     this.traces = new TraceStore(this.db);
     this.audit = new AuditLog(this.db);
@@ -116,13 +134,18 @@ export class Toolsmith {
     this.observer = new UsageObserver(
       this.traces,
       this.redactor,
-      new Fingerprinter(this.fingerprintKey()),
+      new Fingerprinter(fingerprintKey),
       {
         captureArguments: cfg.traces.captureArguments,
         onTrace: (r) => this.otel?.record(r),
       },
     );
-    this.upstreams = new UpstreamManager(() => this.refresh(), this.redactor);
+    // The SDK's list-changed callback cannot wait; a failed refresh keeps
+    // the previous catalog, so log it rather than crash the process.
+    this.upstreams = new UpstreamManager(
+      () => void this.refresh().catch((err) => logRefreshError(err)),
+      this.redactor,
+    );
     this.discovery = new DiscoveryEngine(
       this.db,
       this.registry,
@@ -139,7 +162,6 @@ export class Toolsmith {
       limits: cfg.composites,
     });
     this.registry.onChange(() => this.refresh());
-    this.refresh();
   }
 
   get config() {
@@ -148,16 +170,18 @@ export class Toolsmith {
 
   /** Connect upstreams, apply retention, and watch for changes made by other processes. */
   async start(): Promise<void> {
-    this.traces.applyRetention(this.config.traces.retentionDays);
+    await this.traces.applyRetention(this.config.traces.retentionDays);
     if (this.config.upstreams.length) {
       await this.upstreams.connectAll(this.config.upstreams);
-      for (const u of this.config.upstreams) this.registerUpstream(u.name);
+      for (const u of this.config.upstreams) await this.registerUpstream(u.name);
     }
-    this.refresh();
+    await this.refresh();
     // The CLI and the dashboard may run in other processes; a revision
-    // counter in SQLite lets every gateway notice published/disabled tools.
+    // counter in the database lets every gateway notice published/disabled
+    // tools. A timer cannot await, and a failed poll is retried on the next
+    // tick, so errors are logged, not thrown.
     this.pollTimer = setInterval(() => {
-      if (this.registry.revision() !== this.lastRevision) this.refresh();
+      void this.pollRevision().catch((err) => logRefreshError(err));
     }, 1500);
     this.pollTimer.unref();
   }
@@ -167,7 +191,7 @@ export class Toolsmith {
     await this.otel?.close();
     await this.upstreams.closeAll();
     this.catalog.closeClients();
-    this.db.close();
+    await this.db.close();
   }
 
   onToolsChanged(fn: () => void): () => void {
@@ -175,31 +199,25 @@ export class Toolsmith {
     return () => this.changeListeners.delete(fn);
   }
 
-  refresh(): void {
-    this.lastRevision = this.registry.revision();
-    this.catalog.rebuild();
+  async refresh(): Promise<void> {
+    this.lastRevision = await this.registry.revision();
+    await this.catalog.rebuild();
     for (const fn of this.changeListeners) fn();
+  }
+
+  private async pollRevision(): Promise<void> {
+    if ((await this.registry.revision()) !== this.lastRevision) await this.refresh();
   }
 
   call(name: string, args: JsonObject, ctx: CallContext) {
     return this.dispatcher.call(name, args, ctx);
   }
 
-  private fingerprintKey(): string {
-    const row = this.db
-      .prepare("SELECT value FROM settings WHERE key = 'fingerprint_key'")
-      .get() as { value: string } | undefined;
-    if (row) return row.value;
-    const key = randomBytes(32).toString('hex');
-    this.db.prepare("INSERT INTO settings (key, value) VALUES ('fingerprint_key', ?)").run(key);
-    return key;
-  }
-
-  private registerUpstream(name: string): void {
-    const artifact = this.registry.ensureArtifact('upstream', name);
+  private async registerUpstream(name: string): Promise<void> {
+    const artifact = await this.registry.ensureArtifact('upstream', name);
     const status = this.upstreams.status().find((s) => s.name === name);
     const def = { kind: 'upstream', name, transport: status?.transport ?? 'stdio' } as JsonValue;
-    const { version, created } = this.registry.addVersion(
+    const { version, created } = await this.registry.addVersion(
       artifact.id,
       def,
       'config',
@@ -208,7 +226,7 @@ export class Toolsmith {
     );
     if (created || artifact.publishedVersion !== version.version) {
       if (version.status === 'approved')
-        this.registry.publish(artifact.id, version.version, 'human:config');
+        await this.registry.publish(artifact.id, version.version, 'human:config');
     }
   }
 
@@ -441,15 +459,15 @@ export class Toolsmith {
                 allowPrivateNetwork: cfg.allowPrivateNetwork,
               });
     def.specSource = cfg.spec;
-    const artifact = this.registry.ensureArtifact('openapi', name);
-    const { version, created } = this.registry.addVersion(
+    const artifact = await this.registry.ensureArtifact('openapi', name);
+    const { version, created } = await this.registry.addVersion(
       artifact.id,
       def as unknown as JsonValue,
       `import:${cfg.spec}`,
       'generating',
       actor,
     );
-    this.audit.write(actor, 'import', name, {
+    await this.audit.write(actor, 'import', name, {
       version: version.version,
       operations: def.operations.length,
       created,
@@ -523,7 +541,7 @@ export class Toolsmith {
    */
   async analyzeCapability(request: string, sessionId?: string, principal?: string) {
     const ok = (tool: string) => this.allowed(principal ?? sessionId, tool);
-    const analysis = this.discovery.analyze(request, sessionId, ok);
+    const analysis = await this.discovery.analyze(request, sessionId, ok);
     const llm = this.llmStage();
     if (analysis.verdict !== 'unsupported' || !llm || !this.config.llm.capabilityFallback)
       return analysis;
@@ -602,13 +620,13 @@ export class Toolsmith {
     actor: string,
     opts: { live?: boolean; inputs?: JsonObject[] } = {},
   ): Promise<VersionRow> {
-    let v = this.registry.getVersion(artifactId, version)!;
-    const artifact = this.registry.getArtifact(artifactId)!;
+    let v = (await this.registry.getVersion(artifactId, version))!;
+    const artifact = (await this.registry.getArtifact(artifactId))!;
     if (v.status === 'proposed' || v.status === 'failed' || v.status === 'awaiting_approval') {
-      v = this.registry.transition(artifactId, version, 'generating', actor);
+      v = await this.registry.transition(artifactId, version, 'generating', actor);
     }
     if (v.status === 'generating')
-      v = this.registry.transition(artifactId, version, 'testing', actor);
+      v = await this.registry.transition(artifactId, version, 'testing', actor);
     if (v.status !== 'testing')
       throw new ToolsmithError(`Cannot evaluate a version in status "${v.status}"`, 'policy');
     let evaluation;
@@ -622,7 +640,7 @@ export class Toolsmith {
         );
       } else if (artifact.kind === 'composite') {
         const def = v.definition as unknown as CompositeDef;
-        const inputs = opts.inputs?.length ? opts.inputs : this.examplesFromTraces(def);
+        const inputs = opts.inputs?.length ? opts.inputs : await this.examplesFromTraces(def);
         evaluation = await evaluateComposite(def, inputs, {
           call: (tool, args, ctx) => this.dispatcher.call(tool, args, ctx),
           runComposite: (d, args, ctx) => this.runCompositeDirect(d, args, ctx),
@@ -636,10 +654,10 @@ export class Toolsmith {
         throw new ToolsmithError('Upstream servers are not evaluated', 'validation');
       }
     } catch (err) {
-      this.registry.transition(artifactId, version, 'failed', actor, (err as Error).message);
+      await this.registry.transition(artifactId, version, 'failed', actor, (err as Error).message);
       throw err;
     }
-    this.registry.setEvaluation(artifactId, version, evaluation);
+    await this.registry.setEvaluation(artifactId, version, evaluation);
     return this.registry.transition(
       artifactId,
       version,
@@ -654,12 +672,12 @@ export class Toolsmith {
    * calls it references. Calls that are gone (retention) or whose values
    * were redacted are skipped.
    */
-  private examplesFromTraces(def: CompositeDef): JsonObject[] {
+  private async examplesFromTraces(def: CompositeDef): Promise<JsonObject[]> {
     const props = Object.keys((def.inputSchema.properties ?? {}) as object);
     const required = (def.inputSchema.required as string[] | undefined) ?? [];
     const out: JsonObject[] = [];
     for (const id of def.exampleTraceIds ?? []) {
-      const args = this.traces.get(id)?.args;
+      const args = (await this.traces.get(id))?.args;
       if (!args || typeof args !== 'object' || Array.isArray(args)) continue;
       const input: JsonObject = {};
       for (const k of props) if (k in args) input[k] = (args as JsonObject)[k]!;
@@ -685,20 +703,26 @@ export class Toolsmith {
     actor: string,
     live = true,
   ): Promise<VersionRow> {
-    const { artifact } = this.registry.resolve(name);
-    const latest = this.registry.latestVersion(artifact.id);
+    const { artifact } = await this.registry.resolve(name);
+    const latest = await this.registry.latestVersion(artifact.id);
     if (!latest) throw new ToolsmithError(`"${name}" has no versions`, 'not_found');
     return this.runEvaluation(artifact.id, latest.version, actor, { inputs, live });
   }
 
-  approve(ref: string, perms: Permissions, actor: string, publish = true): VersionRow {
-    const { artifact, version } = this.registry.resolve(ref);
+  async approve(
+    ref: string,
+    perms: Permissions,
+    actor: string,
+    publish = true,
+  ): Promise<VersionRow> {
+    const { artifact, version } = await this.registry.resolve(ref);
     const v =
       version ??
-      this.registry.versionsByStatus('awaiting_approval').find((x) => x.artifactId === artifact.id)
-        ?.version;
+      (await this.registry.versionsByStatus('awaiting_approval')).find(
+        (x) => x.artifactId === artifact.id,
+      )?.version;
     if (!v) {
-      const latest = this.registry.latestVersion(artifact.id);
+      const latest = await this.registry.latestVersion(artifact.id);
       throw new ToolsmithError(
         `"${artifact.name}" has no version awaiting approval${latest ? ` (latest v${latest.version} is ${latest.status})` : ''}`,
         'validation',
@@ -707,52 +731,57 @@ export class Toolsmith {
           : undefined,
       );
     }
-    let out = this.registry.approve(artifact.id, v, perms, actor);
-    this.audit.write(actor, 'approve', `${artifact.name}@${v}`, perms as unknown as JsonValue);
+    let out = await this.registry.approve(artifact.id, v, perms, actor);
+    await this.audit.write(
+      actor,
+      'approve',
+      `${artifact.name}@${v}`,
+      perms as unknown as JsonValue,
+    );
     if (publish) {
-      out = this.registry.publish(artifact.id, v, actor);
-      this.audit.write(actor, 'publish', `${artifact.name}@${v}`);
+      out = await this.registry.publish(artifact.id, v, actor);
+      await this.audit.write(actor, 'publish', `${artifact.name}@${v}`);
     }
     return out;
   }
 
-  reject(ref: string, actor: string, reason?: string): VersionRow {
-    const { artifact, version } = this.registry.resolve(ref);
-    const v = version ?? this.registry.latestVersion(artifact.id)!.version;
-    this.audit.write(actor, 'reject', `${artifact.name}@${v}`, reason ?? null);
+  async reject(ref: string, actor: string, reason?: string): Promise<VersionRow> {
+    const { artifact, version } = await this.registry.resolve(ref);
+    const v = version ?? (await this.registry.latestVersion(artifact.id))!.version;
+    await this.audit.write(actor, 'reject', `${artifact.name}@${v}`, reason ?? null);
     return this.registry.transition(artifact.id, v, 'rejected', actor, reason);
   }
 
-  publish(ref: string, actor: string): VersionRow {
-    const { artifact, version } = this.registry.resolve(ref);
+  async publish(ref: string, actor: string): Promise<VersionRow> {
+    const { artifact, version } = await this.registry.resolve(ref);
     const v =
       version ??
-      this.registry.listVersions(artifact.id).find((x) => x.status === 'approved')?.version;
+      (await this.registry.listVersions(artifact.id)).find((x) => x.status === 'approved')?.version;
     if (!v)
       throw new ToolsmithError(
         `"${artifact.name}" has no approved version to publish`,
         'validation',
       );
-    this.audit.write(actor, 'publish', `${artifact.name}@${v}`);
+    await this.audit.write(actor, 'publish', `${artifact.name}@${v}`);
     return this.registry.publish(artifact.id, v, actor);
   }
 
-  disable(ref: string, actor: string, reason?: string): VersionRow {
-    const { artifact } = this.registry.resolve(ref);
-    this.audit.write(actor, 'disable', artifact.name, reason ?? null);
+  async disable(ref: string, actor: string, reason?: string): Promise<VersionRow> {
+    const { artifact } = await this.registry.resolve(ref);
+    await this.audit.write(actor, 'disable', artifact.name, reason ?? null);
     return this.registry.disable(artifact.id, actor, reason);
   }
 
-  enable(ref: string, actor: string): VersionRow {
-    const { artifact } = this.registry.resolve(ref);
-    this.audit.write(actor, 'enable', artifact.name);
+  async enable(ref: string, actor: string): Promise<VersionRow> {
+    const { artifact } = await this.registry.resolve(ref);
+    await this.audit.write(actor, 'enable', artifact.name);
     return this.registry.enable(artifact.id, actor);
   }
 
-  rollback(ref: string, actor: string): VersionRow {
-    const { artifact, version } = this.registry.resolve(ref);
-    const out = this.registry.rollback(artifact.id, actor, version);
-    this.audit.write(actor, 'rollback', `${artifact.name}@${out.version}`);
+  async rollback(ref: string, actor: string): Promise<VersionRow> {
+    const { artifact, version } = await this.registry.resolve(ref);
+    const out = await this.registry.rollback(artifact.id, actor, version);
+    await this.audit.write(actor, 'rollback', `${artifact.name}@${out.version}`);
     return out;
   }
 
@@ -764,37 +793,40 @@ export class Toolsmith {
    * by hand since it was published. Unused composites are flagged: extra
    * tools are not free for the agent (AWO saw weaker models regress).
    */
-  compositeUsage(unusedAfterDays = 7): Array<{
-    name: string;
-    tool: string;
-    publishedAt: string;
-    calls: number;
-    sessions: number;
-    stepCalls: number;
-    roundTripsSaved: number;
-    manualRunsSincePublish: number;
-    adoption: number | null;
-    lastUsed: string | null;
-    unused: boolean;
-  }> {
+  async compositeUsage(unusedAfterDays = 7): Promise<
+    Array<{
+      name: string;
+      tool: string;
+      publishedAt: string;
+      calls: number;
+      sessions: number;
+      stepCalls: number;
+      roundTripsSaved: number;
+      manualRunsSincePublish: number;
+      adoption: number | null;
+      lastUsed: string | null;
+      unused: boolean;
+    }>
+  > {
     const out = [];
-    for (const { artifact, version } of this.registry.publishedVersions()) {
+    for (const { artifact, version } of await this.registry.publishedVersions()) {
       if (artifact.kind !== 'composite') continue;
       const def = version.definition as unknown as CompositeDef;
-      const published = this.registry
-        .events(artifact.id)
-        .find((e) => e.version === version.version && e.toStatus === 'published');
+      const published = (await this.registry.events(artifact.id)).find(
+        (e) => e.version === version.version && e.toStatus === 'published',
+      );
       const since = published ? Date.parse(published.at) : 0;
-      const calls = this.traces.query({
+      const calls = await this.traces.query({
         tool: def.toolName,
         since,
         topLevelOnly: true,
         limit: 100_000,
       });
-      const stepCalls = calls.reduce((n, t) => n + this.traces.children(t.id).length, 0);
+      let stepCalls = 0;
+      for (const t of calls) stepCalls += (await this.traces.children(t.id)).length;
       const manual =
         def.provenance.type === 'pattern'
-          ? (this.mine(since).find((p) => p.id === def.provenance.ref)?.support ?? 0)
+          ? ((await this.mine(since)).find((p) => p.id === def.provenance.ref)?.support ?? 0)
           : 0;
       const ageDays = (Date.now() - since) / 86_400_000;
       out.push({
@@ -819,9 +851,9 @@ export class Toolsmith {
 
   // ---- Workflow discovery ---------------------------------------------------
 
-  mine(sinceMs?: number): Pattern[] {
+  async mine(sinceMs?: number): Promise<Pattern[]> {
     const p = this.config.patterns;
-    return minePatterns(this.traces.chronological(sinceMs), p);
+    return minePatterns(await this.traces.chronological(sinceMs), p);
   }
 
   /**
@@ -841,14 +873,14 @@ export class Toolsmith {
       version?: VersionRow;
       error?: string;
     }> = [];
-    for (const pattern of this.mine(opts.sinceMs)) {
+    for (const pattern of await this.mine(opts.sinceMs)) {
       try {
         const def = patternToComposite(pattern, (n) => {
           const e = this.catalog.get(n);
           return e && e.def.source !== 'composite' ? e.def : undefined;
         });
-        const artifact = this.registry.ensureArtifact('composite', def.name);
-        const { version, created } = this.registry.addVersion(
+        const artifact = await this.registry.ensureArtifact('composite', def.name);
+        const { version, created } = await this.registry.addVersion(
           artifact.id,
           def as unknown as JsonValue,
           `pattern:${pattern.id}`,
@@ -857,13 +889,13 @@ export class Toolsmith {
         );
         let v = version;
         if (created) {
-          this.audit.write(actor, 'propose', def.name, {
+          await this.audit.write(actor, 'propose', def.name, {
             pattern: pattern.signature,
             support: pattern.support,
           });
           if (opts.evaluate !== false)
-            v = await this.runEvaluation(artifact.id, version.version, actor).catch(() =>
-              this.registry.getVersion(artifact.id, version.version)!,
+            v = await this.runEvaluation(artifact.id, version.version, actor).catch(
+              async () => (await this.registry.getVersion(artifact.id, version.version))!,
             );
         }
         out.push({ pattern, def, version: v });
@@ -873,4 +905,19 @@ export class Toolsmith {
     }
     return out;
   }
+}
+
+/** Read the key trace fingerprints are keyed with, creating it on first run. */
+async function fingerprintKey(db: SqlDb): Promise<string> {
+  const row = await db.get<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'fingerprint_key'",
+  );
+  if (row) return row.value;
+  const key = randomBytes(32).toString('hex');
+  await db.run("INSERT INTO settings (key, value) VALUES ('fingerprint_key', ?)", [key]);
+  return key;
+}
+
+function logRefreshError(err: unknown): void {
+  process.stderr.write(`[toolsmith] failed to refresh the tool catalog: ${errorMessage(err)}\n`);
 }

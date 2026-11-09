@@ -33,8 +33,8 @@ async function publishComposite(
   def: CompositeDef,
   input: Record<string, JsonValue>,
 ) {
-  const artifact = app.registry.ensureArtifact('composite', def.name);
-  const { version } = app.registry.addVersion(
+  const artifact = await app.registry.ensureArtifact('composite', def.name);
+  const { version } = await app.registry.addVersion(
     artifact.id,
     def as unknown as JsonValue,
     'manual',
@@ -186,7 +186,7 @@ describe('scenarios 3 and 4: invalid and expired credentials', () => {
     expect(r.ok).toBe(false);
     expect(r.errorCode).toBe('auth');
     expect(r.error).toMatch(/401.*TEST_SHOP_TOKEN/);
-    expect(JSON.stringify(h.app.traces.query())).not.toContain('wrong-token-value');
+    expect(JSON.stringify(await h.app.traces.query())).not.toContain('wrong-token-value');
   });
 
   it('reports expired credentials as an auth error', async () => {
@@ -313,7 +313,7 @@ describe('scenarios 9, 11, 12: partial failure, parallel and sequential executio
     await approveShop(h.app);
     const v = await publishComposite(h.app, compositeDef(steps), { userId: 1 });
     expect(v.status).toBe('awaiting_approval');
-    h.app.approve('flow-test', { allowWrite: false, allowDestructive: false }, 'human:test');
+    await h.app.approve('flow-test', { allowWrite: false, allowDestructive: false }, 'human:test');
     const t0 = performance.now();
     const r = await h.app.call('flow__test', { userId: 1 }, ctx);
     const elapsed = performance.now() - t0;
@@ -329,15 +329,15 @@ describe('scenarios 9, 11, 12: partial failure, parallel and sequential executio
   it('returns partial results when some steps fail (9)', async () => {
     h = await makeHarness({ shop: { failPaths: ['/payments$'] }, integration: { maxRetries: 0 } });
     await approveShop(h.app);
-    const artifact = h.app.registry.ensureArtifact('composite', 'flow-test');
-    const { version } = h.app.registry.addVersion(
+    const artifact = await h.app.registry.ensureArtifact('composite', 'flow-test');
+    const { version } = await h.app.registry.addVersion(
       artifact.id,
       compositeDef(steps) as unknown as JsonValue,
       'manual',
       'approved',
       'human:test',
     );
-    h.app.registry.publish(artifact.id, version.version, 'human:test');
+    await h.app.registry.publish(artifact.id, version.version, 'human:test');
     const r = await h.app.call('flow__test', { userId: 2 }, ctx);
     expect(r.ok).toBe(true);
     const data = r.data as {
@@ -357,15 +357,15 @@ describe('scenarios 9, 11, 12: partial failure, parallel and sequential executio
       integration: { maxRetries: 0 },
     });
     await approveShop(h.app);
-    const artifact = h.app.registry.ensureArtifact('composite', 'flow-test');
-    const { version } = h.app.registry.addVersion(
+    const artifact = await h.app.registry.ensureArtifact('composite', 'flow-test');
+    const { version } = await h.app.registry.addVersion(
       artifact.id,
       compositeDef(steps) as unknown as JsonValue,
       'manual',
       'approved',
       'human:test',
     );
-    h.app.registry.publish(artifact.id, version.version, 'human:test');
+    await h.app.registry.publish(artifact.id, version.version, 'human:test');
     const data = (await h.app.call('flow__test', { userId: 2 }, ctx)).data as {
       skippedSteps: string[];
     };
@@ -401,7 +401,7 @@ describe('scenario 13: unauthorized write operations', () => {
     const first = await h.app.call('shop__deleteProduct', { id: 5 }, ctx);
     expect(first).toMatchObject({ ok: false, errorCode: 'approval_required' });
     expect(h.shop.products.some((p) => p.id === 5)).toBe(true);
-    h.app.approvals.decide(first.approvalId!, true, 'human:test');
+    await h.app.approvals.decide(first.approvalId!, true, 'human:test');
     // approval for id 5 does not authorize id 6
     expect(await h.app.call('shop__deleteProduct', { id: 6 }, ctx)).toMatchObject({
       errorCode: 'approval_required',
@@ -417,19 +417,19 @@ describe('scenario 13: unauthorized write operations', () => {
   it('a composite cannot exceed the permissions of its steps', async () => {
     h = await makeHarness();
     await approveShop(h.app); // read-only
-    const artifact = h.app.registry.ensureArtifact('composite', 'flow-test');
+    const artifact = await h.app.registry.ensureArtifact('composite', 'flow-test');
     const def = compositeDef(
       [{ id: 'c', tool: 'shop__createProduct', args: { body: { name: 'x', price: 1 } } }],
       {},
     );
-    const { version } = h.app.registry.addVersion(
+    const { version } = await h.app.registry.addVersion(
       artifact.id,
       def as unknown as JsonValue,
       'manual',
       'approved',
       'human:test',
     );
-    h.app.registry.publish(artifact.id, version.version, 'human:test');
+    await h.app.registry.publish(artifact.id, version.version, 'human:test');
     expect(h.app.catalog.has('flow__test')).toBe(false);
     expect(h.app.catalog.problems.some((p) => p.problem.includes('shop__createProduct'))).toBe(
       true,
@@ -442,24 +442,24 @@ describe('scenario 14: generated tool rollback', () => {
     h = await makeHarness();
     await approveShop(h.app);
     const shopName = 'shop';
-    const id = h.app.registry.getArtifactByName(shopName)!.id;
+    const id = (await h.app.registry.getArtifactByName(shopName))!.id;
     // Change the spec (simulate an API update): exclude products endpoints.
     (h.app.config.integrations[0] as { exclude: string[] }).exclude = ['/products*'];
     const v2 = await h.app.importIntegration(shopName, 'human:test');
     expect(v2.version).toBe(2);
-    h.app.approve(shopName, { allowWrite: false, allowDestructive: false }, 'human:test');
+    await h.app.approve(shopName, { allowWrite: false, allowDestructive: false }, 'human:test');
     expect(h.app.catalog.has('shop__getProducts')).toBe(false);
-    const back = h.app.rollback(shopName, 'human:test');
+    const back = await h.app.rollback(shopName, 'human:test');
     expect(back.version).toBe(1);
-    expect(h.app.registry.getArtifact(id)!.publishedVersion).toBe(1);
+    expect((await h.app.registry.getArtifact(id))!.publishedVersion).toBe(1);
     expect(h.app.catalog.has('shop__getProducts')).toBe(true);
-    expect(h.app.registry.getVersion(id, 2)!.status).toBe('approved');
+    expect((await h.app.registry.getVersion(id, 2))!.status).toBe('approved');
   });
 
   it('cannot publish a version that skipped approval', async () => {
     h = await makeHarness({ importNow: true });
-    const id = h.app.registry.getArtifactByName('shop')!.id;
-    expect(() => h!.app.registry.publish(id, 1, 'human:test')).toThrow(
+    const id = (await h.app.registry.getArtifactByName('shop'))!.id;
+    await expect(h.app.registry.publish(id, 1, 'human:test')).rejects.toThrow(
       /awaiting_approval.*published/,
     );
   });
@@ -469,14 +469,14 @@ describe('capability requests with "latest"', () => {
   it('proposes a composite that selects the latest order itself', async () => {
     h = await makeHarness();
     await approveShop(h.app);
-    const a = h.app.discovery.analyze(
+    const a = await h.app.discovery.analyze(
       "Find a customer's latest order and show its payment status",
       's',
     );
     expect(a.verdict).toBe('composable');
     expect(a.explanation).toMatch(/selects the latest/);
-    const art = h.app.registry.getArtifactByName(a.proposal!.artifact)!;
-    const def = h.app.registry.latestVersion(art.id)!.definition as unknown as CompositeDef;
+    const art = (await h.app.registry.getArtifactByName(a.proposal!.artifact))!;
+    const def = (await h.app.registry.latestVersion(art.id))!.definition as unknown as CompositeDef;
     const t = def.steps.find((s) => s.tool === '$transform')!;
     expect(t.transform!.ops).toEqual([
       { sort: { field: 'createdAt', order: 'desc' } },
@@ -484,7 +484,7 @@ describe('capability requests with "latest"', () => {
     ]);
     const v = await h.app.evaluateLatest(a.proposal!.artifact, [{ userId: 2 }], 'human:test');
     expect(v.status).toBe('awaiting_approval');
-    h.app.approve(
+    await h.app.approve(
       a.proposal!.artifact,
       { allowWrite: false, allowDestructive: false },
       'human:test',
@@ -543,9 +543,9 @@ describe('optional side calls inside a workflow', () => {
         await h.app.call('shop__getPayments', { orderId: o.id }, ctx);
       }
     }
-    const pattern = h.app
-      .mine()
-      .find((p) => p.signature === 'shop__getOrders > loop(shop__getOrderItems+shop__getPayments)');
+    const pattern = (await h.app.mine()).find(
+      (p) => p.signature === 'shop__getOrders > loop(shop__getOrderItems+shop__getPayments)',
+    );
     // All six runs count: four contiguous ones and two with getUser in between.
     expect(pattern?.support).toBe(6);
     const out = await h.app.proposeComposites('system');

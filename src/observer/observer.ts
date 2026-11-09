@@ -78,7 +78,7 @@ export class UsageObserver {
           : {},
         resultBytes: Buffer.byteLength(serialized),
       };
-      this.store.insert(record);
+      await this.store.insert(record);
       this.opts.onTrace?.(record);
     } catch (err) {
       process.stderr.write(`[toolsmith] failed to record trace: ${(err as Error).message}\n`);

@@ -120,7 +120,7 @@ describe('gateway as an OAuth 2.1 resource server', () => {
       const r = await c.callTool({ name: 'shop__getUser', arguments: { userId: 1 } });
       expect(r.isError).toBeFalsy();
       await c.close();
-      const sessions = h.app.traces.chronological().map((t) => t.sessionId);
+      const sessions = (await h.app.traces.chronological()).map((t) => t.sessionId);
       expect(sessions.some((s) => /^http:oauth:agent-a\.[0-9a-f]{24}\/-\//.test(s))).toBe(true);
     });
   });
@@ -224,12 +224,12 @@ describe('gateway as an OAuth 2.1 resource server', () => {
         expect((await subOnly.listTools()).tools.map((t) => t.name)).toContain('shop__getUser');
         await subOnly.close();
         // Approval granted to one principal cannot be spent by another.
-        const req = h.app.approvals.request(
+        const req = await h.app.approvals.request(
           'shop__deleteProduct',
           { id: 1 },
           `http:${oauthPrincipalName('app', 'alice')}`,
         );
-        h.app.approvals.decide(req.id, true, 'human:test');
+        await h.app.approvals.decide(req.id, true, 'human:test');
         const bob = await connect(url, await token({ client_id: 'app', sub: 'bob' }));
         const r = await bob.callTool({ name: 'shop__deleteProduct', arguments: { id: 1 } });
         expect(r.isError).toBe(true);

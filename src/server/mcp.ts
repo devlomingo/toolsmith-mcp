@@ -179,9 +179,9 @@ export function createServerFactory(app: Toolsmith, opts: ServerFactoryOptions =
           if (answered) app.inClientAsks.delete(key);
           if (answer?.approve === true && asked) {
             // The person confirmed in the client: record it like a dashboard approval.
-            const req = app.approvals.request(params.name, params.arguments ?? {}, principal);
-            app.approvals.decide(req.id, true, 'human:client-elicitation');
-            app.audit.write('human:client-elicitation', 'approve-call', req.id, {
+            const req = await app.approvals.request(params.name, params.arguments ?? {}, principal);
+            await app.approvals.decide(req.id, true, 'human:client-elicitation');
+            await app.audit.write('human:client-elicitation', 'approve-call', req.id, {
               tool: params.name,
             });
           } else if (!answered && JSON.stringify(params.arguments ?? {}, null, 2).length <= 1500) {

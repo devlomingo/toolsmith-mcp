@@ -49,7 +49,9 @@ describe('in-client approval through elicitation (opt-in)', () => {
       expect(r.isError).toBeFalsy();
       expect(yes.prompts[0]).toMatch(/Allow ONE call to shop__deleteProduct\?[\s\S]*"id": 3/);
       expect(h.shop.products.some((p) => p.id === 3)).toBe(false);
-      expect(h.app.audit.list().some((a) => a.actor === 'human:client-elicitation')).toBe(true);
+      expect((await h.app.audit.list()).some((a) => a.actor === 'human:client-elicitation')).toBe(
+        true,
+      );
 
       const no = elicitingClient('decline', 'auto');
       await no.c.connect(
@@ -115,9 +117,9 @@ describe('in-client approval through elicitation (opt-in)', () => {
     );
     const { Toolsmith } = await import('../../src/app.js');
     const { loadConfig } = await import('../../src/config/config.js');
-    const setup = new Toolsmith(loadConfig(join(dir, 'toolsmith.config.json')));
+    const setup = await Toolsmith.open(loadConfig(join(dir, 'toolsmith.config.json')));
     await setup.importIntegration('shop', 'human:test', { live: false });
-    setup.approve('shop', { allowWrite: true, allowDestructive: true }, 'human:test');
+    await setup.approve('shop', { allowWrite: true, allowDestructive: true }, 'human:test');
     await setup.close();
     const { c, prompts } = elicitingClient('accept', 'legacy');
     await c.connect(

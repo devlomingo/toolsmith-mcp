@@ -70,7 +70,7 @@ describe('OAuth 2.0 client credentials', () => {
     const r2 = await h.app.call('shop__getProduct', { id: 2 }, { sessionId: 's' });
     expect(r2.ok).toBe(true);
     expect(ts.requests()).toBe(2); // cached
-    const stored = JSON.stringify(h.app.traces.query({ limit: 100 }));
+    const stored = JSON.stringify(await h.app.traces.query({ limit: 100 }));
     expect(stored).not.toContain(SHOP_TOKEN);
     expect(stored).not.toContain('oauth-client-secret-xyz');
   });

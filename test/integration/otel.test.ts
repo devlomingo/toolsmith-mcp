@@ -44,7 +44,7 @@ describe('OpenTelemetry export', () => {
     const col = await collector();
     h = await makeHarness({ config: { telemetry: { otlpEndpoint: col.url } } });
     await approveShop(h.app);
-    const art = h.app.registry.ensureArtifact('composite', 'flow-otel');
+    const art = await h.app.registry.ensureArtifact('composite', 'flow-otel');
     const def: CompositeDef = {
       kind: 'composite',
       name: 'flow-otel',
@@ -62,14 +62,14 @@ describe('OpenTelemetry export', () => {
       provenance: { type: 'manual' },
       examples: [],
     };
-    h.app.registry.addVersion(
+    await h.app.registry.addVersion(
       art.id,
       def as unknown as JsonValue,
       'manual',
       'awaiting_approval',
       'human:test',
     );
-    h.app.approve('flow-otel', { allowWrite: false, allowDestructive: false }, 'human:test');
+    await h.app.approve('flow-otel', { allowWrite: false, allowDestructive: false }, 'human:test');
     await h.app.call('flow__otel', { userId: 3 }, { sessionId: 'otel-session' });
     await h.app.call('shop__getProduct', { id: 9999 }, { sessionId: 'otel-session' });
     await h.app.otel!.flush();

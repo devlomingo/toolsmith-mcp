@@ -48,7 +48,7 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
       await agentWorkflow(client, userId);
       await client.close();
     }
-    const traces = h.app.traces.query({ limit: 500 });
+    const traces = await h.app.traces.query({ limit: 500 });
     expect(traces.length).toBe(4 * (2 + 3 * 2));
     const t = traces.find((x) => x.tool === 'shop__getUser')!;
     expect(t.args).toEqual({ userId: expect.any(Number) });
@@ -56,8 +56,8 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
     expect(t.upstreamRequests).toBe(1);
   });
 
-  it('discovers the repeated workflow with its data dependencies and loop', () => {
-    const patterns = h.app.mine();
+  it('discovers the repeated workflow with its data dependencies and loop', async () => {
+    const patterns = await h.app.mine();
     const p = patterns[0]!;
     expect(p.signature).toBe(
       'shop__getOrders > shop__getUser > loop(shop__getOrderItems+shop__getPayments)',
@@ -88,18 +88,18 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
     expect(h.app.catalog.has('flow__getUserOrdersDetails')).toBe(false);
   });
 
-  it('refuses approval by a non-human actor', () => {
-    expect(() =>
+  it('refuses approval by a non-human actor', async () => {
+    await expect(
       h.app.approve(
         'flow-get-user-orders-details',
         { allowWrite: false, allowDestructive: false },
         'system',
       ),
-    ).toThrow(/human/);
+    ).rejects.toThrow(/human/);
   });
 
   it('after approval the agent gets the same data in one MCP call', async () => {
-    h.app.approve(
+    await h.app.approve(
       'flow-get-user-orders-details',
       { allowWrite: false, allowDestructive: false },
       'human:test',
@@ -124,9 +124,11 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
     // same underlying API requests as the manual workflow: 1 + 1 + 3 + 3
     expect(h.shop.requestCount - before).toBe(8);
     // the composite's own steps are traced as children
-    const top = h.app.traces.query({ tool: 'flow__getUserOrdersDetails' })[0]!;
-    expect(h.app.traces.children(top.id).length).toBe(8);
-    const usage = h.app.compositeUsage().find((u) => u.tool === 'flow__getUserOrdersDetails')!;
+    const top = (await h.app.traces.query({ tool: 'flow__getUserOrdersDetails' }))[0]!;
+    expect((await h.app.traces.children(top.id)).length).toBe(8);
+    const usage = (await h.app.compositeUsage()).find(
+      (u) => u.tool === 'flow__getUserOrdersDetails',
+    )!;
     expect(usage).toMatchObject({
       calls: 1,
       sessions: 1,
@@ -139,9 +141,9 @@ describe('end-to-end lifecycle: API → tools → traces → pattern → composi
 
   it('disables and rolls back', async () => {
     const name = 'flow-get-user-orders-details';
-    h.app.disable(name, 'human:test');
+    await h.app.disable(name, 'human:test');
     expect(h.app.catalog.has('flow__getUserOrdersDetails')).toBe(false);
-    h.app.enable(name, 'human:test');
+    await h.app.enable(name, 'human:test');
     expect(h.app.catalog.has('flow__getUserOrdersDetails')).toBe(true);
   });
 });

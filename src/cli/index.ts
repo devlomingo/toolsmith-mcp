@@ -131,7 +131,7 @@ async function main(argv: string[]): Promise<number> {
   }
   if (values.stdio) useStderr();
   const loaded = loadConfig(values.config);
-  const app = new Toolsmith(loaded);
+  const app = await Toolsmith.open(loaded);
   try {
     switch (cmd) {
       case 'start':
@@ -139,9 +139,9 @@ async function main(argv: string[]): Promise<number> {
       case 'client-config':
         return clientConfig(loaded);
       case 'list':
-        return list(app);
+        return await list(app);
       case 'show':
-        return show(app, need(rest[0], 'show <name>'), values.json === true);
+        return await show(app, need(rest[0], 'show <name>'), values.json === true);
       case 'evaluate': {
         const inputs = values.input ? [parseJson(values.input) as JsonObject] : [];
         const v = await app.evaluateLatest(
@@ -154,12 +154,12 @@ async function main(argv: string[]): Promise<number> {
       }
       case 'approve': {
         await confirmHuman(
-          describeGrant(app, need(rest[0], 'approve <name>'), {
+          await describeGrant(app, need(rest[0], 'approve <name>'), {
             allowWrite: values['allow-writes'] === true,
             allowDestructive: values['allow-destructive'] === true,
           }),
         );
-        const v = app.approve(
+        const v = await app.approve(
           need(rest[0], 'approve <name>'),
           {
             allowWrite: values['allow-writes'] === true,
@@ -169,8 +169,8 @@ async function main(argv: string[]): Promise<number> {
           ACTOR,
           !values['no-publish'],
         );
-        app.refresh();
-        const name = app.registry.getArtifact(v.artifactId)!.name;
+        await app.refresh();
+        const name = (await app.registry.getArtifact(v.artifactId))!.name;
         say(`${c.green('✓')} ${name} v${v.version} is ${statusColor(v.status)}.`);
         // Published is not the same as visible: say so when the catalog hides it.
         for (const p of app.catalog.problems.filter((x) => x.artifact === name))
@@ -188,31 +188,35 @@ async function main(argv: string[]): Promise<number> {
         return 0;
       }
       case 'reject':
-        return report(app.reject(need(rest[0], 'reject <name>'), ACTOR, values.reason));
+        return report(await app.reject(need(rest[0], 'reject <name>'), ACTOR, values.reason));
       case 'publish':
         await confirmHuman(`Publish ${need(rest[0], 'publish <name>')} to agents?`);
-        return report(app.publish(rest[0]!, ACTOR));
+        return report(await app.publish(rest[0]!, ACTOR));
       case 'disable':
-        return report(app.disable(need(rest[0], 'disable <name>'), ACTOR, values.reason));
+        return report(await app.disable(need(rest[0], 'disable <name>'), ACTOR, values.reason));
       case 'enable':
         await confirmHuman(`Re-enable ${need(rest[0], 'enable <name>')} for agents?`);
-        return report(app.enable(rest[0]!, ACTOR));
+        return report(await app.enable(rest[0]!, ACTOR));
       case 'rollback':
         await confirmHuman(
           `Republish the previous approved version of ${need(rest[0], 'rollback <name>')}?`,
         );
-        return report(app.rollback(rest[0]!, ACTOR));
+        return report(await app.rollback(rest[0]!, ACTOR));
       case 'approve-call':
       case 'reject-call': {
         if (cmd === 'approve-call') {
-          const pending = app.approvals.get(need(rest[0], `${cmd} <id>`));
+          const pending = await app.approvals.get(need(rest[0], `${cmd} <id>`));
           if (!pending) throw new ToolsmithError(`No approval request ${rest[0]}`, 'not_found');
           await confirmHuman(
             `Allow ONE call to ${pending.tool} with ${JSON.stringify(pending.args)}?`,
           );
         }
-        const a = app.approvals.decide(need(rest[0], `${cmd} <id>`), cmd === 'approve-call', ACTOR);
-        app.audit.write(ACTOR, cmd, a.id);
+        const a = await app.approvals.decide(
+          need(rest[0], `${cmd} <id>`),
+          cmd === 'approve-call',
+          ACTOR,
+        );
+        await app.audit.write(ACTOR, cmd, a.id);
         say(
           `${cmd === 'approve-call' ? c.green('✓ approved') : c.red('✗ rejected')} call ${a.id} to ${a.tool} ${c.dim(JSON.stringify(a.args))}`,
         );
@@ -220,17 +224,17 @@ async function main(argv: string[]): Promise<number> {
         return 0;
       }
       case 'patterns':
-        return patterns(app);
+        return await patterns(app);
       case 'discover':
         return await discover(app);
       case 'ask':
         return await ask(app, need(rest.join(' ') || undefined, 'ask "<what you need>"'));
       case 'traces':
-        return traces(app, values.tool, values.limit ? Number(values.limit) : 30);
+        return await traces(app, values.tool, values.limit ? Number(values.limit) : 30);
       case 'doctor':
         return await doctor(app);
       case 'usage': {
-        const u = app.compositeUsage();
+        const u = await app.compositeUsage();
         if (!u.length) return (say('No published composite tools yet.'), 0);
         table(
           u.map((x) => ({
@@ -284,15 +288,17 @@ async function confirmHuman(question: string): Promise<void> {
   }
 }
 
-function describeGrant(
+async function describeGrant(
   app: Toolsmith,
   ref: string,
   perms: { allowWrite: boolean; allowDestructive: boolean },
-): string {
-  const { artifact, version } = app.registry.resolve(ref);
+): Promise<string> {
+  const { artifact, version } = await app.registry.resolve(ref);
   const v = version
-    ? app.registry.getVersion(artifact.id, version)
-    : app.registry.versionsByStatus('awaiting_approval').find((x) => x.artifactId === artifact.id);
+    ? await app.registry.getVersion(artifact.id, version)
+    : (await app.registry.versionsByStatus('awaiting_approval')).find(
+        (x) => x.artifactId === artifact.id,
+      );
   const grant =
     [perms.allowWrite && 'WRITE', perms.allowDestructive && 'DESTRUCTIVE']
       .filter(Boolean)
@@ -450,7 +456,7 @@ async function importCmd(
   const previousConfig = readFileSync(cfgPath, 'utf8');
   writeFileSync(cfgPath, `${JSON.stringify(raw, null, 2)}\n`);
 
-  const app = new Toolsmith(loadConfig(cfgPath));
+  const app = await Toolsmith.open(loadConfig(cfgPath));
   try {
     say(`Importing ${c.bold(source)} as ${c.bold(name)}…`);
     let v: VersionRow;
@@ -589,24 +595,25 @@ function clientConfig(loaded: LoadedConfig): number {
 
 // ---- inspection -------------------------------------------------------------------
 
-function list(app: Toolsmith): number {
-  const rows = app.registry.listArtifacts().map((a) => {
-    const latest = app.registry.latestVersion(a.id);
+async function list(app: Toolsmith): Promise<number> {
+  const rows = [];
+  for (const a of await app.registry.listArtifacts()) {
+    const latest = await app.registry.latestVersion(a.id);
     const tools = app.catalog
       .list()
       .filter((t) => t.artifactId === a.id || t.artifactId === `upstream:${a.name}`).length;
-    return {
+    rows.push({
       name: a.name,
       kind: a.kind,
       latest: latest ? `v${latest.version}` : '-',
       status: latest ? statusColor(latest.status) : '-',
       published: a.publishedVersion ? `v${a.publishedVersion}` : '-',
       tools,
-    };
-  });
+    });
+  }
   say(c.bold('Integrations and tools'));
   table(rows);
-  const pending = app.approvals.list('pending');
+  const pending = await app.approvals.list('pending');
   if (pending.length) {
     say('', c.bold('Destructive calls waiting for approval'));
     table(
@@ -622,11 +629,11 @@ function list(app: Toolsmith): number {
   return 0;
 }
 
-function show(app: Toolsmith, ref: string, asJson: boolean): number {
-  const { artifact, version } = app.registry.resolve(ref);
+async function show(app: Toolsmith, ref: string, asJson: boolean): Promise<number> {
+  const { artifact, version } = await app.registry.resolve(ref);
   const v = version
-    ? app.registry.getVersion(artifact.id, version)
-    : app.registry.latestVersion(artifact.id);
+    ? await app.registry.getVersion(artifact.id, version)
+    : await app.registry.latestVersion(artifact.id);
   if (!v) throw new ToolsmithError('No such version', 'not_found');
   if (asJson) return (say(JSON.stringify(v, null, 2)), 0);
   say(
@@ -692,7 +699,7 @@ function show(app: Toolsmith, ref: string, asJson: boolean): number {
     `Permissions: ${v.permissions.allowWrite ? 'write ' : ''}${v.permissions.allowDestructive ? 'destructive ' : ''}${!v.permissions.allowWrite && !v.permissions.allowDestructive ? 'read-only' : ''}`,
   );
   printEvaluation(app, v);
-  const history = app.registry.events(artifact.id, 10);
+  const history = await app.registry.events(artifact.id, 10);
   say('', c.bold('History'));
   for (const e of history)
     say(
@@ -716,8 +723,8 @@ function printEvaluation(_app: Toolsmith, v: VersionRow): void {
   }
 }
 
-function patterns(app: Toolsmith): number {
-  const ps = app.mine();
+async function patterns(app: Toolsmith): Promise<number> {
+  const ps = await app.mine();
   if (ps.length === 0) {
     say(
       'No repeated workflows yet. They appear after agents run the same sequence of calls in several sessions.',
@@ -783,8 +790,8 @@ async function ask(app: Toolsmith, request: string): Promise<number> {
   return 0;
 }
 
-function traces(app: Toolsmith, tool: string | undefined, limit: number): number {
-  const rows = app.traces.query({ tool, limit, topLevelOnly: true });
+async function traces(app: Toolsmith, tool: string | undefined, limit: number): Promise<number> {
+  const rows = await app.traces.query({ tool, limit, topLevelOnly: true });
   table(
     rows.map((t) => ({
       when: new Date(t.startedAt).toISOString().slice(11, 23),
@@ -822,7 +829,7 @@ async function doctor(app: Toolsmith): Promise<number> {
     }
   }
   for (const i of app.config.integrations) {
-    const r = app.registry.getArtifactByName(i.name);
+    const r = await app.registry.getArtifactByName(i.name);
     if (!r)
       bad(
         `integration ${i.name} is configured but never imported`,
@@ -880,7 +887,7 @@ async function demo(port?: number): Promise<number> {
       2,
     ),
   );
-  const app = new Toolsmith(loadConfig(cfgPath));
+  const app = await Toolsmith.open(loadConfig(cfgPath));
   say(c.bold('toolsmith-mcp demo'), c.dim(`  working directory: ${dir}`), '');
   say(`1. A demo shop API is running at ${shop.baseUrl}`);
   const v = await app.importIntegration('shop', 'human:demo');
@@ -888,7 +895,7 @@ async function demo(port?: number): Promise<number> {
   say(
     `2. Imported its OpenAPI spec: ${def.operations.length} operations → evaluation ${v.evaluation?.passed ? c.green('passed') : c.red('failed')}`,
   );
-  app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:demo');
+  await app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:demo');
   say(
     `3. Approved read-only: ${app.catalog
       .list()
@@ -919,10 +926,10 @@ async function demo(port?: number): Promise<number> {
         `   evaluator: identical results; ${m.baselineMcpCalls} MCP calls → 1; ${m.baselineMedianMs} ms sequential vs ${m.compositeMedianMs} ms composite (server-side)`,
       ),
     );
-    app.approve(o.def!.name, { allowWrite: false, allowDestructive: false }, 'human:demo');
+    await app.approve(o.def!.name, { allowWrite: false, allowDestructive: false }, 'human:demo');
     say(`6. Approved and published ${o.def!.toolName}.`);
   }
-  const a = app.discovery.analyze(
+  const a = await app.discovery.analyze(
     "Find a customer's latest order and show its payment status",
     'demo',
   );

@@ -134,7 +134,7 @@ describe('GraphQL source', () => {
   it('introspects, generates typed tools, and runs queries with variables', async () => {
     const gql = await gqlServer();
     process.env.GQL_TOKEN = 'gql-token-123456';
-    app = new Toolsmith(
+    app = await Toolsmith.open(
       parseConfig(
         {
           integrations: [
@@ -180,7 +180,7 @@ describe('GraphQL source', () => {
       /products\(category: \$category\) \{ id name price category supplier \{ name \} \}/,
     );
 
-    app.approve('gql', { allowWrite: false, allowDestructive: false }, 'human:test');
+    await app.approve('gql', { allowWrite: false, allowDestructive: false }, 'human:test');
     expect(app.catalog.has('gql__createProduct')).toBe(false);
     const r = await app.call('gql__products', { category: 'GAMES' }, { sessionId: 's' });
     expect(r.ok).toBe(true);

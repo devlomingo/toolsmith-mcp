@@ -55,9 +55,9 @@ const loaded = parseConfig(
   },
   process.cwd(),
 );
-const app = new Toolsmith(loaded, { dbPath: ':memory:' });
+const app = await Toolsmith.open(loaded, { dbPath: ':memory:' });
 await app.importIntegration('shop', 'human:bench', { live: false });
-app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:bench');
+await app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:bench');
 const http = await startHttpServer(app, {
   host: '127.0.0.1',
   port: 0,
@@ -156,11 +156,11 @@ for (const n of quick ? [50, 500] : [50, 200, 1000, 2000]) {
   const def = await importOpenApi(bigSpec(n), { name: 'big' });
   const importMs = performance.now() - t0;
   const cfg = parseConfig({ integrations: [{ name: 'big', spec: 'inline' }] }, process.cwd());
-  const a = new Toolsmith(cfg, { dbPath: ':memory:' });
-  const art = a.registry.ensureArtifact('openapi', 'big');
-  a.registry.addVersion(art.id, def, 'bench', 'approved', 'human:bench');
+  const a = await Toolsmith.open(cfg, { dbPath: ':memory:' });
+  const art = await a.registry.ensureArtifact('openapi', 'big');
+  await a.registry.addVersion(art.id, def, 'bench', 'approved', 'human:bench');
   const t1 = performance.now();
-  a.registry.publish(art.id, 1, 'human:bench'); // triggers catalog rebuild
+  await a.registry.publish(art.id, 1, 'human:bench'); // triggers catalog rebuild
   const rebuildMs = performance.now() - t1;
   const http2 = await startHttpServer(a, {
     host: '127.0.0.1',

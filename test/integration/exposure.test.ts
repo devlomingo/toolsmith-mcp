@@ -46,7 +46,7 @@ describe('tool exposure per client', () => {
     });
     await approveShop(h.app);
     // a composite that reaches outside the orders-only allow-list
-    const art = h.app.registry.ensureArtifact('composite', 'flow-mixed');
+    const art = await h.app.registry.ensureArtifact('composite', 'flow-mixed');
     const def: CompositeDef = {
       kind: 'composite',
       name: 'flow-mixed',
@@ -61,14 +61,14 @@ describe('tool exposure per client', () => {
       provenance: { type: 'manual' },
       examples: [],
     };
-    h.app.registry.addVersion(
+    await h.app.registry.addVersion(
       art.id,
       def as unknown as JsonValue,
       'manual',
       'awaiting_approval',
       'human:test',
     );
-    h.app.approve('flow-mixed', { allowWrite: false, allowDestructive: false }, 'human:test');
+    await h.app.approve('flow-mixed', { allowWrite: false, allowDestructive: false }, 'human:test');
 
     const gw = await startHttpServer(h.app, {
       host: '127.0.0.1',

@@ -84,7 +84,7 @@ export async function startHttpServer(
   const hostGuard = isLoopback(host) ? localhostHostValidation() : undefined;
   const unsubscribe = app.onToolsChanged(() => mcp.notify.toolsChanged());
 
-  const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     try {
       const url = new URL(req.url ?? '/', 'http://localhost');
       // DNS-rebinding defence: on loopback, only answer requests addressed to localhost.
@@ -142,7 +142,9 @@ export async function startHttpServer(
       if (!res.headersSent) json(res, 500, { error: 'Internal error' });
       else res.end();
     }
-  });
+  };
+  // handle() answers every error itself; node:http has no use for the promise.
+  const server = createServer((req, res) => void handle(req, res));
 
   await new Promise<void>((resolvePromise, reject) => {
     server.once('error', reject);

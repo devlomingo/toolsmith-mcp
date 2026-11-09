@@ -112,7 +112,7 @@ describe('M1: credentials echoed in successful responses', () => {
 describe('M2: destructive upstream tools need per-call approval', () => {
   const fixture = resolve('test/fixtures/upstream-server.mjs');
   const makeApp = (extra: Record<string, unknown> = {}) =>
-    new Toolsmith(
+    Toolsmith.open(
       parseConfig(
         { upstreams: [{ name: 'mini', command: process.execPath, args: [fixture], ...extra }] },
         process.cwd(),
@@ -121,7 +121,7 @@ describe('M2: destructive upstream tools need per-call approval', () => {
     );
 
   it('asks a human before running destructive or unannotated upstream tools', async () => {
-    const app = makeApp();
+    const app = await makeApp();
     await app.start();
     try {
       expect((await app.call('mini__read_note', {}, { sessionId: 's' })).ok).toBe(true);
@@ -131,7 +131,7 @@ describe('M2: destructive upstream tools need per-call approval', () => {
       expect((await app.call('mini__mystery', {}, { sessionId: 's' })).errorCode).toBe(
         'approval_required',
       );
-      app.approvals.decide(wipe.approvalId!, true, 'human:test');
+      await app.approvals.decide(wipe.approvalId!, true, 'human:test');
       const done = await app.call('mini__wipe_disk', {}, { sessionId: 's' });
       expect(done.ok).toBe(true);
       expect(JSON.stringify(done.data)).toContain('"wiped":1');
@@ -141,7 +141,7 @@ describe('M2: destructive upstream tools need per-call approval', () => {
   });
 
   it('honours an explicit opt-out per tool', async () => {
-    const app = makeApp({ trustedTools: ['wipe_disk'] });
+    const app = await makeApp({ trustedTools: ['wipe_disk'] });
     await app.start();
     try {
       expect((await app.call('mini__wipe_disk', {}, { sessionId: 's' })).ok).toBe(true);
@@ -169,7 +169,7 @@ describe('M3: write composites', () => {
   it('stays hidden unless its own approval granted write access', async () => {
     h = await makeHarness();
     await approveShop(h.app, { allowWrite: true, allowDestructive: false });
-    const art = h.app.registry.ensureArtifact('composite', 'flow-update-product');
+    const art = await h.app.registry.ensureArtifact('composite', 'flow-update-product');
     const def = writeDef([
       { id: 'getProduct', tool: 'shop__getProduct', args: { id: { $ref: 'input.id' } } },
       {
@@ -179,14 +179,14 @@ describe('M3: write composites', () => {
         after: ['getProduct'],
       },
     ]);
-    h.app.registry.addVersion(
+    await h.app.registry.addVersion(
       art.id,
       def as unknown as JsonValue,
       'manual',
       'awaiting_approval',
       'human:test',
     );
-    h.app.approve(
+    await h.app.approve(
       'flow-update-product',
       { allowWrite: false, allowDestructive: false },
       'human:test',
@@ -254,20 +254,20 @@ describe('M3: write composites', () => {
   it('uses the reviewer-written description when one was given at approval', async () => {
     h = await makeHarness();
     await approveShop(h.app);
-    const art = h.app.registry.ensureArtifact('composite', 'flow-read');
+    const art = await h.app.registry.ensureArtifact('composite', 'flow-read');
     const def = writeDef([
       { id: 'getProduct', tool: 'shop__getProduct', args: { id: { $ref: 'input.id' } } },
     ]);
     def.name = 'flow-read';
     def.toolName = 'flow__read';
-    h.app.registry.addVersion(
+    await h.app.registry.addVersion(
       art.id,
       def as unknown as JsonValue,
       'manual',
       'awaiting_approval',
       'human:test',
     );
-    h.app.approve(
+    await h.app.approve(
       'flow-read',
       {
         allowWrite: false,
@@ -287,7 +287,7 @@ describe('approvals are bound to the requesting session', () => {
     h = await makeHarness();
     await approveShop(h.app, { allowWrite: true, allowDestructive: true });
     const first = await h.app.call('shop__deleteProduct', { id: 7 }, { sessionId: 'agent-a' });
-    h.app.approvals.decide(first.approvalId!, true, 'human:test');
+    await h.app.approvals.decide(first.approvalId!, true, 'human:test');
     expect(
       await h.app.call('shop__deleteProduct', { id: 7 }, { sessionId: 'agent-b' }),
     ).toMatchObject({ errorCode: 'approval_required' });
@@ -351,11 +351,11 @@ describe.runIf(existsSync(CLI))('CLI (built)', () => {
         ],
       }),
     );
-    const app = new Toolsmith(
+    const app = await Toolsmith.open(
       (await import('../../src/config/config.js')).loadConfig(join(dir, 'toolsmith.config.json')),
     );
     await app.importIntegration('shop', 'human:test', { live: false });
-    app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:test');
+    await app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:test');
     for (const userId of [1, 2, 3, 4]) {
       const ctx = { sessionId: `cli-${userId}` };
       await app.call('shop__getUser', { userId }, ctx);
@@ -484,11 +484,11 @@ describe('N2: approvals bound to the authenticated client over HTTP', () => {
         const a = await connect('token-for-agent-a', mode);
         const first = await a.callTool({ name: 'shop__deleteProduct', arguments: { id } });
         expect(first.isError).toBe(true);
-        const pending = h.app.approvals
-          .list('pending')
-          .find((p) => JSON.stringify(p.args).includes(`"id":${id}`))!;
+        const pending = (await h.app.approvals.list('pending')).find((p) =>
+          JSON.stringify(p.args).includes(`"id":${id}`),
+        )!;
         expect(pending.sessionId).toBe('http:default');
-        h.app.approvals.decide(pending.id, true, 'human:test');
+        await h.app.approvals.decide(pending.id, true, 'human:test');
         // agent-b: same client name, same arguments, plus a forged identity header
         const b = await connect('token-for-agent-b', mode, { 'x-toolsmith-client': 'default' });
         const stolen = await b.callTool({ name: 'shop__deleteProduct', arguments: { id } });
@@ -543,7 +543,7 @@ describe('m12: capability verbs', () => {
   it('"delete a product" points at the delete operation, not a read', async () => {
     h = await makeHarness();
     await approveShop(h.app, { allowWrite: true, allowDestructive: true });
-    const a = h.app.discovery.analyze('delete a product', 's');
+    const a = await h.app.discovery.analyze('delete a product', 's');
     expect(a.matches[0]!.tool).toBe('shop__deleteProduct');
   });
 });
@@ -666,7 +666,7 @@ describe('N5: workflow discovery over HTTP without a session header', () => {
         }
         await c.close();
       }
-      const sigs = h.app.mine().map((p) => p.signature);
+      const sigs = (await h.app.mine()).map((p) => p.signature);
       expect(sigs).toContain('shop__getOrders > shop__getUser > loop(shop__getOrderItems)');
       expect(
         sigs.some((s) => s.includes('shop__getOrder >') && s.includes('shop__getPayments')),
@@ -698,9 +698,9 @@ describe('R4-1: tool poisoning in parameter and schema descriptions', () => {
       v.evaluation!.checks.find((c) => c.name === 'no instruction-like text in descriptions')!
         .detail,
     ).toMatch(/getProducts: a parameter or schema description/);
-    expect(() =>
-      h!.app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:test'),
-    ).toThrow();
+    await expect(
+      h.app.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:test'),
+    ).rejects.toThrow();
   });
 });
 

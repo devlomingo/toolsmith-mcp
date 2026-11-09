@@ -3,6 +3,7 @@ import { CompositeExecutor } from '../composite/executor.js';
 import { COMPOSITE_OUTPUT_SCHEMA } from '../composite/generator.js';
 import { isTransform, maxAccess, type CompositeDef } from '../composite/plan.js';
 import { errorMessage } from '../core/errors.js';
+import { Mutex } from '../core/mutex.js';
 import { toolName } from '../core/naming.js';
 import {
   NAMESPACE_SEP,
@@ -65,6 +66,11 @@ const CLIENT_GRACE_MS = 5 * 60_000;
 export class Catalog {
   private entries = new Map<string, CatalogEntry>();
   private clients = new Map<string, IntegrationClient>();
+  /**
+   * Rebuilds run one at a time, in call order, so a rebuild that read older
+   * registry state can never replace the result of a later one.
+   */
+  private readonly rebuilding = new Mutex();
   problems: CatalogProblem[] = [];
 
   constructor(
@@ -75,7 +81,13 @@ export class Catalog {
     private readonly builtins: BuiltinTool[] = [],
   ) {}
 
-  rebuild(): void {
+  /** Readers keep seeing the previous catalog until the new one is swapped in whole. */
+  rebuild(): Promise<void> {
+    return this.rebuilding.run(() => this.rebuildNow());
+  }
+
+  private async rebuildNow(): Promise<void> {
+    const published = await this.registry.publishedVersions();
     const next = new Map<string, CatalogEntry>();
     const problems: CatalogProblem[] = [];
     const add = (
@@ -121,7 +133,7 @@ export class Catalog {
     }> = [];
     const upstreamCfg = new Map(this.config.upstreams.map((u) => [u.name, u]));
 
-    for (const { artifact, version } of this.registry.publishedVersions()) {
+    for (const { artifact, version } of published) {
       if (artifact.kind === 'openapi') {
         const def = version.definition as unknown as OpenApiIntegrationDef;
         const cfg = integrationCfg.get(artifact.name);
@@ -339,8 +351,8 @@ export class Dispatcher {
 
     if (entry.perCallApproval) {
       const principal = ctx.principal ?? ctx.sessionId;
-      if (!this.approvals.consume(name, args, principal, ctx.approvalId)) {
-        const pending = this.approvals.request(name, args, principal);
+      if (!(await this.approvals.consume(name, args, principal, ctx.approvalId))) {
+        const pending = await this.approvals.request(name, args, principal);
         return {
           ...fail(
             'approval_required',
