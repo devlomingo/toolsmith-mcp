@@ -14,9 +14,12 @@ import { isEmptyFingerprint } from '../security/redact.js';
  *    this works without storing payloads.
  * 3. Collapse runs of calls that iterate over the same array of an earlier
  *    result into a single loop element.
- * 4. Count contiguous element n-grams per episode, keep those with enough
- *    support whose elements are connected by data flow, and drop
- *    sub-patterns that are explained by a longer pattern.
+ * 4. Count element sequences per episode: contiguous n-grams, plus (by
+ *    default) dependency-closed subsequences, where every step consumes a
+ *    value from an earlier chosen step, so an optional linked side call in
+ *    the middle does not hide a workflow. Keep those with enough support
+ *    whose elements are connected by data flow, and drop sub-patterns that
+ *    are explained by a longer pattern.
  */
 
 export interface MinerOptions {
@@ -48,7 +51,16 @@ export interface MinerOptions {
    * as one workflow.
    */
   commutativeReads?: boolean;
+  /**
+   * Also count non-contiguous steps inside a data-flow component, as long as
+   * each step consumes something from an earlier chosen step. Default: on
+   * with 'dataflow' segmentation.
+   */
+  subsequences?: boolean;
 }
+
+/** Enumeration bound per episode for non-contiguous subsequences. */
+const MAX_SUBSEQUENCES_PER_EPISODE = 5000;
 
 export type Binding =
   | { type: 'output'; from: number; path: string; tier: number }
@@ -301,13 +313,41 @@ export function toElements(calls: EpisodeCall[]): { elements: Element[]; callEle
 
 interface Occurrence {
   episode: number;
-  start: number;
+  /** Element indices in the episode, increasing. */
+  positions: number[];
 }
 
 interface EpisodeModel {
   calls: EpisodeCall[];
   elements: Element[];
   callElement: number[];
+  /**
+   * call -> argPath -> earlier calls that hold this value: the binding's
+   * origin plus every earlier call that took the same value under the same
+   * argument name. When a pattern leaves out the origin (an optional side
+   * call that happened to see userId first), the value still flows from a
+   * step that is in the pattern.
+   */
+  carriers: Array<Map<string, number[]>>;
+}
+
+function valueCarriers(calls: EpisodeCall[]): Array<Map<string, number[]>> {
+  return calls.map((c, j) => {
+    const out = new Map<string, number[]>();
+    for (const [argPath, b] of c.bindings) {
+      const hash = c.trace.argFingerprints[argPath]!;
+      const name = lastSegment(argPath);
+      const list = new Set<number>([b.from]);
+      for (let i = 0; i < j; i++)
+        for (const [p, h] of Object.entries(calls[i]!.trace.argFingerprints))
+          if (h === hash && lastSegment(p) === name) list.add(i);
+      out.set(
+        argPath,
+        [...list].sort((x, y) => x - y),
+      );
+    }
+    return out;
+  });
 }
 
 export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern[] {
@@ -317,9 +357,10 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
     .map((ep) => (opts.commutativeReads === false ? ep : canonicalizeReads(ep)))
     .map((ep) => {
       const calls = bindCalls(ep);
-      return { calls, ...toElements(calls) };
+      return { calls, ...toElements(calls), carriers: valueCarriers(calls) };
     });
 
+  const gaps = opts.subsequences ?? segmentation === 'dataflow';
   const grams = new Map<string, Occurrence[]>();
   const firstTokenEpisodes = new Map<string, Set<number>>();
   // prefix signature -> next token -> episodes (the weighted edges of AWO's state graph)
@@ -330,18 +371,23 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
       (firstTokenEpisodes.get(t) ?? firstTokenEpisodes.set(t, new Set()).get(t)!).add(e),
     );
     const seenInEpisode = new Set<string>();
-    for (let n = 2; n <= opts.maxLength; n++) {
-      for (let s = 0; s + n <= tokens.length; s++) {
-        const sig = tokens.slice(s, s + n).join(' > ');
-        const key = `${sig}#${e}`;
-        if (seenInEpisode.has(key)) continue; // count once per episode
-        seenInEpisode.add(key);
-        (grams.get(sig) ?? grams.set(sig, []).get(sig)!).push({ episode: e, start: s });
-        const prefix = tokens.slice(s, s + n - 1).join(' > ');
-        const next = successors.get(prefix) ?? successors.set(prefix, new Map()).get(prefix)!;
-        next.set(tokens[s + n - 1]!, (next.get(tokens[s + n - 1]!) ?? 0) + 1);
-      }
-    }
+    const count = (positions: number[]): void => {
+      const sig = positions.map((i) => tokens[i]!).join(' > ');
+      if (seenInEpisode.has(sig)) return; // count once per episode
+      seenInEpisode.add(sig);
+      (grams.get(sig) ?? grams.set(sig, []).get(sig)!).push({ episode: e, positions });
+      const prefix = positions
+        .slice(0, -1)
+        .map((i) => tokens[i]!)
+        .join(' > ');
+      const last = tokens[positions.at(-1)!]!;
+      const next = successors.get(prefix) ?? successors.set(prefix, new Map()).get(prefix)!;
+      next.set(last, (next.get(last) ?? 0) + 1);
+    };
+    for (let n = 2; n <= opts.maxLength; n++)
+      for (let s = 0; s + n <= tokens.length; s++)
+        count(Array.from({ length: n }, (_, k) => s + k));
+    if (gaps) for (const positions of closedSubsequences(ep, opts.maxLength)) count(positions);
   });
 
   const candidates: Pattern[] = [];
@@ -349,7 +395,7 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
     const support = new Set(occs.map((o) => o.episode)).size;
     if (support < opts.minSupport) continue;
     const n = sig.split(' > ').length;
-    const connected = occs.filter((o) => isConnected(episodes[o.episode]!, o.start, n));
+    const connected = occs.filter((o) => isConnected(episodes[o.episode]!, o.positions));
     const connectivity = connected.length / occs.length;
     if (connectivity < opts.minConfidence || connected.length < opts.minSupport) continue;
     const tokensOf = sig.split(' > ');
@@ -357,6 +403,20 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
     const confidence = support / (firstTokenEpisodes.get(firstToken)?.size ?? support);
     const stepShares: number[] = [];
     for (let k = 1; k < tokensOf.length; k++) {
+      if (gaps) {
+        // With gaps, "next" is not one edge: the share is how many of the
+        // sessions that reached this prefix went on to this step later.
+        const prefix = tokensOf.slice(0, k).join(' > ');
+        const reached =
+          k === 1
+            ? (firstTokenEpisodes.get(prefix)?.size ?? 0)
+            : new Set((grams.get(prefix) ?? []).map((o) => o.episode)).size;
+        const went = new Set(
+          (grams.get(tokensOf.slice(0, k + 1).join(' > ')) ?? []).map((o) => o.episode),
+        ).size;
+        stepShares.push(reached ? Math.round((went / reached) * 1000) / 1000 : 0);
+        continue;
+      }
       const next = successors.get(tokensOf.slice(0, k).join(' > '));
       const total = next ? [...next.values()].reduce((a, b) => a + b, 0) : 0;
       stepShares.push(
@@ -387,7 +447,9 @@ export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern
         (q) =>
           q !== p &&
           q.elements.length > p.elements.length &&
-          containsContiguous(q.signature, p.signature) &&
+          (gaps
+            ? containsSubsequence(q.signature, p.signature)
+            : containsContiguous(q.signature, p.signature)) &&
           q.support >= (opts.closedRatio ?? 0.6) * p.support,
       ),
   );
@@ -453,23 +515,71 @@ function containsContiguous(longer: string, shorter: string): boolean {
   return ` > ${longer} > `.includes(` > ${shorter} > `);
 }
 
-function isConnected(ep: EpisodeModel, start: number, n: number): boolean {
+function containsSubsequence(longer: string, shorter: string): boolean {
+  const a = longer.split(' > ');
+  let i = 0;
+  for (const t of shorter.split(' > ')) {
+    while (i < a.length && a[i] !== t) i++;
+    if (i++ >= a.length) return false;
+  }
+  return true;
+}
+
+/** Element indices each element consumes from (bindings and loop sources). */
+function elementDeps(ep: EpisodeModel): Array<Set<number>> {
+  return ep.elements.map((el, j) => {
+    const deps = new Set<number>();
+    for (const m of el.members)
+      for (const from of ep.carriers[m]!.values())
+        for (const c of from) {
+          const src = ep.callElement[c]!;
+          if (src < j) deps.add(src);
+        }
+    if (el.element.kind === 'loop') deps.add(el.element.sourceElement);
+    return deps;
+  });
+}
+
+/**
+ * Non-contiguous, dependency-closed subsequences of length 2..maxLength:
+ * each chosen element consumes something from an earlier chosen one (and a
+ * loop's source is always chosen). Contiguous ones are counted separately.
+ */
+function closedSubsequences(ep: EpisodeModel, maxLength: number): number[][] {
+  const deps = elementDeps(ep);
+  const out: number[][] = [];
+  const walk = (chosen: number[]): void => {
+    if (out.length >= MAX_SUBSEQUENCES_PER_EPISODE) return;
+    const last = chosen.at(-1)!;
+    if (chosen.length >= 2 && last - chosen[0]! >= chosen.length) out.push([...chosen]);
+    if (chosen.length >= maxLength) return;
+    for (let j = last + 1; j < ep.elements.length; j++) {
+      const el = ep.elements[j]!;
+      if (el.element.kind === 'loop' && !chosen.includes(el.element.sourceElement)) continue;
+      if (![...deps[j]!].some((d) => chosen.includes(d))) continue;
+      chosen.push(j);
+      walk(chosen);
+      chosen.pop();
+    }
+  };
+  ep.elements.forEach((el, i) => {
+    if (el.element.kind !== 'loop') walk([i]);
+  });
+  return out;
+}
+
+function isConnected(ep: EpisodeModel, positions: number[]): boolean {
   // A loop iterates over an earlier call's result; that call must be part of
   // the pattern, also when the loop is the pattern's first element.
-  const first = ep.elements[start]!;
-  if (first.element.kind === 'loop') return false;
-  for (let k = 1; k < n; k++) {
-    const el = ep.elements[start + k]!;
-    if (
-      el.element.kind === 'loop' &&
-      (el.element.sourceElement < start || el.element.sourceElement >= start + k)
-    )
-      return false;
+  if (ep.elements[positions[0]!]!.element.kind === 'loop') return false;
+  for (let k = 1; k < positions.length; k++) {
+    const earlier = positions.slice(0, k);
+    const el = ep.elements[positions[k]!]!;
+    if (el.element.kind === 'loop' && !earlier.includes(el.element.sourceElement)) return false;
     const linked = el.members.some((m) =>
-      [...ep.calls[m]!.bindings.values()].some((b) => {
-        const srcEl = ep.callElement[b.from]!;
-        return srcEl >= start && srcEl < start + k;
-      }),
+      [...ep.carriers[m]!.values()].some((from) =>
+        from.some((c) => earlier.includes(ep.callElement[c]!)),
+      ),
     );
     if (!linked) return false;
   }
@@ -487,14 +597,15 @@ function buildPattern(
   opts: MinerOptions,
 ): Pattern {
   const ref = episodes[occs[0]!.episode]!;
-  const elements: PatternElement[] = ref.elements
-    .slice(occs[0]!.start, occs[0]!.start + n)
+  const refPositions = occs[0]!.positions;
+  const elements: PatternElement[] = refPositions
+    .map((p) => ref.elements[p]!)
     .map((e) => {
       if (e.element.kind === 'loop')
         return {
           ...e.element,
           tools: [...e.element.tools],
-          sourceElement: e.element.sourceElement - occs[0]!.start,
+          sourceElement: refPositions.indexOf(e.element.sourceElement),
         };
       return { ...e.element };
     });
@@ -510,7 +621,7 @@ function buildPattern(
   for (const o of occs) {
     const ep = episodes[o.episode]!;
     for (let k = 0; k < n; k++) {
-      const el = ep.elements[o.start + k]!;
+      const el = ep.elements[o.positions[k]!]!;
       const doneForTool = new Set<string>();
       for (const m of el.members) {
         const call = ep.calls[m]!;
@@ -521,7 +632,7 @@ function buildPattern(
           const b = call.bindings.get(argPath);
           let src: ArgSource = { type: 'input' };
           if (b) {
-            const srcEl = ep.callElement[b.from]! - o.start;
+            const srcEl = o.positions.indexOf(ep.callElement[b.from]!);
             if (srcEl >= 0 && srcEl < k) {
               if (b.type === 'output') {
                 const prefix = arrayPrefix(b.path);
@@ -543,6 +654,23 @@ function buildPattern(
                   tool: ep.calls[b.from]!.trace.tool,
                   arg: b.fromArg,
                 };
+              }
+            } else {
+              // The origin is not part of this pattern: take the value from
+              // the earliest step in it that received the same value.
+              const hash = call.trace.argFingerprints[argPath]!;
+              for (const c of ep.carriers[m]!.get(argPath) ?? []) {
+                const at = o.positions.indexOf(ep.callElement[c]!);
+                if (at < 0 || at >= k || c === b.from) continue;
+                const carrier = ep.calls[c]!.trace;
+                const arg = Object.keys(carrier.argFingerprints).find(
+                  (p) =>
+                    carrier.argFingerprints[p] === hash && lastSegment(p) === lastSegment(argPath),
+                );
+                if (arg) {
+                  src = { type: 'shared', element: at, tool: carrier.tool, arg };
+                  break;
+                }
               }
             }
           }
@@ -607,8 +735,8 @@ function buildPattern(
   const exampleArgs: Array<Record<string, unknown>> = [];
   for (const o of occs) {
     const ep = episodes[o.episode]!;
-    const members = ep.elements
-      .slice(o.start, o.start + n)
+    const members = o.positions
+      .map((p) => ep.elements[p]!)
       .flatMap((e) => e.members)
       .map((m) => ep.calls[m]!.trace);
     callsPer.push(members.length);
@@ -633,7 +761,7 @@ function buildPattern(
   // Counting uses the canonical order; present the steps in the order the
   // agent actually ran them (reference occurrence), which reads naturally and
   // keeps every data source before its consumer.
-  const window = ref.elements.slice(occs[0]!.start, occs[0]!.start + n);
+  const window = refPositions.map((p) => ref.elements[p]!);
   const firstStart = window.map((e) =>
     Math.min(...e.members.map((m) => ref.calls[m]!.trace.startedAt)),
   );
@@ -688,7 +816,7 @@ function buildPattern(
       medianUpstreamRequests: median(upstreamPer),
       medianToolTimeMs: round(median(toolTime)),
       medianSpanMs: round(median(spans)),
-      startsRun: round(occs.filter((o) => o.start === 0).length / occs.length),
+      startsRun: round(occs.filter((o) => o.positions[0] === 0).length / occs.length),
     },
     examples,
     exampleArgs,

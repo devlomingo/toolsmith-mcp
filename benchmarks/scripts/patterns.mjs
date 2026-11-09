@@ -13,6 +13,7 @@ const MINER = { minSupport: 3, minConfidence: 0.6, maxLength: 6, episodeGapMs: 1
 const VARIANTS = {
   default: { ...MINER },
   'no AWO rules': { ...MINER, minStepShare: 0, commutativeReads: false },
+  'no gaps (contiguous within components)': { ...MINER, subsequences: false },
   'contiguous (v0 baseline)': {
     ...MINER,
     segmentation: 'contiguous',
@@ -37,6 +38,8 @@ const grid = [
   { condition: 'colliding small ids (1..10)', ...BASE, smallIdRange: 10 },
   { condition: 'two agents share a session key 30%', ...BASE, mergeRate: 0.3 },
   { condition: 'independent reads in random order 50%', ...BASE, swapReadsRate: 0.5 },
+  { condition: 'optional linked side calls 30%', ...BASE, linkedSideRate: 0.3 },
+  { condition: 'optional linked side calls 60%', ...BASE, linkedSideRate: 0.6 },
   {
     condition: 'all of the above (moderate)',
     ...BASE,
@@ -45,6 +48,7 @@ const grid = [
     truncateRate: 0.2,
     smallIdRange: 50,
     mergeRate: 0.1,
+    linkedSideRate: 0.2,
   },
 ];
 

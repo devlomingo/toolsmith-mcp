@@ -1,6 +1,6 @@
 # Benchmark report
 
-Generated 2026-11-07T22:17:50.960Z from the JSON files in `benchmarks/results/`. Nothing in this report is estimated or hand-edited.
+Generated 2026-11-09T03:57:15.306Z from the JSON files in `benchmarks/results/`. Nothing in this report is estimated or hand-edited.
 
 **Environment:** toolsmith-mcp 0.1.0 (commit `085fb68`), Node v22.13.1, darwin 27.2.0 arm64, Apple M1 Pro (10 cores, 17 GB), MCP SDK server 2.4.0 / client 2.4.0, developer workstation.
 
@@ -88,44 +88,64 @@ Order → its customer → that customer’s orders (strictly sequential, nothin
 
 | Condition | Miner | Precision | Recall | F1 (mean ± sd) | Mining ms (p50) |
 |---|---|---|---|---|---|
-| clean | default | 1 | 1 | 1 ± 0 | 3.34 |
-| clean | no AWO rules | 1 | 1 | 1 ± 0 | 2.11 |
-| clean | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.59 |
-| boundary noise 80% | default | 1 | 1 | 1 ± 0 | 2.47 |
-| boundary noise 80% | no AWO rules | 1 | 1 | 1 ± 0 | 1.88 |
-| boundary noise 80% | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 2.29 |
-| rare workflows (10% of sessions) | default | 1 | 0.83 | 0.9 ± 0.1 | 0.75 |
-| rare workflows (10% of sessions) | no AWO rules | 1 | 0.83 | 0.9 ± 0.1 | 0.7 |
-| rare workflows (10% of sessions) | contiguous (v0 baseline) | 1 | 0.83 | 0.9 ± 0.1 | 1.13 |
-| block-style loops | default | 1 | 1 | 1 ± 0 | 1.82 |
-| block-style loops | no AWO rules | 1 | 1 | 1 ± 0 | 1.47 |
-| block-style loops | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 1.41 |
-| noise between steps 10% | default | 1 | 1 | 1 ± 0 | 1.56 |
-| noise between steps 10% | no AWO rules | 1 | 1 | 1 ± 0 | 1.36 |
-| noise between steps 10% | contiguous (v0 baseline) | 0.71 | 1 | 0.81 ± 0.14 | 1.81 |
-| noise between steps 30% | default | 1 | 1 | 1 ± 0 | 1.81 |
-| noise between steps 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.5 |
-| noise between steps 30% | contiguous (v0 baseline) | 0.35 | 1 | 0.51 ± 0.02 | 2.21 |
-| abandoned runs 30% | default | 1 | 1 | 1 ± 0 | 1.33 |
-| abandoned runs 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.16 |
-| abandoned runs 30% | contiguous (v0 baseline) | 0.73 | 1 | 0.83 ± 0.1 | 1.3 |
-| colliding small ids (1..50) | default | 0.95 | 1 | 0.97 ± 0.06 | 1.97 |
-| colliding small ids (1..50) | no AWO rules | 0.95 | 1 | 0.97 ± 0.06 | 1.69 |
-| colliding small ids (1..50) | contiguous (v0 baseline) | 0.98 | 1 | 0.99 ± 0.04 | 1.46 |
-| colliding small ids (1..10) | default | 0.69 | 1 | 0.81 ± 0.08 | 1.77 |
-| colliding small ids (1..10) | no AWO rules | 0.67 | 1 | 0.79 ± 0.13 | 1.3 |
-| colliding small ids (1..10) | contiguous (v0 baseline) | 0.67 | 1 | 0.79 ± 0.11 | 1.65 |
-| two agents share a session key 30% | default | 1 | 1 | 1 ± 0 | 2.31 |
-| two agents share a session key 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.35 |
-| two agents share a session key 30% | contiguous (v0 baseline) | 0.59 | 1 | 0.73 ± 0.12 | 1.69 |
-| independent reads in random order 50% | default | 1 | 1 | 1 ± 0 | 1.4 |
-| independent reads in random order 50% | no AWO rules | 0.75 | 1 | 0.86 ± 0 | 1.29 |
-| independent reads in random order 50% | contiguous (v0 baseline) | 0.75 | 1 | 0.86 ± 0 | 1.39 |
-| all of the above (moderate) | default | 0.95 | 1 | 0.97 ± 0.06 | 1.52 |
-| all of the above (moderate) | no AWO rules | 0.98 | 1 | 0.99 ± 0.04 | 1.26 |
-| all of the above (moderate) | contiguous (v0 baseline) | 0.49 | 1 | 0.65 ± 0.07 | 1.7 |
+| clean | default | 1 | 1 | 1 ± 0 | 4.12 |
+| clean | no AWO rules | 1 | 1 | 1 ± 0 | 2.06 |
+| clean | no gaps (contiguous within components) | 1 | 1 | 1 ± 0 | 2.55 |
+| clean | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 2.23 |
+| boundary noise 80% | default | 1 | 1 | 1 ± 0 | 3.19 |
+| boundary noise 80% | no AWO rules | 1 | 1 | 1 ± 0 | 2.69 |
+| boundary noise 80% | no gaps (contiguous within components) | 1 | 1 | 1 ± 0 | 2.32 |
+| boundary noise 80% | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 3.17 |
+| rare workflows (10% of sessions) | default | 1 | 0.83 | 0.9 ± 0.1 | 0.85 |
+| rare workflows (10% of sessions) | no AWO rules | 1 | 0.83 | 0.9 ± 0.1 | 0.88 |
+| rare workflows (10% of sessions) | no gaps (contiguous within components) | 1 | 0.83 | 0.9 ± 0.1 | 0.87 |
+| rare workflows (10% of sessions) | contiguous (v0 baseline) | 1 | 0.83 | 0.9 ± 0.1 | 1.45 |
+| block-style loops | default | 1 | 1 | 1 ± 0 | 1.97 |
+| block-style loops | no AWO rules | 1 | 1 | 1 ± 0 | 1.78 |
+| block-style loops | no gaps (contiguous within components) | 1 | 1 | 1 ± 0 | 2.35 |
+| block-style loops | contiguous (v0 baseline) | 1 | 1 | 1 ± 0 | 2.61 |
+| noise between steps 10% | default | 1 | 1 | 1 ± 0 | 2.94 |
+| noise between steps 10% | no AWO rules | 1 | 1 | 1 ± 0 | 1.82 |
+| noise between steps 10% | no gaps (contiguous within components) | 1 | 1 | 1 ± 0 | 2.77 |
+| noise between steps 10% | contiguous (v0 baseline) | 0.71 | 1 | 0.81 ± 0.14 | 2.61 |
+| noise between steps 30% | default | 1 | 1 | 1 ± 0 | 2.51 |
+| noise between steps 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.71 |
+| noise between steps 30% | no gaps (contiguous within components) | 1 | 1 | 1 ± 0 | 2.42 |
+| noise between steps 30% | contiguous (v0 baseline) | 0.35 | 1 | 0.51 ± 0.02 | 2.69 |
+| abandoned runs 30% | default | 1 | 1 | 1 ± 0 | 2.02 |
+| abandoned runs 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.63 |
+| abandoned runs 30% | no gaps (contiguous within components) | 1 | 1 | 1 ± 0 | 1.67 |
+| abandoned runs 30% | contiguous (v0 baseline) | 0.73 | 1 | 0.83 ± 0.1 | 1.66 |
+| colliding small ids (1..50) | default | 0.98 | 1 | 0.99 ± 0.04 | 2.51 |
+| colliding small ids (1..50) | no AWO rules | 0.95 | 1 | 0.97 ± 0.06 | 2.24 |
+| colliding small ids (1..50) | no gaps (contiguous within components) | 0.95 | 1 | 0.97 ± 0.06 | 1.86 |
+| colliding small ids (1..50) | contiguous (v0 baseline) | 0.98 | 1 | 0.99 ± 0.04 | 1.83 |
+| colliding small ids (1..10) | default | 1 | 1 | 1 ± 0 | 2.59 |
+| colliding small ids (1..10) | no AWO rules | 0.59 | 1 | 0.73 ± 0.13 | 2.2 |
+| colliding small ids (1..10) | no gaps (contiguous within components) | 0.64 | 1 | 0.78 ± 0.07 | 2.63 |
+| colliding small ids (1..10) | contiguous (v0 baseline) | 0.67 | 1 | 0.79 ± 0.11 | 2.08 |
+| two agents share a session key 30% | default | 1 | 1 | 1 ± 0 | 2.47 |
+| two agents share a session key 30% | no AWO rules | 1 | 1 | 1 ± 0 | 1.67 |
+| two agents share a session key 30% | no gaps (contiguous within components) | 1 | 1 | 1 ± 0 | 2.16 |
+| two agents share a session key 30% | contiguous (v0 baseline) | 0.59 | 1 | 0.73 ± 0.12 | 2.15 |
+| independent reads in random order 50% | default | 1 | 1 | 1 ± 0 | 1.92 |
+| independent reads in random order 50% | no AWO rules | 0.65 | 1 | 0.78 ± 0.05 | 1.58 |
+| independent reads in random order 50% | no gaps (contiguous within components) | 1 | 1 | 1 ± 0 | 1.68 |
+| independent reads in random order 50% | contiguous (v0 baseline) | 0.75 | 1 | 0.86 ± 0 | 1.98 |
+| optional linked side calls 30% | default | 0.86 | 1 | 0.92 ± 0.09 | 3.01 |
+| optional linked side calls 30% | no AWO rules | 0.31 | 1 | 0.48 ± 0.06 | 2.48 |
+| optional linked side calls 30% | no gaps (contiguous within components) | 0.57 | 1 | 0.72 ± 0.07 | 3.29 |
+| optional linked side calls 30% | contiguous (v0 baseline) | 0.2 | 1 | 0.34 ± 0.04 | 2.55 |
+| optional linked side calls 60% | default | 0.83 | 0.97 | 0.89 ± 0.12 | 4.15 |
+| optional linked side calls 60% | no AWO rules | 0.17 | 1 | 0.29 ± 0.02 | 4.17 |
+| optional linked side calls 60% | no gaps (contiguous within components) | 0.65 | 0.97 | 0.76 ± 0.09 | 3.92 |
+| optional linked side calls 60% | contiguous (v0 baseline) | 0.11 | 0.9 | 0.19 ± 0.03 | 3.91 |
+| all of the above (moderate) | default | 0.85 | 1 | 0.91 ± 0.1 | 2.74 |
+| all of the above (moderate) | no AWO rules | 0.5 | 1 | 0.66 ± 0.12 | 2.04 |
+| all of the above (moderate) | no gaps (contiguous within components) | 0.63 | 1 | 0.76 ± 0.11 | 3.26 |
+| all of the above (moderate) | contiguous (v0 baseline) | 0.33 | 1 | 0.49 ± 0.08 | 2.58 |
 
-Overall mean across conditions (shipped miner): precision 0.97, recall 0.99, F1 0.97. v0 baseline: F1 0.84.
+Overall mean across conditions (shipped miner): precision 0.97, recall 0.99, F1 0.97. v0 baseline: F1 0.75.
 
 ## Scalability
 

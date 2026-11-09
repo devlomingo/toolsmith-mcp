@@ -144,14 +144,17 @@ opens one connection per task and never hit the limit.
 
 ![Workflow discovery F1 by condition](benchmarks/charts/patterns-f1.svg)
 
-The data is synthetic traces with 3 planted workflows, 12 noise conditions
+The data is synthetic traces with 3 planted workflows, 14 noise conditions
 and 10 seeds each:
 
-- **Mean F1 is 0.97**, against 0.84 for the first version of the miner.
+- **Mean F1 is 0.97**, against 0.75 for the first version of the miner.
 - **It is perfect** on clean data, noise between steps, abandoned runs,
-  agents sharing a session, and reordered reads.
-- **It is weakest** when unrelated calls reuse tiny integer ids (ids 1..10:
-  precision 0.69).
+  agents sharing a session, reordered reads and colliding tiny ids.
+- **Optional side calls** (a lookup on the same `userId` between steps)
+  no longer hide a workflow: F1 0.92 with them in 30% of runs and 0.89 at
+  60%, against 0.72 and 0.76 when only adjacent steps are counted. The
+  remaining misses are mostly patterns that keep a frequent side call.
+- **It is weakest** on rare workflows (10% of sessions: recall 0.83).
 
 **Not measured:** LLM requests and tokens. No claim is made about them.
 

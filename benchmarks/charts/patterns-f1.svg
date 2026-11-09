@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 868" width="760" height="868" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 1230" width="760" height="1230" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
 <title id="t">Workflow discovery F1 by condition</title><desc id="d">Synthetic traces, 3 planted workflows, mean of 10 seeds</desc>
 <style>
   .bg{fill:#fcfcfb}.ttl{fill:#1b1b1a;font-size:16px;font-weight:600}.sub,.tick,.leg{fill:#5f5e58;font-size:12px}.lbl{fill:#2f2e2b;font-size:12.5px}.val{fill:#2f2e2b;font-size:11.5px;font-variant-numeric:tabular-nums}
@@ -8,91 +8,133 @@
 <rect class="bg" width="100%" height="100%" rx="8"/>
 <text class="ttl" x="20" y="28">Workflow discovery F1 by condition</text>
 <text class="sub" x="20" y="44">Synthetic traces, 3 planted workflows, mean of 10 seeds</text>
-<rect class="s1" x="20" y="52" width="12" height="12" rx="3"/><text class="leg" x="38" y="62">Shipped miner</text><rect class="s2" x="20" y="70" width="12" height="12" rx="3"/><text class="leg" x="38" y="80">Without AWO rules</text><rect class="s3" x="20" y="88" width="12" height="12" rx="3"/><text class="leg" x="38" y="98">v0: contiguous order</text>
-<line class="grid" x1="280" x2="280" y1="108" y2="838"/><text class="tick" x="280" y="854" text-anchor="middle">0.00</text><line class="grid" x1="382.5" x2="382.5" y1="108" y2="838"/><text class="tick" x="382.5" y="854" text-anchor="middle">0.25</text><line class="grid" x1="485" x2="485" y1="108" y2="838"/><text class="tick" x="485" y="854" text-anchor="middle">0.50</text><line class="grid" x1="587.5" x2="587.5" y1="108" y2="838"/><text class="tick" x="587.5" y="854" text-anchor="middle">0.75</text><line class="grid" x1="690" x2="690" y1="108" y2="838"/><text class="tick" x="690" y="854" text-anchor="middle">1.00</text>
-<text class="lbl" x="270" y="141" text-anchor="end">clean</text>
-<path class="s1" d="M280,114 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>clean — Shipped miner: 1.00 F1</title></path>
-<text class="val" x="696" y="125">1.00</text>
-<path class="s2" d="M280,130 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>clean — Without AWO rules: 1.00 F1</title></path>
-<text class="val" x="696" y="141">1.00</text>
-<path class="s3" d="M280,146 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>clean — v0: contiguous order: 1.00 F1</title></path>
-<text class="val" x="696" y="157">1.00</text>
-<text class="lbl" x="270" y="201" text-anchor="end">boundary noise 80%</text>
-<path class="s1" d="M280,174 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>boundary noise 80% — Shipped miner: 1.00 F1</title></path>
-<text class="val" x="696" y="185">1.00</text>
-<path class="s2" d="M280,190 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>boundary noise 80% — Without AWO rules: 1.00 F1</title></path>
-<text class="val" x="696" y="201">1.00</text>
-<path class="s3" d="M280,206 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>boundary noise 80% — v0: contiguous order: 1.00 F1</title></path>
-<text class="val" x="696" y="217">1.00</text>
-<text class="lbl" x="270" y="261" text-anchor="end">rare workflows (10% of sessions)</text>
-<path class="s1" d="M280,234 h365 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-365 z"><title>rare workflows (10% of sessions) — Shipped miner: 0.90 F1</title></path>
-<text class="val" x="655" y="245">0.90</text>
-<path class="s2" d="M280,250 h365 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-365 z"><title>rare workflows (10% of sessions) — Without AWO rules: 0.90 F1</title></path>
-<text class="val" x="655" y="261">0.90</text>
-<path class="s3" d="M280,266 h365 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-365 z"><title>rare workflows (10% of sessions) — v0: contiguous order: 0.90 F1</title></path>
-<text class="val" x="655" y="277">0.90</text>
-<text class="lbl" x="270" y="321" text-anchor="end">block-style loops</text>
-<path class="s1" d="M280,294 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>block-style loops — Shipped miner: 1.00 F1</title></path>
-<text class="val" x="696" y="305">1.00</text>
-<path class="s2" d="M280,310 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>block-style loops — Without AWO rules: 1.00 F1</title></path>
-<text class="val" x="696" y="321">1.00</text>
-<path class="s3" d="M280,326 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>block-style loops — v0: contiguous order: 1.00 F1</title></path>
-<text class="val" x="696" y="337">1.00</text>
-<text class="lbl" x="270" y="381" text-anchor="end">noise between steps 10%</text>
-<path class="s1" d="M280,354 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>noise between steps 10% — Shipped miner: 1.00 F1</title></path>
-<text class="val" x="696" y="365">1.00</text>
-<path class="s2" d="M280,370 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>noise between steps 10% — Without AWO rules: 1.00 F1</title></path>
-<text class="val" x="696" y="381">1.00</text>
-<path class="s3" d="M280,386 h328.1 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-328.1 z"><title>noise between steps 10% — v0: contiguous order: 0.81 F1</title></path>
-<text class="val" x="618.1" y="397">0.81</text>
-<text class="lbl" x="270" y="441" text-anchor="end">noise between steps 30%</text>
-<path class="s1" d="M280,414 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>noise between steps 30% — Shipped miner: 1.00 F1</title></path>
-<text class="val" x="696" y="425">1.00</text>
-<path class="s2" d="M280,430 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>noise between steps 30% — Without AWO rules: 1.00 F1</title></path>
-<text class="val" x="696" y="441">1.00</text>
-<path class="s3" d="M280,446 h205.10000000000002 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-205.10000000000002 z"><title>noise between steps 30% — v0: contiguous order: 0.51 F1</title></path>
-<text class="val" x="495.1" y="457">0.51</text>
-<text class="lbl" x="270" y="501" text-anchor="end">abandoned runs 30%</text>
-<path class="s1" d="M280,474 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>abandoned runs 30% — Shipped miner: 1.00 F1</title></path>
-<text class="val" x="696" y="485">1.00</text>
-<path class="s2" d="M280,490 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>abandoned runs 30% — Without AWO rules: 1.00 F1</title></path>
-<text class="val" x="696" y="501">1.00</text>
-<path class="s3" d="M280,506 h336.29999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-336.29999999999995 z"><title>abandoned runs 30% — v0: contiguous order: 0.83 F1</title></path>
-<text class="val" x="626.3" y="517">0.83</text>
-<text class="lbl" x="270" y="561" text-anchor="end">colliding small ids (1..50)</text>
-<path class="s1" d="M280,534 h393.70000000000005 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-393.70000000000005 z"><title>colliding small ids (1..50) — Shipped miner: 0.97 F1</title></path>
-<text class="val" x="683.7" y="545">0.97</text>
-<path class="s2" d="M280,550 h393.70000000000005 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-393.70000000000005 z"><title>colliding small ids (1..50) — Without AWO rules: 0.97 F1</title></path>
-<text class="val" x="683.7" y="561">0.97</text>
-<path class="s3" d="M280,566 h401.9 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-401.9 z"><title>colliding small ids (1..50) — v0: contiguous order: 0.99 F1</title></path>
-<text class="val" x="691.9" y="577">0.99</text>
-<text class="lbl" x="270" y="621" text-anchor="end">colliding small ids (1..10)</text>
-<path class="s1" d="M280,594 h328.1 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-328.1 z"><title>colliding small ids (1..10) — Shipped miner: 0.81 F1</title></path>
-<text class="val" x="618.1" y="605">0.81</text>
-<path class="s2" d="M280,610 h319.9000000000001 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-319.9000000000001 z"><title>colliding small ids (1..10) — Without AWO rules: 0.79 F1</title></path>
-<text class="val" x="609.9000000000001" y="621">0.79</text>
-<path class="s3" d="M280,626 h319.9000000000001 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-319.9000000000001 z"><title>colliding small ids (1..10) — v0: contiguous order: 0.79 F1</title></path>
-<text class="val" x="609.9000000000001" y="637">0.79</text>
-<text class="lbl" x="270" y="681" text-anchor="end">two agents share a session key 30%</text>
-<path class="s1" d="M280,654 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>two agents share a session key 30% — Shipped miner: 1.00 F1</title></path>
-<text class="val" x="696" y="665">1.00</text>
-<path class="s2" d="M280,670 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>two agents share a session key 30% — Without AWO rules: 1.00 F1</title></path>
-<text class="val" x="696" y="681">1.00</text>
-<path class="s3" d="M280,686 h295.29999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-295.29999999999995 z"><title>two agents share a session key 30% — v0: contiguous order: 0.73 F1</title></path>
-<text class="val" x="585.3" y="697">0.73</text>
-<text class="lbl" x="270" y="741" text-anchor="end">independent reads in random order 50%</text>
-<path class="s1" d="M280,714 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>independent reads in random order 50% — Shipped miner: 1.00 F1</title></path>
-<text class="val" x="696" y="725">1.00</text>
-<path class="s2" d="M280,730 h348.6 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-348.6 z"><title>independent reads in random order 50% — Without AWO rules: 0.86 F1</title></path>
-<text class="val" x="638.6" y="741">0.86</text>
-<path class="s3" d="M280,746 h348.6 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-348.6 z"><title>independent reads in random order 50% — v0: contiguous order: 0.86 F1</title></path>
-<text class="val" x="638.6" y="757">0.86</text>
-<text class="lbl" x="270" y="801" text-anchor="end">all of the above (moderate)</text>
-<path class="s1" d="M280,774 h393.70000000000005 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-393.70000000000005 z"><title>all of the above (moderate) — Shipped miner: 0.97 F1</title></path>
-<text class="val" x="683.7" y="785">0.97</text>
-<path class="s2" d="M280,790 h401.9 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-401.9 z"><title>all of the above (moderate) — Without AWO rules: 0.99 F1</title></path>
-<text class="val" x="691.9" y="801">0.99</text>
-<path class="s3" d="M280,806 h262.5 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-262.5 z"><title>all of the above (moderate) — v0: contiguous order: 0.65 F1</title></path>
-<text class="val" x="552.5" y="817">0.65</text>
-<text class="tick" x="20" y="854">F1</text>
+<rect class="s1" x="20" y="52" width="12" height="12" rx="3"/><text class="leg" x="38" y="62">Shipped miner</text><rect class="s2" x="20" y="70" width="12" height="12" rx="3"/><text class="leg" x="38" y="80">Without AWO rules</text><rect class="s3" x="20" y="88" width="12" height="12" rx="3"/><text class="leg" x="38" y="98">no gaps (contiguous within components)</text><rect class="s4" x="20" y="106" width="12" height="12" rx="3"/><text class="leg" x="38" y="116">v0: contiguous order</text>
+<line class="grid" x1="280" x2="280" y1="126" y2="1200"/><text class="tick" x="280" y="1216" text-anchor="middle">0.00</text><line class="grid" x1="382.5" x2="382.5" y1="126" y2="1200"/><text class="tick" x="382.5" y="1216" text-anchor="middle">0.25</text><line class="grid" x1="485" x2="485" y1="126" y2="1200"/><text class="tick" x="485" y="1216" text-anchor="middle">0.50</text><line class="grid" x1="587.5" x2="587.5" y1="126" y2="1200"/><text class="tick" x="587.5" y="1216" text-anchor="middle">0.75</text><line class="grid" x1="690" x2="690" y1="126" y2="1200"/><text class="tick" x="690" y="1216" text-anchor="middle">1.00</text>
+<text class="lbl" x="270" y="167" text-anchor="end">clean</text>
+<path class="s1" d="M280,132 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>clean — Shipped miner: 1.00 F1</title></path>
+<text class="val" x="696" y="143">1.00</text>
+<path class="s2" d="M280,148 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>clean — Without AWO rules: 1.00 F1</title></path>
+<text class="val" x="696" y="159">1.00</text>
+<path class="s3" d="M280,164 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>clean — no gaps (contiguous within components): 1.00 F1</title></path>
+<text class="val" x="696" y="175">1.00</text>
+<path class="s4" d="M280,180 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>clean — v0: contiguous order: 1.00 F1</title></path>
+<text class="val" x="696" y="191">1.00</text>
+<text class="lbl" x="270" y="243" text-anchor="end">boundary noise 80%</text>
+<path class="s1" d="M280,208 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>boundary noise 80% — Shipped miner: 1.00 F1</title></path>
+<text class="val" x="696" y="219">1.00</text>
+<path class="s2" d="M280,224 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>boundary noise 80% — Without AWO rules: 1.00 F1</title></path>
+<text class="val" x="696" y="235">1.00</text>
+<path class="s3" d="M280,240 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>boundary noise 80% — no gaps (contiguous within components): 1.00 F1</title></path>
+<text class="val" x="696" y="251">1.00</text>
+<path class="s4" d="M280,256 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>boundary noise 80% — v0: contiguous order: 1.00 F1</title></path>
+<text class="val" x="696" y="267">1.00</text>
+<text class="lbl" x="270" y="319" text-anchor="end">rare workflows (10% of sessions)</text>
+<path class="s1" d="M280,284 h365 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-365 z"><title>rare workflows (10% of sessions) — Shipped miner: 0.90 F1</title></path>
+<text class="val" x="655" y="295">0.90</text>
+<path class="s2" d="M280,300 h365 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-365 z"><title>rare workflows (10% of sessions) — Without AWO rules: 0.90 F1</title></path>
+<text class="val" x="655" y="311">0.90</text>
+<path class="s3" d="M280,316 h365 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-365 z"><title>rare workflows (10% of sessions) — no gaps (contiguous within components): 0.90 F1</title></path>
+<text class="val" x="655" y="327">0.90</text>
+<path class="s4" d="M280,332 h365 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-365 z"><title>rare workflows (10% of sessions) — v0: contiguous order: 0.90 F1</title></path>
+<text class="val" x="655" y="343">0.90</text>
+<text class="lbl" x="270" y="395" text-anchor="end">block-style loops</text>
+<path class="s1" d="M280,360 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>block-style loops — Shipped miner: 1.00 F1</title></path>
+<text class="val" x="696" y="371">1.00</text>
+<path class="s2" d="M280,376 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>block-style loops — Without AWO rules: 1.00 F1</title></path>
+<text class="val" x="696" y="387">1.00</text>
+<path class="s3" d="M280,392 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>block-style loops — no gaps (contiguous within components): 1.00 F1</title></path>
+<text class="val" x="696" y="403">1.00</text>
+<path class="s4" d="M280,408 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>block-style loops — v0: contiguous order: 1.00 F1</title></path>
+<text class="val" x="696" y="419">1.00</text>
+<text class="lbl" x="270" y="471" text-anchor="end">noise between steps 10%</text>
+<path class="s1" d="M280,436 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>noise between steps 10% — Shipped miner: 1.00 F1</title></path>
+<text class="val" x="696" y="447">1.00</text>
+<path class="s2" d="M280,452 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>noise between steps 10% — Without AWO rules: 1.00 F1</title></path>
+<text class="val" x="696" y="463">1.00</text>
+<path class="s3" d="M280,468 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>noise between steps 10% — no gaps (contiguous within components): 1.00 F1</title></path>
+<text class="val" x="696" y="479">1.00</text>
+<path class="s4" d="M280,484 h328.1 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-328.1 z"><title>noise between steps 10% — v0: contiguous order: 0.81 F1</title></path>
+<text class="val" x="618.1" y="495">0.81</text>
+<text class="lbl" x="270" y="547" text-anchor="end">noise between steps 30%</text>
+<path class="s1" d="M280,512 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>noise between steps 30% — Shipped miner: 1.00 F1</title></path>
+<text class="val" x="696" y="523">1.00</text>
+<path class="s2" d="M280,528 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>noise between steps 30% — Without AWO rules: 1.00 F1</title></path>
+<text class="val" x="696" y="539">1.00</text>
+<path class="s3" d="M280,544 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>noise between steps 30% — no gaps (contiguous within components): 1.00 F1</title></path>
+<text class="val" x="696" y="555">1.00</text>
+<path class="s4" d="M280,560 h205.10000000000002 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-205.10000000000002 z"><title>noise between steps 30% — v0: contiguous order: 0.51 F1</title></path>
+<text class="val" x="495.1" y="571">0.51</text>
+<text class="lbl" x="270" y="623" text-anchor="end">abandoned runs 30%</text>
+<path class="s1" d="M280,588 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>abandoned runs 30% — Shipped miner: 1.00 F1</title></path>
+<text class="val" x="696" y="599">1.00</text>
+<path class="s2" d="M280,604 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>abandoned runs 30% — Without AWO rules: 1.00 F1</title></path>
+<text class="val" x="696" y="615">1.00</text>
+<path class="s3" d="M280,620 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>abandoned runs 30% — no gaps (contiguous within components): 1.00 F1</title></path>
+<text class="val" x="696" y="631">1.00</text>
+<path class="s4" d="M280,636 h336.29999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-336.29999999999995 z"><title>abandoned runs 30% — v0: contiguous order: 0.83 F1</title></path>
+<text class="val" x="626.3" y="647">0.83</text>
+<text class="lbl" x="270" y="699" text-anchor="end">colliding small ids (1..50)</text>
+<path class="s1" d="M280,664 h401.9 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-401.9 z"><title>colliding small ids (1..50) — Shipped miner: 0.99 F1</title></path>
+<text class="val" x="691.9" y="675">0.99</text>
+<path class="s2" d="M280,680 h393.70000000000005 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-393.70000000000005 z"><title>colliding small ids (1..50) — Without AWO rules: 0.97 F1</title></path>
+<text class="val" x="683.7" y="691">0.97</text>
+<path class="s3" d="M280,696 h393.70000000000005 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-393.70000000000005 z"><title>colliding small ids (1..50) — no gaps (contiguous within components): 0.97 F1</title></path>
+<text class="val" x="683.7" y="707">0.97</text>
+<path class="s4" d="M280,712 h401.9 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-401.9 z"><title>colliding small ids (1..50) — v0: contiguous order: 0.99 F1</title></path>
+<text class="val" x="691.9" y="723">0.99</text>
+<text class="lbl" x="270" y="775" text-anchor="end">colliding small ids (1..10)</text>
+<path class="s1" d="M280,740 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>colliding small ids (1..10) — Shipped miner: 1.00 F1</title></path>
+<text class="val" x="696" y="751">1.00</text>
+<path class="s2" d="M280,756 h295.29999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-295.29999999999995 z"><title>colliding small ids (1..10) — Without AWO rules: 0.73 F1</title></path>
+<text class="val" x="585.3" y="767">0.73</text>
+<path class="s3" d="M280,772 h315.79999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-315.79999999999995 z"><title>colliding small ids (1..10) — no gaps (contiguous within components): 0.78 F1</title></path>
+<text class="val" x="605.8" y="783">0.78</text>
+<path class="s4" d="M280,788 h319.9000000000001 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-319.9000000000001 z"><title>colliding small ids (1..10) — v0: contiguous order: 0.79 F1</title></path>
+<text class="val" x="609.9000000000001" y="799">0.79</text>
+<text class="lbl" x="270" y="851" text-anchor="end">two agents share a session key 30%</text>
+<path class="s1" d="M280,816 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>two agents share a session key 30% — Shipped miner: 1.00 F1</title></path>
+<text class="val" x="696" y="827">1.00</text>
+<path class="s2" d="M280,832 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>two agents share a session key 30% — Without AWO rules: 1.00 F1</title></path>
+<text class="val" x="696" y="843">1.00</text>
+<path class="s3" d="M280,848 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>two agents share a session key 30% — no gaps (contiguous within components): 1.00 F1</title></path>
+<text class="val" x="696" y="859">1.00</text>
+<path class="s4" d="M280,864 h295.29999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-295.29999999999995 z"><title>two agents share a session key 30% — v0: contiguous order: 0.73 F1</title></path>
+<text class="val" x="585.3" y="875">0.73</text>
+<text class="lbl" x="270" y="927" text-anchor="end">independent reads in random order 50%</text>
+<path class="s1" d="M280,892 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>independent reads in random order 50% — Shipped miner: 1.00 F1</title></path>
+<text class="val" x="696" y="903">1.00</text>
+<path class="s2" d="M280,908 h315.79999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-315.79999999999995 z"><title>independent reads in random order 50% — Without AWO rules: 0.78 F1</title></path>
+<text class="val" x="605.8" y="919">0.78</text>
+<path class="s3" d="M280,924 h406 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-406 z"><title>independent reads in random order 50% — no gaps (contiguous within components): 1.00 F1</title></path>
+<text class="val" x="696" y="935">1.00</text>
+<path class="s4" d="M280,940 h348.6 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-348.6 z"><title>independent reads in random order 50% — v0: contiguous order: 0.86 F1</title></path>
+<text class="val" x="638.6" y="951">0.86</text>
+<text class="lbl" x="270" y="1003" text-anchor="end">optional linked side calls 30%</text>
+<path class="s1" d="M280,968 h373.20000000000005 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-373.20000000000005 z"><title>optional linked side calls 30% — Shipped miner: 0.92 F1</title></path>
+<text class="val" x="663.2" y="979">0.92</text>
+<path class="s2" d="M280,984 h192.79999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-192.79999999999995 z"><title>optional linked side calls 30% — Without AWO rules: 0.48 F1</title></path>
+<text class="val" x="482.79999999999995" y="995">0.48</text>
+<path class="s3" d="M280,1000 h291.20000000000005 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-291.20000000000005 z"><title>optional linked side calls 30% — no gaps (contiguous within components): 0.72 F1</title></path>
+<text class="val" x="581.2" y="1011">0.72</text>
+<path class="s4" d="M280,1016 h135.39999999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-135.39999999999998 z"><title>optional linked side calls 30% — v0: contiguous order: 0.34 F1</title></path>
+<text class="val" x="425.4" y="1027">0.34</text>
+<text class="lbl" x="270" y="1079" text-anchor="end">optional linked side calls 60%</text>
+<path class="s1" d="M280,1044 h360.9 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-360.9 z"><title>optional linked side calls 60% — Shipped miner: 0.89 F1</title></path>
+<text class="val" x="650.9" y="1055">0.89</text>
+<path class="s2" d="M280,1060 h114.89999999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-114.89999999999998 z"><title>optional linked side calls 60% — Without AWO rules: 0.29 F1</title></path>
+<text class="val" x="404.9" y="1071">0.29</text>
+<path class="s3" d="M280,1076 h307.6 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-307.6 z"><title>optional linked side calls 60% — no gaps (contiguous within components): 0.76 F1</title></path>
+<text class="val" x="597.6" y="1087">0.76</text>
+<path class="s4" d="M280,1092 h73.89999999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-73.89999999999998 z"><title>optional linked side calls 60% — v0: contiguous order: 0.19 F1</title></path>
+<text class="val" x="363.9" y="1103">0.19</text>
+<text class="lbl" x="270" y="1155" text-anchor="end">all of the above (moderate)</text>
+<path class="s1" d="M280,1120 h369.1 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-369.1 z"><title>all of the above (moderate) — Shipped miner: 0.91 F1</title></path>
+<text class="val" x="659.1" y="1131">0.91</text>
+<path class="s2" d="M280,1136 h266.6 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-266.6 z"><title>all of the above (moderate) — Without AWO rules: 0.66 F1</title></path>
+<text class="val" x="556.6" y="1147">0.66</text>
+<path class="s3" d="M280,1152 h307.6 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-307.6 z"><title>all of the above (moderate) — no gaps (contiguous within components): 0.76 F1</title></path>
+<text class="val" x="597.6" y="1163">0.76</text>
+<path class="s4" d="M280,1168 h196.89999999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-196.89999999999998 z"><title>all of the above (moderate) — v0: contiguous order: 0.49 F1</title></path>
+<text class="val" x="486.9" y="1179">0.49</text>
+<text class="tick" x="20" y="1216">F1</text>
 </svg>

@@ -526,3 +526,35 @@ describe('baked constants', () => {
     expect(JSON.stringify(def)).not.toMatch(/"books"|"games"/); // no recorded values in the definition
   });
 });
+
+describe('optional side calls inside a workflow', () => {
+  it('counts runs with and without the side call as one workflow; the composite passes evaluation', async () => {
+    h = await makeHarness();
+    await approveShop(h.app);
+    for (let s = 1; s <= 6; s++) {
+      const ctx = { sessionId: `side-${s}` };
+      const userId = s;
+      const orders = (await h.app.call('shop__getOrders', { userId }, ctx)).data as Array<{
+        id: number;
+      }>;
+      if (s <= 2) await h.app.call('shop__getUser', { userId }, ctx); // optional look-up
+      for (const o of orders) {
+        await h.app.call('shop__getOrderItems', { orderId: o.id }, ctx);
+        await h.app.call('shop__getPayments', { orderId: o.id }, ctx);
+      }
+    }
+    const pattern = h.app
+      .mine()
+      .find((p) => p.signature === 'shop__getOrders > loop(shop__getOrderItems+shop__getPayments)');
+    // All six runs count: four contiguous ones and two with getUser in between.
+    expect(pattern?.support).toBe(6);
+    const out = await h.app.proposeComposites('system');
+    const hit = out.find((o) => o.pattern.signature === pattern!.signature);
+    expect(hit?.def?.steps.map((st) => st.tool)).toEqual([
+      'shop__getOrders',
+      'shop__getOrderItems',
+      'shop__getPayments',
+    ]);
+    expect(hit?.version?.status).toBe('awaiting_approval');
+  });
+});

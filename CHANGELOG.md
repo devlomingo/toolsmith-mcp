@@ -19,6 +19,13 @@ uses [semantic versioning](https://semver.org/).
     per-client tool exposure. Static client tokens keep working.
 - **Per-client rate limits** (`server.rateLimit`, with overrides per
   static or OAuth client). A composite counts as one call.
+- **Workflows with gaps.** Inside a data-flow component, the miner also
+  counts non-adjacent steps, as long as each consumes a value from an
+  earlier chosen step. An optional linked side call no longer hides the
+  workflow around it (benchmark F1 0.72 → 0.92 with side calls in 30% of
+  runs). Values are wired from the earliest step in the pattern that holds
+  them. `subsequences: false` restores adjacent-only counting. Mining is
+  about 18% slower (477 ms for 88k traces).
 - `npm run verify:cycle`: the whole release cycle as one command (checks,
   tests, quick benchmarks, the demo lifecycle over HTTP, a packed install,
   the site).

@@ -55,7 +55,7 @@ The brief's component list maps to code as follows.
 | Tool discovery engine | `src/discovery/discovery.ts` | Match a natural-language request against published tools and imported-but-unpublished operations; build a chain from schema links; answer `available` / `composable` / `needs_approval` / `unsupported` |
 | Usage observer | `src/observer/observer.ts` | Wrap every call; record timing, outcome, upstream request count, redacted args and value fingerprints |
 | Trace storage | `src/observer/trace-store.ts`, `src/store/db.ts` | Query, stats (p50/p95), retention |
-| Pattern discovery engine | `src/patterns/miner.ts` | Episodes → data-flow components → canonical reads → loop folding → n-gram support → majority rule → closed patterns, with argument-source voting |
+| Pattern discovery engine | `src/patterns/miner.ts` | Episodes → data-flow components → canonical reads → loop folding → n-gram and dependency-closed subsequence support → majority rule → closed patterns, with argument-source voting |
 | Composite tool generator | `src/composite/generator.ts`, `plan.ts`, `executor.ts` | Turn a pattern into a declarative plan; validate it; execute it with parallel stages, bounded fan-out, partial results |
 | MCP server generator | `src/gateway/gateway.ts` (Catalog) + `src/registry/registry.ts` | Group operations of one spec into one integration (an artifact) with versions; expose the published version; rollback |
 | Tool evaluator | `src/evaluator/evaluator.ts`, `src/openapi/verify.ts` | Static checks, security checks, live verification of read operations, equivalence test for composites, performance comparison |
@@ -140,15 +140,21 @@ stateDiagram-v2
    as barriers.
 4. **Loop folding:** consecutive calls that iterate over the same array of
    an earlier result (`orders[*]`) become one `loop(...)` element.
-5. **Counting:** contiguous element n-grams, at most once per episode. A
+5. **Counting:** contiguous element n-grams, plus dependency-closed
+   subsequences inside a component: steps need not be adjacent, but every
+   step must consume a value from an earlier chosen step. So an optional
+   linked side call (a settings lookup on the same `userId`) does not hide
+   the workflow around it. Each sequence counts at most once per episode. A
    pattern must reach `minSupport` and stay connected. Each step must pass
-   the majority rule, taking more than 50% of the sessions that continue
-   past its prefix (AWO's `SELECT_CHILD`). Fragments explained by a longer
-   pattern are dropped.
+   the majority rule: more than 50% of the sessions that reached its prefix
+   go on to it (AWO's `SELECT_CHILD`). Fragments explained by a longer
+   pattern (as a subsequence) are dropped.
 6. **Argument sources:** for every argument, the most common source across
    occurrences wins if it reaches `minConfidence`: an input, an output path,
-   a loop item field, or a shared input. Otherwise the argument becomes an
-   input.
+   a loop item field, or a shared input. When the call that first held a
+   value is not part of the pattern, the value is taken from the earliest
+   step in the pattern that received it under the same argument name.
+   Otherwise the argument becomes an input.
 7. **Generation:** the plan is built in the order agents actually ran the
    steps. Inputs are typed from the underlying tools' schemas, and example
    inputs come from redacted arguments.

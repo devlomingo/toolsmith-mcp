@@ -112,19 +112,21 @@ model got more expensive.
 ## How the effect was measured
 
 `npm run benchmark:patterns` runs an ablation on synthetic traces with planted
-workflows, under eleven difficulty conditions:
+workflows, under fourteen difficulty conditions:
 
 - noise between steps
 - abandoned runs
 - colliding small ids
 - two agents sharing a session key
 - independent reads in random order
+- optional linked side calls between steps
 - and others
 
-It compares three miners:
+It compares four miners:
 
 - the shipped defaults
 - the defaults with the AWO rules turned off (`no AWO rules`)
+- the defaults with only contiguous sequences inside a component (`no gaps`)
 - the first contiguous-sequence version (`contiguous (v0 baseline)`)
 
 Results, including where the AWO rules do not help, are in

@@ -45,7 +45,16 @@ export interface SyntheticOptions {
   mergeRate?: number;
   /** Probability that the agent runs the first two independent reads in swapped order. */
   swapReadsRate?: number;
+  /**
+   * Probability of an optional side call after a step that takes the same
+   * value (a settings or audit lookup on the same userId): linked by data
+   * flow, so it lands inside the workflow's component, but not part of it.
+   */
+  linkedSideRate?: number;
 }
+
+/** Tools used for optional linked side calls (one is picked at random). */
+export const SIDE_TOOLS = ['prefs__getSettings', 'audit__logView', 'notes__listNotes'];
 
 export interface SyntheticResult {
   traces: TraceRecord[];
@@ -228,6 +237,10 @@ export function generateTraces(opts: SyntheticOptions): SyntheticResult {
         stepTrace[i] = traces.length;
         record(sessionId, step.tool, { [step.arg]: value }, result);
         outputs[i] = result;
+        if (i + 1 < stopAt && opts.linkedSideRate && rand() < opts.linkedSideRate) {
+          const side = SIDE_TOOLS[Math.floor(rand() * SIDE_TOOLS.length)]!;
+          record(sessionId, side, { [step.arg]: value }, { note: `s${Math.floor(rand() * 1e9)}` });
+        }
         i++;
         if (i < stopAt) inner(sessionId);
       }

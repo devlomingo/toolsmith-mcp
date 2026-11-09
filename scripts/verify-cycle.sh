@@ -26,10 +26,13 @@ step "tests"
 npx vitest run --reporter=dot
 
 step "quick benchmarks + regression gate"
+# Quick runs overwrite the committed results; put back what was there before.
+cp -R benchmarks "$WORK/benchmarks.before"
 node benchmarks/scripts/performance.mjs --quick >/dev/null
 node benchmarks/scripts/patterns.mjs --quick >/dev/null
 npm run -s benchmark:check
-git checkout -q -- benchmarks/results benchmarks/charts benchmarks/reports 2>/dev/null || true
+rm -rf benchmarks/results benchmarks/charts benchmarks/reports
+cp -R "$WORK/benchmarks.before/results" "$WORK/benchmarks.before/charts" "$WORK/benchmarks.before/reports" benchmarks/
 
 step "demo lifecycle over HTTP"
 PORT=$((20000 + RANDOM % 20000))
