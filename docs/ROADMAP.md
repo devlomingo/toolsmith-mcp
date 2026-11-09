@@ -15,5 +15,4 @@ Released items moved to the [changelog](../CHANGELOG.md).
 
 - Ranking composites by measured benefit (`usage`) and suggesting to
   disable unused ones automatically.
-- Per-client rate limits.
 - Importing AsyncAPI and gRPC-gateway annotations.

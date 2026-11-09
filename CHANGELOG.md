@@ -17,6 +17,8 @@ uses [semantic versioning](https://semver.org/).
     every `WWW-Authenticate` challenge.
   - OAuth clients get their own identity (`oauth:<client id>`) and
     per-client tool exposure. Static client tokens keep working.
+- **Per-client rate limits** (`server.rateLimit`, with overrides per
+  static or OAuth client). A composite counts as one call.
 - `npm run verify:cycle`: the whole release cycle as one command (checks,
   tests, quick benchmarks, the demo lifecycle over HTTP, a packed install,
   the site).

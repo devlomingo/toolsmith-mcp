@@ -71,6 +71,13 @@ export const ExposureSchema = z.object({
 });
 export type Exposure = z.infer<typeof ExposureSchema>;
 
+/** Calls per second one MCP client may make (token bucket; composites count once). */
+export const ClientRateLimitSchema = z.object({
+  requestsPerSecond: z.number().positive(),
+  burst: z.number().int().positive(),
+});
+export type ClientRateLimit = z.infer<typeof ClientRateLimitSchema>;
+
 export const OAuthResourceSchema = z.object({
   /** The authorization server's issuer URL (the token's `iss`). */
   issuer: z.string().url(),
@@ -101,9 +108,17 @@ export const OAuthResourceSchema = z.object({
     .default(['RS256', 'ES256', 'EdDSA']),
   /** Default exposure for OAuth clients (falls back to the top-level `exposure`). */
   exposure: z.lazy(() => ExposureSchema).optional(),
+  /** Default per-client rate limit for OAuth clients (falls back to server.rateLimit). */
+  rateLimit: ClientRateLimitSchema.optional(),
   /** Per-client exposure, keyed by the token's client id. */
   clients: z
-    .array(z.object({ clientId: z.string().min(1), exposure: z.lazy(() => ExposureSchema) }))
+    .array(
+      z.object({
+        clientId: z.string().min(1),
+        exposure: z.lazy(() => ExposureSchema).optional(),
+        rateLimit: ClientRateLimitSchema.optional(),
+      }),
+    )
     .default([]),
 });
 export type OAuthResourceConfig = z.infer<typeof OAuthResourceSchema>;
@@ -161,6 +176,8 @@ export const ConfigSchema = z.object({
             token: z.string(),
             /** Overrides the top-level `exposure` for this client. */
             exposure: z.lazy(() => ExposureSchema).optional(),
+            /** Overrides server.rateLimit for this client. */
+            rateLimit: z.lazy(() => ClientRateLimitSchema).optional(),
           }),
         )
         .default([]),
@@ -170,6 +187,8 @@ export const ConfigSchema = z.object({
        * static client tokens.
        */
       oauth: z.lazy(() => OAuthResourceSchema).optional(),
+      /** Per-client call rate limit applied to every client without its own. Off by default. */
+      rateLimit: z.lazy(() => ClientRateLimitSchema).optional(),
     })
     .default({ host: '127.0.0.1', port: 7420, clients: [] }),
   dataDir: z.string().default('.toolsmith'),

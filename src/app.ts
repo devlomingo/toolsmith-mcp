@@ -1,7 +1,13 @@
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { Exposure, IntegrationConfig, LoadedConfig } from './config/config.js';
+import type {
+  ClientRateLimit,
+  Exposure,
+  IntegrationConfig,
+  LoadedConfig,
+} from './config/config.js';
+import { TokenBucket } from './security/rate-limit.js';
 import { resolvePath } from './config/config.js';
 import { patternToComposite } from './composite/generator.js';
 import type { CompositeDef } from './composite/plan.js';
@@ -205,7 +211,12 @@ export class Toolsmith {
 
   // ---- Exposure (which tools a client sees and may call) ------------------
 
-  exposureFor(principal?: string): Exposure {
+  /** The configured client entry behind a principal, if any. */
+  private clientConfig(principal?: string): {
+    exposure?: Exposure;
+    rateLimit?: ClientRateLimit;
+    oauth: boolean;
+  } {
     const name = principal?.startsWith('http:') ? principal.slice(5) : undefined;
     if (name?.startsWith('oauth:')) {
       const oauth = this.config.server.oauth;
@@ -215,14 +226,40 @@ export class Toolsmith {
       } catch {
         /* never matches a configured client */
       }
-      return (
-        oauth?.clients.find((c) => c.clientId === clientId)?.exposure ??
-        oauth?.exposure ??
-        this.config.exposure
-      );
+      const c = oauth?.clients.find((x) => x.clientId === clientId);
+      return {
+        exposure: c?.exposure ?? oauth?.exposure,
+        rateLimit: c?.rateLimit ?? oauth?.rateLimit,
+        oauth: true,
+      };
     }
-    const client = name ? this.config.server.clients.find((c) => c.name === name) : undefined;
-    return client?.exposure ?? this.config.exposure;
+    const c = name ? this.config.server.clients.find((x) => x.name === name) : undefined;
+    return { exposure: c?.exposure, rateLimit: c?.rateLimit, oauth: false };
+  }
+
+  exposureFor(principal?: string): Exposure {
+    return this.clientConfig(principal).exposure ?? this.config.exposure;
+  }
+
+  private readonly clientBuckets = new Map<string, TokenBucket>();
+
+  /**
+   * Spend one call from this client's rate limit. Returns 0 when allowed,
+   * else the milliseconds until the next call would be. Never waits: a
+   * client over its limit is told so at once.
+   */
+  takeClientCall(principal: string): number {
+    const limit = this.clientConfig(principal).rateLimit ?? this.config.server.rateLimit;
+    if (!limit) return 0;
+    let bucket = this.clientBuckets.get(principal);
+    if (!bucket) {
+      bucket = new TokenBucket(limit.requestsPerSecond, limit.burst);
+      this.clientBuckets.set(principal, bucket);
+      // Bounded: principals are authenticated, but OAuth client ids are open-ended.
+      if (this.clientBuckets.size > 10_000)
+        this.clientBuckets.delete(this.clientBuckets.keys().next().value!);
+    }
+    return bucket.tryTake() ? 0 : Math.max(1, bucket.waitMs());
   }
 
   /**

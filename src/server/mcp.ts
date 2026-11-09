@@ -141,6 +141,22 @@ export function createServerFactory(app: Toolsmith, opts: ServerFactoryOptions =
       const { principal, session } = identify(
         envelope?.clientInfo?.name ?? server.getClientVersion()?.name,
       );
+      // Before anything else, approval prompts included: a client over its
+      // limit gets nothing but the limit message.
+      const waitMs = app.takeClientCall(principal);
+      if (waitMs > 0) {
+        return toMcpResult(
+          undefined,
+          {
+            ok: false,
+            errorCode: 'rate_limited',
+            error: `This client's call rate limit is exceeded. Retry in ${Math.ceil(waitMs / 1000)} s.`,
+            upstreamRequests: 0,
+            retries: 0,
+          },
+          false,
+        ) as never;
+      }
       const entry = app.catalog.get(params.name);
       if (entry?.perCallApproval && app.config.approvals.inClient) {
         const envelope = ctx.mcpReq.envelope as
