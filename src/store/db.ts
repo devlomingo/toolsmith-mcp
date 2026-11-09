@@ -211,7 +211,12 @@ export class SqliteDb implements SqlDb {
   }
 
   private locked<T>(fn: () => T): Promise<T> {
-    assertNotInTransaction(this);
+    // Rejected, not thrown, so a caller's .catch() sees it.
+    try {
+      assertNotInTransaction(this);
+    } catch (err) {
+      return Promise.reject(err as Error);
+    }
     return this.lock.run(fn);
   }
 }

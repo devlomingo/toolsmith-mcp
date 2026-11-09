@@ -205,10 +205,11 @@ endpoint:
 
 ## Status
 
-Version 0.1.0:
-- **Tested:** unit, integration, end-to-end over MCP, and security suites.
+Version 0.2.0:
+- **Tested:** unit, integration, end-to-end over MCP, and security suites,
+  on SQLite and on PostgreSQL (with multi-node tests).
 - **Benchmarked:** see above.
-- **Independently validated:** nine rounds by a separate agent; the
+- **Independently validated:** fifteen rounds by a separate agent; the
   reports are in
   [docs/validation](docs/validation).
 
