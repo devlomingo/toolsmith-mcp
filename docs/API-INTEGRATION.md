@@ -133,19 +133,28 @@ against `includeDirs` and each file's folder, like `protoc -I`), or
 `"reflection"` to read the service definitions from the server's
 reflection API (v1, with a v1alpha fallback). Then:
 
-- every **unary** and **server-streaming** method becomes a tool. A
-  streamed reply comes back as `{ "items": [...], "truncated": bool }`, at
-  most `grpc.maxStreamMessages` items (default 100). Client and
-  bidirectional streaming are skipped and listed as findings;
+- every **unary** and **server-streaming** method becomes a tool, filtered
+  by `include` / `exclude` (globs on the tool name, the method name or
+  `/package.Service/Method`). A streamed reply comes back as
+  `{ "items": [...], "truncated": bool }`, with at most
+  `grpc.maxStreamMessages` items (default 100) and 5 MB in total. A stream
+  still open at the timeout (a `Watch…` method) returns what arrived so far,
+  with `truncated: true`. Client and bidirectional streaming are skipped and
+  listed as findings;
 - arguments and results use the **ProtoJSON** mapping: lowerCamelCase field
-  names, 64-bit integers as strings (numbers are accepted), enums by name,
+  names, 64-bit integers as strings (numbers are accepted), enums by name
+  (or number, for values newer than the descriptor),
   `bytes` as base64, `Timestamp` as RFC 3339, `Duration` as `"1.5s"`, maps
-  as objects. The tool schemas say exactly this;
-- **access level**: a method marked `option idempotency_level =
-  NO_SIDE_EFFECTS` is a read. Otherwise the name decides: `Get…`, `List…`,
-  `Search…` and similar are reads, `Delete…`, `Remove…` and similar are
-  destructive, and everything else is a write (reported as a finding, so you
-  can check it before approving);
+  as objects; wrapper results such as `StringValue` come back as the bare
+  value. The tool schemas say exactly this;
+- **access level** errs towards caution. A name containing a delete-type
+  word (`Delete`, `Remove`, `Purge`, `Cancel`, …) is destructive, even if the
+  proto says `NO_SIDE_EFFECTS`. A read needs `option idempotency_level =
+  NO_SIDE_EFFECTS`, or a read verb first (`Get`, `List`, `Search`, `Watch`,
+  …) and no mutating word anywhere (`CheckAndMutateRow`, `FindOrCreate` and
+  `GetAndDelete` are not reads). Everything else is a write. Reads are
+  visible without a grant and are probed during import, so check the list
+  before approving;
 - status codes map to the same tool errors as HTTP (`NOT_FOUND` → not
   found, `UNAUTHENTICATED` → auth, `UNAVAILABLE` → network, …). Only reads
   are retried, and only on `UNAVAILABLE`;

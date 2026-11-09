@@ -152,14 +152,20 @@ export async function evaluateIntegration(
       : `only ${[host, ...cfg.allowedHosts].join(', ')} reachable`,
     severity: 'error',
   });
+  // gRPC: TLS unless turned off (loopback defaults to plaintext).
+  const encrypted =
+    base.protocol === 'grpc:'
+      ? (cfg.grpc?.tls ?? !(host === 'localhost' || host === '127.0.0.1' || host === '::1'))
+      : base.protocol === 'https:';
   checks.push({
     name: 'transport security',
     passed: true,
-    detail:
-      base.protocol === 'https:'
-        ? 'https'
-        : 'plain http: credentials and data are not encrypted in transit',
-    severity: base.protocol === 'https:' ? 'info' : 'warning',
+    detail: encrypted
+      ? base.protocol === 'grpc:'
+        ? 'gRPC over TLS'
+        : 'https'
+      : 'plaintext: credentials and data are not encrypted in transit',
+    severity: encrypted ? 'info' : 'warning',
   });
 
   const refs = authRefs(cfg);
@@ -204,7 +210,7 @@ export async function evaluateIntegration(
 
   if (opts.live && missing.length === 0 && (!privateHost || cfg.allowPrivateNetwork)) {
     const client = integrationClient(cfg, def, redactor);
-    const report = await verifyOperations(def, cfg, client);
+    const report = await verifyOperations(def, cfg, client).finally(() => client.close?.());
     metrics.verifiedOperations = report.verified;
     metrics.probedOperations = report.probed;
     const lat = report.results

@@ -103,6 +103,11 @@ export async function reflectRoot(
       for (const bytes of r.file_descriptor_response?.file_descriptor_proto ?? []) {
         const fd = descriptor.FileDescriptorProto.decode(bytes);
         if (!fd.name || files.has(fd.name)) continue;
+        if (files.size >= MAX_FILES)
+          throw new ToolsmithError(
+            `Reflection returned more than ${MAX_FILES} files`,
+            'validation',
+          );
         files.set(fd.name, bytes);
         deps.push(...(fd.dependency ?? []));
       }

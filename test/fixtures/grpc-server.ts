@@ -94,6 +94,25 @@ export async function startGrpcShop(opts: { reflection?: boolean } = {}) {
       if (!authed(call)) return cb(unauth);
       cb(null, { deleted: true });
     },
+    WatchSlow(call: grpc.ServerWritableStream<{ user_id: string }, unknown>) {
+      if (!authed(call)) return call.destroy(Object.assign(new Error('bad token'), unauth));
+      let i = 0;
+      const t = setInterval(() => {
+        if (call.cancelled) return clearInterval(t);
+        call.write({ id: String(i++), user_id: call.request.user_id, status: 'new' });
+      }, 100);
+      call.on('cancelled', () => clearInterval(t));
+    },
+    StreamBlobs(call: grpc.ServerWritableStream<unknown, unknown>) {
+      if (!authed(call)) return call.destroy(Object.assign(new Error('bad token'), unauth));
+      const blob = Buffer.alloc(3 * 1024 * 1024, 7);
+      for (let i = 0; i < 30 && !call.cancelled; i++) call.write({ data: blob });
+      call.end();
+    },
+    GetNickname(call: grpc.ServerUnaryCall<unknown, unknown>, cb: grpc.sendUnaryData<unknown>) {
+      if (!authed(call)) return cb(unauth);
+      cb(null, { value: 'shopper' });
+    },
     Upload(_call: unknown, cb: grpc.sendUnaryData<unknown>) {
       cb(null, { deleted: false });
     },

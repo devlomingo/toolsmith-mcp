@@ -43,7 +43,11 @@ const WELL_KNOWN: Record<string, JsonSchema> = {
 };
 
 function scalar(type: string): JsonSchema | undefined {
-  if (type === 'double' || type === 'float') return { type: 'number' };
+  if (type === 'double' || type === 'float')
+    // ProtoJSON writes NaN and the infinities as strings.
+    return {
+      anyOf: [{ type: 'number' }, { type: 'string', enum: ['NaN', 'Infinity', '-Infinity'] }],
+    };
   if (INT32.has(type)) return { type: 'integer' };
   if (INT64.has(type))
     return { type: ['string', 'integer'], pattern: '^-?[0-9]+$', description: '64-bit integer' };
@@ -63,7 +67,8 @@ function valueSchema(field: protobuf.Field, depth: number, seen: Set<string>): J
   if (s) return s;
   const resolved = field.resolve().resolvedType;
   if (resolved instanceof protobuf.Enum)
-    return { type: 'string', enum: Object.keys(resolved.values) };
+    // A value added to the enum after the descriptor was read comes back as its number.
+    return { anyOf: [{ type: 'string', enum: Object.keys(resolved.values) }, { type: 'integer' }] };
   if (resolved instanceof protobuf.Type) return messageSchema(resolved, depth + 1, seen);
   return {};
 }

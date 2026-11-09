@@ -3,6 +3,7 @@ syntax = "proto3";
 package demo.shop.v1;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 
 // A small shop, for testing the gRPC importer.
 service ShopService {
@@ -19,6 +20,11 @@ service ShopService {
   rpc PlaceOrder(PlaceOrderRequest) returns (Order);
   rpc DeleteOrder(DeleteOrderRequest) returns (DeleteOrderResponse);
   rpc Upload(stream Chunk) returns (DeleteOrderResponse);
+  // Never ends on its own; one event every 100 ms.
+  rpc WatchSlow(ListOrdersRequest) returns (stream Order);
+  // Large messages.
+  rpc StreamBlobs(ListOrdersRequest) returns (stream Chunk);
+  rpc GetNickname(GetUserRequest) returns (google.protobuf.StringValue);
 }
 
 message GetUserRequest { int64 user_id = 1; }

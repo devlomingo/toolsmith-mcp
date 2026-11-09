@@ -8,6 +8,8 @@ import type { Redactor } from './security/redact.js';
 /** What the gateway, evaluator and verifier need from an integration's executor. */
 export interface IntegrationClient {
   call(op: OperationDef, args: JsonObject, signal?: AbortSignal): Promise<HttpOutcome>;
+  /** Release connections (gRPC channels). */
+  close?(): void;
 }
 
 export function integrationClient(

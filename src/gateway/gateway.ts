@@ -248,8 +248,11 @@ export class Catalog {
     const key = `${cfg.name}|${cfg.baseUrl ?? def.baseUrl}|${types}`;
     let client = this.clients.get(key);
     if (!client) {
-      for (const k of [...this.clients.keys()])
-        if (k.startsWith(`${cfg.name}|`)) this.clients.delete(k);
+      for (const [k, old] of [...this.clients])
+        if (k.startsWith(`${cfg.name}|`)) {
+          old.close?.();
+          this.clients.delete(k);
+        }
       client = integrationClient(cfg, def, this.redactor);
       this.clients.set(key, client);
     }

@@ -27,6 +27,7 @@ export function parseAddress(address: string): { host: string; port: number } {
 }
 
 const MAX_MESSAGE_BYTES = 4 * 1024 * 1024;
+const MAX_STREAM_BYTES = 5 * 1024 * 1024;
 
 /**
  * Opens a channel only to an address that passed the same egress rules as
@@ -187,12 +188,13 @@ export class GrpcIntegrationClient {
         };
       requests++;
       try {
-        const client = await (this.channel ??= openChannel(this.cfg, this.def.grpc!.address).catch(
-          (e) => {
-            this.channel = undefined;
-            throw e;
-          },
-        ));
+        const client = await (this.channel ??= openChannel(
+          this.cfg,
+          this.cfg.grpc?.address ?? this.def.grpc!.address,
+        ).catch((e) => {
+          this.channel = undefined;
+          throw e;
+        }));
         const data = await this.invoke(client, op, payload, resType, signal);
         return {
           ok: true,
@@ -264,10 +266,14 @@ export class GrpcIntegrationClient {
       }
       const max = this.cfg.grpc?.maxStreamMessages ?? 100;
       const items: JsonValue[] = [];
+      let bytes = 0;
       const call = client.makeServerStreamRequest(
         g.path,
         (b: Buffer) => b,
-        decode,
+        (b: Buffer) => {
+          bytes += b.length;
+          return decode(b);
+        },
         payload,
         this.metadata(),
         options,
@@ -275,6 +281,12 @@ export class GrpcIntegrationClient {
       signal?.addEventListener('abort', () => call.cancel(), { once: true });
       let truncated = false;
       call.on('data', (m: JsonValue) => {
+        // Same total cap as an HTTP response body: a stream of large messages
+        // must not grow without bound.
+        if (bytes > MAX_STREAM_BYTES) {
+          truncated = true;
+          return call.cancel();
+        }
         items.push(m);
         if (items.length >= max) {
           truncated = true;
@@ -282,8 +294,10 @@ export class GrpcIntegrationClient {
         }
       });
       call.on('error', (err: grpc.ServiceError) =>
-        truncated && err.code === grpc.status.CANCELLED
-          ? resolve({ items, truncated })
+        (truncated && err.code === grpc.status.CANCELLED) ||
+        // Watch-style streams rarely end: at the deadline, return what came in.
+        err.code === grpc.status.DEADLINE_EXCEEDED
+          ? resolve({ items, truncated: true })
           : reject(err),
       );
       call.on('end', () => resolve({ items, truncated }));
