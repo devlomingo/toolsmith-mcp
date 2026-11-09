@@ -11,16 +11,16 @@
 <rect class="s1" x="20" y="52" width="12" height="12" rx="3"/><text class="leg" x="38" y="62">Throughput</text>
 <line class="grid" x1="280" x2="280" y1="72" y2="194"/><text class="tick" x="280" y="210" text-anchor="middle">0</text><line class="grid" x1="382.5" x2="382.5" y1="72" y2="194"/><text class="tick" x="382.5" y="210" text-anchor="middle">500</text><line class="grid" x1="485" x2="485" y1="72" y2="194"/><text class="tick" x="485" y="210" text-anchor="middle">1000</text><line class="grid" x1="587.5" x2="587.5" y1="72" y2="194"/><text class="tick" x="587.5" y="210" text-anchor="middle">1500</text><line class="grid" x1="690" x2="690" y1="72" y2="194"/><text class="tick" x="690" y="210" text-anchor="middle">2000</text>
 <text class="lbl" x="270" y="89" text-anchor="end">1 client</text>
-<path class="s1" d="M280,78 h18.345000000000027 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-18.345000000000027 z"><title>1 client — Throughput: 109 calls/s</title></path>
-<text class="val" x="308.345" y="89">109</text>
+<path class="s1" d="M280,78 h18.95999999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-18.95999999999998 z"><title>1 client — Throughput: 112 calls/s</title></path>
+<text class="val" x="308.96" y="89">112</text>
 <text class="lbl" x="270" y="117" text-anchor="end">10 clients</text>
-<path class="s1" d="M280,106 h172.505 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-172.505 z"><title>10 clients — Throughput: 861 calls/s</title></path>
-<text class="val" x="462.505" y="117">861</text>
+<path class="s1" d="M280,106 h144.21500000000003 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-144.21500000000003 z"><title>10 clients — Throughput: 723 calls/s</title></path>
+<text class="val" x="434.21500000000003" y="117">723</text>
 <text class="lbl" x="270" y="145" text-anchor="end">50 clients</text>
-<path class="s1" d="M280,134 h349.4200000000001 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-349.4200000000001 z"><title>50 clients — Throughput: 1724 calls/s</title></path>
-<text class="val" x="639.4200000000001" y="145">1724</text>
+<path class="s1" d="M280,134 h312.93000000000006 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-312.93000000000006 z"><title>50 clients — Throughput: 1546 calls/s</title></path>
+<text class="val" x="602.9300000000001" y="145">1546</text>
 <text class="lbl" x="270" y="173" text-anchor="end">100 clients</text>
-<path class="s1" d="M280,162 h389.19000000000005 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-389.19000000000005 z"><title>100 clients — Throughput: 1918 calls/s</title></path>
-<text class="val" x="679.19" y="173">1918</text>
+<path class="s1" d="M280,162 h355.775 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-355.775 z"><title>100 clients — Throughput: 1755 calls/s</title></path>
+<text class="val" x="645.775" y="173">1755</text>
 <text class="tick" x="20" y="210">calls/s</text>
 </svg>

@@ -28,8 +28,11 @@ uses [semantic versioning](https://semver.org/).
   earlier chosen step. An optional linked side call no longer hides the
   workflow around it (benchmark F1 0.72 → 0.92 with side calls in 30% of
   runs). Values are wired from the earliest step in the pattern that holds
-  them. `subsequences: false` restores adjacent-only counting. Mining is
-  about 18% slower (477 ms for 88k traces).
+  them. `subsequences: false` restores adjacent-only counting.
+- **Mining scales linearly with session length.** Bindings are found
+  through a value index instead of a scan of every earlier call. One
+  12,000-call session now mines in 0.14 s and 132 MB; it took minutes
+  before. 88k traces take 418 ms, against 403 ms before gaps were added.
 - `npm run verify:cycle`: the whole release cycle as one command (checks,
   tests, quick benchmarks, the demo lifecycle over HTTP, a packed install,
   the site).

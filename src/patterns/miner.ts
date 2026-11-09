@@ -178,8 +178,14 @@ function startedRun(episode: TraceRecord[]): boolean {
   );
 }
 
+/** Earlier holders of one value examined per argument (earliest first). */
+const MAX_CANDIDATES = 256;
+
 export function bindCalls(episode: TraceRecord[]): EpisodeCall[] {
   const calls: EpisodeCall[] = episode.map((trace) => ({ trace, bindings: new Map() }));
+  // value -> earlier calls holding it, in time order. Built as we go, so each
+  // argument looks only at calls that share its value, not the whole session.
+  const holders = new Map<string, number[]>();
   for (let j = 0; j < calls.length; j++) {
     const cj = calls[j]!;
     for (const [argPath, hash] of Object.entries(cj.trace.argFingerprints)) {
@@ -191,7 +197,9 @@ export function bindCalls(episode: TraceRecord[]): EpisodeCall[] {
       // coincidences, so a name match (orderId <- orders[*].id) outranks
       // an unrelated field, and voting across episodes removes the rest.
       let best: { b: Binding; rank: number } | undefined;
-      for (let i = 0; i < j; i++) {
+      const candidates = holders.get(hash) ?? [];
+      for (let n = 0; n < candidates.length && n < MAX_CANDIDATES; n++) {
+        const i = candidates[n]!;
         const ci = calls[i]!.trace;
         const fromArg = Object.keys(ci.argFingerprints).find((k) => ci.argFingerprints[k] === hash);
         if (fromArg) {
@@ -208,9 +216,16 @@ export function bindCalls(episode: TraceRecord[]): EpisodeCall[] {
           if (!best || rank > best.rank)
             best = { b: { type: 'output', from: i, path, tier: t }, rank };
         }
+        // Candidates come in time order: the first strongest match is final.
+        if (best && best.b.tier === 2) break;
       }
       if (best) cj.bindings.set(argPath, best.b);
     }
+    const own = new Set([
+      ...Object.values(cj.trace.argFingerprints).filter((h) => !isEmptyFingerprint(h)),
+      ...Object.keys(cj.trace.resultFingerprints),
+    ]);
+    for (const h of own) (holders.get(h) ?? holders.set(h, []).get(h)!).push(j);
   }
   return calls;
 }
@@ -220,9 +235,18 @@ function tier(affinity: number): number {
   return affinity >= 3 ? 2 : affinity >= 1 ? 1 : 0;
 }
 
+const segmentCache = new Map<string, string>();
+
 function lastSegment(path: string): string {
-  const seg = path.split(/[.[\]*]+/).filter(Boolean);
-  return (seg[seg.length - 1] ?? '').toLowerCase();
+  let out = segmentCache.get(path);
+  if (out === undefined) {
+    const seg = path.split(/[.[\]*]+/).filter(Boolean);
+    out = (seg[seg.length - 1] ?? '').toLowerCase();
+    // Paths repeat across calls; the cache is bounded so odd traces cannot grow it forever.
+    if (segmentCache.size > 50_000) segmentCache.clear();
+    segmentCache.set(path, out);
+  }
+  return out;
 }
 
 /** orderId <- orders[*].id or order.id or orderId; userId <- user.id, etc. */
@@ -331,36 +355,49 @@ interface EpisodeModel {
   carriers: Array<Map<string, number[]>>;
 }
 
-function valueCarriers(calls: EpisodeCall[]): Array<Map<string, number[]>> {
+/** Nearest earlier holders kept per argument; bounds memory on very long sessions. */
+const MAX_CARRIERS = 8;
+
+function valueCarriers(calls: EpisodeCall[], gaps: boolean): Array<Map<string, number[]>> {
+  // One pass with an index (argument name + value -> calls that took it),
+  // keeping only the nearest few, so memory stays linear in session length.
+  const seen = new Map<string, number[]>();
   return calls.map((c, j) => {
     const out = new Map<string, number[]>();
     for (const [argPath, b] of c.bindings) {
-      const hash = c.trace.argFingerprints[argPath]!;
-      const name = lastSegment(argPath);
       const list = new Set<number>([b.from]);
-      for (let i = 0; i < j; i++)
-        for (const [p, h] of Object.entries(calls[i]!.trace.argFingerprints))
-          if (h === hash && lastSegment(p) === name) list.add(i);
+      if (gaps) {
+        const key = `${lastSegment(argPath)}\u0000${c.trace.argFingerprints[argPath]!}`;
+        for (const i of seen.get(key) ?? []) list.add(i);
+      }
       out.set(
         argPath,
         [...list].sort((x, y) => x - y),
       );
     }
+    if (gaps)
+      for (const [p, h] of Object.entries(c.trace.argFingerprints)) {
+        if (isEmptyFingerprint(h)) continue;
+        const key = `${lastSegment(p)}\u0000${h}`;
+        const holders = seen.get(key) ?? seen.set(key, []).get(key)!;
+        if (holders.at(-1) !== j) holders.push(j);
+        if (holders.length > MAX_CARRIERS) holders.shift();
+      }
     return out;
   });
 }
 
 export function minePatterns(traces: TraceRecord[], opts: MinerOptions): Pattern[] {
   const segmentation = opts.segmentation ?? 'dataflow';
+  const gaps = opts.subsequences ?? segmentation === 'dataflow';
   const episodes: EpisodeModel[] = segmentEpisodes(traces, opts.episodeGapMs)
     .flatMap((ep) => (segmentation === 'dataflow' ? dataflowComponents(ep) : [ep]))
     .map((ep) => (opts.commutativeReads === false ? ep : canonicalizeReads(ep)))
     .map((ep) => {
       const calls = bindCalls(ep);
-      return { calls, ...toElements(calls), carriers: valueCarriers(calls) };
+      return { calls, ...toElements(calls), carriers: valueCarriers(calls, gaps) };
     });
 
-  const gaps = opts.subsequences ?? segmentation === 'dataflow';
   const grams = new Map<string, Occurrence[]>();
   const firstTokenEpisodes = new Map<string, Set<number>>();
   // prefix signature -> next token -> episodes (the weighted edges of AWO's state graph)

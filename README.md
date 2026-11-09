@@ -149,11 +149,14 @@ and 10 seeds each:
 
 - **Mean F1 is 0.97**, against 0.75 for the first version of the miner.
 - **It is perfect** on clean data, noise between steps, abandoned runs,
-  agents sharing a session, reordered reads and colliding tiny ids.
+  agents sharing a session, reordered reads and colliding ids 1..10 (ids
+  1..50: F1 0.99).
 - **Optional side calls** (a lookup on the same `userId` between steps)
   no longer hide a workflow: F1 0.92 with them in 30% of runs and 0.89 at
-  60%, against 0.72 and 0.76 when only adjacent steps are counted. The
-  remaining misses are mostly patterns that keep a frequent side call.
+  60%, against 0.59 and 0.61 when only adjacent steps are counted. The
+  remaining misses are mostly patterns that keep a frequent side call; such
+  a pattern can call the side tool with an argument mix that no single run
+  used, which evaluation and review should catch.
 - **It is weakest** on rare workflows (10% of sessions: recall 0.83).
 
 **Not measured:** LLM requests and tokens. No claim is made about them.

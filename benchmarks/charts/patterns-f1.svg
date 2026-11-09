@@ -87,8 +87,8 @@
 <text class="val" x="696" y="751">1.00</text>
 <path class="s2" d="M280,756 h295.29999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-295.29999999999995 z"><title>colliding small ids (1..10) — Without AWO rules: 0.73 F1</title></path>
 <text class="val" x="585.3" y="767">0.73</text>
-<path class="s3" d="M280,772 h315.79999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-315.79999999999995 z"><title>colliding small ids (1..10) — no gaps (contiguous within components): 0.78 F1</title></path>
-<text class="val" x="605.8" y="783">0.78</text>
+<path class="s3" d="M280,772 h328.1 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-328.1 z"><title>colliding small ids (1..10) — no gaps (contiguous within components): 0.81 F1</title></path>
+<text class="val" x="618.1" y="783">0.81</text>
 <path class="s4" d="M280,788 h319.9000000000001 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-319.9000000000001 z"><title>colliding small ids (1..10) — v0: contiguous order: 0.79 F1</title></path>
 <text class="val" x="609.9000000000001" y="799">0.79</text>
 <text class="lbl" x="270" y="851" text-anchor="end">two agents share a session key 30%</text>
@@ -114,27 +114,27 @@
 <text class="val" x="663.2" y="979">0.92</text>
 <path class="s2" d="M280,984 h192.79999999999995 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-192.79999999999995 z"><title>optional linked side calls 30% — Without AWO rules: 0.48 F1</title></path>
 <text class="val" x="482.79999999999995" y="995">0.48</text>
-<path class="s3" d="M280,1000 h291.20000000000005 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-291.20000000000005 z"><title>optional linked side calls 30% — no gaps (contiguous within components): 0.72 F1</title></path>
-<text class="val" x="581.2" y="1011">0.72</text>
-<path class="s4" d="M280,1016 h135.39999999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-135.39999999999998 z"><title>optional linked side calls 30% — v0: contiguous order: 0.34 F1</title></path>
-<text class="val" x="425.4" y="1027">0.34</text>
+<path class="s3" d="M280,1000 h237.89999999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-237.89999999999998 z"><title>optional linked side calls 30% — no gaps (contiguous within components): 0.59 F1</title></path>
+<text class="val" x="527.9" y="1011">0.59</text>
+<path class="s4" d="M280,1016 h143.60000000000002 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-143.60000000000002 z"><title>optional linked side calls 30% — v0: contiguous order: 0.36 F1</title></path>
+<text class="val" x="433.6" y="1027">0.36</text>
 <text class="lbl" x="270" y="1079" text-anchor="end">optional linked side calls 60%</text>
 <path class="s1" d="M280,1044 h360.9 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-360.9 z"><title>optional linked side calls 60% — Shipped miner: 0.89 F1</title></path>
 <text class="val" x="650.9" y="1055">0.89</text>
 <path class="s2" d="M280,1060 h114.89999999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-114.89999999999998 z"><title>optional linked side calls 60% — Without AWO rules: 0.29 F1</title></path>
 <text class="val" x="404.9" y="1071">0.29</text>
-<path class="s3" d="M280,1076 h307.6 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-307.6 z"><title>optional linked side calls 60% — no gaps (contiguous within components): 0.76 F1</title></path>
-<text class="val" x="597.6" y="1087">0.76</text>
-<path class="s4" d="M280,1092 h73.89999999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-73.89999999999998 z"><title>optional linked side calls 60% — v0: contiguous order: 0.19 F1</title></path>
-<text class="val" x="363.9" y="1103">0.19</text>
+<path class="s3" d="M280,1076 h246.10000000000002 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-246.10000000000002 z"><title>optional linked side calls 60% — no gaps (contiguous within components): 0.61 F1</title></path>
+<text class="val" x="536.1" y="1087">0.61</text>
+<path class="s4" d="M280,1092 h82.10000000000002 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-82.10000000000002 z"><title>optional linked side calls 60% — v0: contiguous order: 0.21 F1</title></path>
+<text class="val" x="372.1" y="1103">0.21</text>
 <text class="lbl" x="270" y="1155" text-anchor="end">all of the above (moderate)</text>
 <path class="s1" d="M280,1120 h369.1 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-369.1 z"><title>all of the above (moderate) — Shipped miner: 0.91 F1</title></path>
 <text class="val" x="659.1" y="1131">0.91</text>
 <path class="s2" d="M280,1136 h266.6 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-266.6 z"><title>all of the above (moderate) — Without AWO rules: 0.66 F1</title></path>
 <text class="val" x="556.6" y="1147">0.66</text>
-<path class="s3" d="M280,1152 h307.6 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-307.6 z"><title>all of the above (moderate) — no gaps (contiguous within components): 0.76 F1</title></path>
-<text class="val" x="597.6" y="1163">0.76</text>
-<path class="s4" d="M280,1168 h196.89999999999998 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-196.89999999999998 z"><title>all of the above (moderate) — v0: contiguous order: 0.49 F1</title></path>
-<text class="val" x="486.9" y="1179">0.49</text>
+<path class="s3" d="M280,1152 h287.0999999999999 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-287.0999999999999 z"><title>all of the above (moderate) — no gaps (contiguous within components): 0.71 F1</title></path>
+<text class="val" x="577.0999999999999" y="1163">0.71</text>
+<path class="s4" d="M280,1168 h201 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-201 z"><title>all of the above (moderate) — v0: contiguous order: 0.50 F1</title></path>
+<text class="val" x="491" y="1179">0.50</text>
 <text class="tick" x="20" y="1216">F1</text>
 </svg>

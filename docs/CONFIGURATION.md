@@ -58,7 +58,7 @@ from or wherever `--config <path>` points.
 | `mcpToken` | none | Bearer token that MCP clients must send. It identifies the client named `default`. Serving MCP over HTTP requires at least one client token, even on loopback. |
 | `adminToken` | none | Bearer token for the dashboard and admin API. Required to run `start`. |
 | `clients` | `[]` | Extra MCP clients, each `{ "name": "agent-a", "token": "${env:AGENT_A_TOKEN}" }`. The token identifies the client, and per-call approvals are bound to it. Give each agent its own. |
-| `rateLimit` | off | Per-client call limit, `{ "requestsPerSecond": 5, "burst": 20 }`, for every client without its own (`clients[].rateLimit`, `oauth.clients[].rateLimit`, `oauth.rateLimit`). Each `tools/call` counts once, so a composite costs one call however many steps it runs. Over the limit, the call fails at once with `rate_limited` and a retry hint; it never reaches the API. |
+| `rateLimit` | off | Per-client call limit, `{ "requestsPerSecond": 5, "burst": 20 }`, for every client without its own (`clients[].rateLimit`, `oauth.clients[].rateLimit`, `oauth.rateLimit`). Each `tools/call` counts once, so a composite costs one call however many steps it runs. Over the limit, the call fails at once with `rate_limited` and a retry hint; it never reaches the API. The limit applies per principal: for OAuth that is per user of a client app, so an app with many users gets the limit once per user. An in-client approval prompt and its answer count as two calls. |
 | `oauth` | none | Accept OAuth 2.1 access tokens (JWTs) from your authorization server, as the MCP authorization spec describes. See below. Static tokens keep working alongside it. |
 
 #### `server.oauth`
@@ -85,7 +85,7 @@ from or wherever `--config <path>` points.
 | `algorithms` | `RS256`, `ES256`, `EdDSA` | Accepted signature algorithms. Only asymmetric ones can be configured; `none` and HMAC are always refused. |
 | `exposure` | top-level `exposure` | Tool exposure for OAuth clients. |
 | `rateLimit` | `server.rateLimit` | Per-client call limit for OAuth clients. |
-| `clients` | `[]` | Per-client `exposure` and `rateLimit`, keyed by the token's client id: the full `client_id` claim, else `azp`. The `sub` claim never selects a client. |
+| `clients` | `[]` | Per-client `exposure` and `rateLimit`, keyed by the token's client id: the full `client_id` claim, else `azp`. The `sub` claim never selects a client. Issuers that name the client in another claim (Okta `cid`, Azure v1 `appid`) are not matched, so set `oauth.exposure` to the narrowest allow-list and widen it per client, not the other way round. |
 
 The gateway serves RFC 9728 protected-resource metadata at
 `/.well-known/oauth-protected-resource/mcp`, and every 401 carries a

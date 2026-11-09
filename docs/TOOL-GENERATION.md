@@ -78,6 +78,10 @@ It is a declarative plan. Nothing generated is ever run as code:
   as an input; none is silently dropped. Empty values (`""`, `null`, `[]`,
   `{}`) count too: they become inputs, so a write that cleared a field
   keeps clearing it. Empty values never link one call to another.
+- **Limitation: optional side calls kept in a pattern.** When a side call
+  happens often enough to stay in a mined workflow, its arguments are
+  voted on across runs, so the composite may pass it a mix of values that
+  no single run used together. Review the plan before approving.
 - **Limitation: sensitive-named inputs.** Example inputs for automatic
   evaluation are read back from recorded traces, and arguments with
   sensitive names (`password`, `token`, `secret`, …) are redacted there.
