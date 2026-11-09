@@ -90,6 +90,10 @@ export async function evaluateIntegration(
     }),
     ...def.operations.flatMap((op) =>
       [
+        // Scanned here too, not only through importer findings: a new
+        // importer that forgets to report must not slip text past review.
+        op.summary,
+        op.description,
         op.path,
         safeDecode(op.path),
         op.name,
