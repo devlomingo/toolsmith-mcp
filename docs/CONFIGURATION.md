@@ -142,6 +142,31 @@ review step. Destructive calls are still checked:
 | `approval` | `destructive` | Tools whose MCP annotations mark them destructive need a human per call. Under the MCP spec a tool **without annotations counts as destructive**. `none` trusts the server completely. |
 | `trustedTools` | `[]` | Tool names (as the server names them) exempt from per-call approval. |
 
+### `database` (several gateway nodes)
+
+```json
+"database": { "url": "${env:DATABASE_URL}", "poolSize": 10 }
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `url` | none | A `postgres://` URL. When set, PostgreSQL replaces the SQLite file in `dataDir`. Put it in the environment, and add `?sslmode=require` (or stricter) for a remote server. |
+| `poolSize` | `10` | Connections per gateway node. |
+
+With PostgreSQL, every node shares the registry, traces, approvals and audit
+log: a tool published through one node's dashboard is served by all of them
+within about 1.5 s, traffic through every node feeds workflow discovery, and
+a per-call approval is spent exactly once, whichever nodes the retries land
+on. The schema is created on first start (nodes starting together take
+turns). Some state stays in each node's memory:
+
+- **Rate limits** (`server.rateLimit` and the per-client limits) count per
+  node, so N nodes allow up to N times the configured rate.
+- **In-client approval prompts.** An answer that reaches a different node
+  than the one that asked falls back to the dashboard approval flow. Use
+  sticky sessions if you rely on in-client approvals.
+- The OAuth key cache and gRPC channels, which need no coordination.
+
 ### `traces`
 
 | Field | Default | Meaning |

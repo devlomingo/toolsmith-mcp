@@ -213,5 +213,5 @@ Version 0.1.0:
   [docs/validation](docs/validation).
 
 It is **not** yet hardened by production use. It runs on a single host
-with SQLite storage. The [roadmap](docs/ROADMAP.md) lists what isn't built
-yet, PostgreSQL storage first.
+with SQLite storage, or as several nodes sharing one PostgreSQL database.
+The [roadmap](docs/ROADMAP.md) lists what isn't built yet.

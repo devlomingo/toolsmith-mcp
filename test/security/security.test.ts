@@ -153,9 +153,9 @@ describe('secrets never reach the agent or the traces', () => {
       audit: await h.app.audit.list(),
     });
     expect(everything).not.toContain(SHOP_TOKEN);
-    const dump = await h.app.db.get(
-      "SELECT group_concat(args, '') AS a, group_concat(error, '') AS e FROM traces",
-    );
+    // Every stored row, as raw columns (portable across SQLite and PostgreSQL).
+    const dump = await h.app.db.all('SELECT * FROM traces');
+    expect(dump.length).toBeGreaterThan(0);
     expect(JSON.stringify(dump)).not.toContain(SHOP_TOKEN);
   });
 

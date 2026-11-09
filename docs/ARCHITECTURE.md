@@ -169,7 +169,14 @@ stateDiagram-v2
 
 ## Storage
 
-One SQLite database in `<dataDir>/toolsmith.db`:
+One SQLite database in `<dataDir>/toolsmith.db`, or a PostgreSQL database
+shared by several gateway nodes (`database.url`). Every component talks to
+a small async interface (`SqlDb`: `all`, `get`, `run`, `transaction`) with
+one portable SQL text. SQLite serialises statements behind a lock so a
+transaction never absorbs another caller's statements. PostgreSQL runs
+transactions `SERIALIZABLE`, retried on conflicts, so check-then-write steps
+(the next version number, spending an approval) stay correct when nodes
+race. Tables:
 
 | Table | Holds |
 |---|---|
@@ -186,9 +193,8 @@ One SQLite database in `<dataDir>/toolsmith.db`:
 - **A new tool source** (for example GraphQL) implements
   `ToolExecutor`-style execution, publishes descriptors through the
   registry, and plugs into `Catalog.rebuild`.
-- **A different store** (for example PostgreSQL) reimplements the four
-  storage classes. Their interfaces are small and synchronous today; a
-  networked store would make them async.
+- **A different store** implements `SqlDb` (see `src/store/postgres.ts`)
+  and its own migrations.
 - **An optional LLM stage** (extraction from free-text docs, or richer
   capability matching) would sit in front of `importOpenApi` or
   `DiscoveryEngine.analyze`. Its output goes through the same evaluation

@@ -40,6 +40,31 @@ jobs:
           test -f toolsmith.config.json && test -f .env
           node "$GITHUB_WORKSPACE/dist/cli/index.js" doctor || true
 
+  postgres:
+    name: Full test suite on PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: toolsmith
+          POSTGRES_DB: toolsmith
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s
+          --health-retries 20
+    env:
+      TOOLSMITH_TEST_DATABASE_URL: postgres://postgres:toolsmith@localhost:5432/toolsmith
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
   security:
     name: Dependency audit
     runs-on: ubuntu-latest

@@ -39,6 +39,14 @@ uses [semantic versioning](https://semver.org/).
   the method name. TLS is on by default; the address follows the same
   egress rules as HTTP, auth goes in metadata, secrets are scrubbed from
   replies, and only reads are retried.
+- **PostgreSQL storage** (`database.url`) so several gateway nodes share
+  one registry, trace store, approval queue and audit log. All storage is
+  now async behind one small interface. SQLite keeps statements from
+  joining another caller's transaction; PostgreSQL transactions run
+  SERIALIZABLE with retries, so a per-call approval is spent exactly once
+  across nodes. The whole test suite runs against both databases in CI,
+  plus multi-node tests: concurrent start-up, publishing across nodes,
+  approval races and concurrent versioning.
 - `npm run verify:cycle`: the whole release cycle as one command (checks,
   tests, quick benchmarks, the demo lifecycle over HTTP, a packed install,
   the site).

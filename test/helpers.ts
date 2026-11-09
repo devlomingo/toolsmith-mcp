@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { Toolsmith } from '../src/app.js';
 import { parseConfig } from '../src/config/config.js';
@@ -42,7 +43,9 @@ export async function makeHarness(
     },
     process.cwd(),
   );
-  const app = await Toolsmith.open(loaded, { dbPath: ':memory:' });
+  const pg = await testDatabase();
+  if (pg) loaded.config.database = { url: pg.url, poolSize: 4 };
+  const app = await Toolsmith.open(loaded, pg ? {} : { dbPath: ':memory:' });
   if (opts.importNow !== false) await app.importIntegration('shop', 'human:test');
   return {
     shop,
@@ -50,6 +53,7 @@ export async function makeHarness(
     close: async () => {
       await app.close();
       await shop.stop();
+      await pg?.drop();
     },
   };
 }
@@ -88,3 +92,31 @@ export async function startGateway(app: Toolsmith) {
 }
 
 export { shopOpenApi };
+
+/**
+ * With TOOLSMITH_TEST_DATABASE_URL set (a postgres:// URL), every harness
+ * gets its own fresh schema on that server, so the suite runs on PostgreSQL.
+ */
+export async function testDatabase(): Promise<
+  { url: string; drop: () => Promise<void> } | undefined
+> {
+  const base = process.env.TOOLSMITH_TEST_DATABASE_URL;
+  if (!base) return undefined;
+  const { default: pg } = await import('pg');
+  const schema = `t_${randomUUID().replace(/-/g, '')}`;
+  const admin = new pg.Client({ connectionString: base });
+  await admin.connect();
+  await admin.query(`CREATE SCHEMA ${schema}`);
+  await admin.end();
+  const url = new URL(base);
+  url.searchParams.set('options', `-c search_path=${schema}`);
+  return {
+    url: url.toString(),
+    drop: async () => {
+      const c = new pg.Client({ connectionString: base });
+      await c.connect();
+      await c.query(`DROP SCHEMA ${schema} CASCADE`);
+      await c.end();
+    },
+  };
+}

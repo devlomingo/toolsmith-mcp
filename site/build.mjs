@@ -363,7 +363,7 @@ toolsmith-mcp client-config</pre>
 
 <section id="roadmap"><div class="wrap grid g2">
 <div><div class="eyebrow">Roadmap</div><h2>What's next</h2><p class="sub">Not built yet; tracked in the <a href="${doc('docs/ROADMAP.md')}">roadmap</a>.</p></div>
-<ul class="roadmap"><li>PostgreSQL storage for multi-node deployments</li><li>Optional calls inside loop bodies</li></ul>
+<ul class="roadmap"><li>Shared rate limits across gateway nodes</li><li>Optional calls inside loop bodies</li></ul>
 </div></section>
 
 <section id="community"><div class="wrap">
