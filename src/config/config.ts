@@ -30,8 +30,25 @@ export type AuthConfig = z.infer<typeof AuthSchema>;
 
 export const IntegrationSchema = z.object({
   name: namespace,
-  /** "graphql": `spec` is the GraphQL endpoint URL (introspected) or a saved introspection JSON file. */
-  type: z.enum(['openapi', 'graphql', 'docs']).default('openapi'),
+  /**
+   * "graphql": `spec` is the GraphQL endpoint URL (introspected) or a saved introspection JSON file.
+   * "grpc": `spec` is a .proto file (comma-separate several) or "reflection"; set `grpc.address`.
+   */
+  type: z.enum(['openapi', 'graphql', 'docs', 'grpc']).default('openapi'),
+  grpc: z
+    .object({
+      /** host:port of the gRPC server. */
+      address: z.string(),
+      /** TLS on by default; plaintext only when set to false (or on loopback by default). */
+      tls: z.boolean().optional(),
+      /** Import paths for .proto files (like protoc -I). */
+      includeDirs: z.array(z.string()).default([]),
+      /** Only these fully-qualified services (default: all). */
+      services: z.array(z.string()).default([]),
+      /** Server-streaming calls return at most this many messages. */
+      maxStreamMessages: z.number().int().min(1).max(10_000).default(100),
+    })
+    .optional(),
   /** Path or http(s) URL of an OpenAPI 3.x / Swagger 2.0 document (JSON or YAML). */
   spec: z.string(),
   /** Overrides the spec's servers[0].url. Required when the spec has none. */

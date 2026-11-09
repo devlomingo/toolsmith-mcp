@@ -114,7 +114,8 @@ from flooding the issuer. If the JWKS cannot be fetched, clients get a
 | Field | Default | Meaning |
 |---|---|---|
 | `name` | required | Namespace: lowercase letters, digits and `-`. Tools are named `<name>__<operation>`. |
-| `type` | `openapi` | `openapi` (OpenAPI, Swagger, Postman collection or endpoint list, detected automatically), `graphql` (`spec` is the endpoint URL, or a saved introspection JSON with `baseUrl` set), or `docs` (free-text documentation; needs the optional LLM stage). |
+| `type` | `openapi` | `openapi` (OpenAPI, Swagger, Postman collection or endpoint list, detected automatically), `graphql` (`spec` is the endpoint URL, or a saved introspection JSON with `baseUrl` set), `docs` (free-text documentation; needs the optional LLM stage), or `grpc` (`spec` is `.proto` file(s) or `reflection`; set `grpc.address`, see [gRPC](API-INTEGRATION.md#from-a-grpc-service)). |
+| `grpc` | none | For `type: grpc`: `{ "address": "host:port", "tls": true, "includeDirs": [], "services": [], "maxStreamMessages": 100 }`. `services` limits the import to these fully-qualified services. |
 | `spec` | required | Path or URL of an OpenAPI 3.x / Swagger 2.0 document (JSON or YAML), or a `.txt` / `.endpoints` endpoint list. |
 | `baseUrl` | the spec's first server | Required when the spec has none. Toolsmith never guesses it. |
 | `auth` | `{ "type": "none" }` | `bearer` (`token`), `apiKey` (`in`: `header`/`query`, `name`, `value`), `basic` (`username`, `password`), or `oauth2ClientCredentials` (`tokenUrl`, `clientId`, `clientSecret`, optional `scope`, `audience`). |

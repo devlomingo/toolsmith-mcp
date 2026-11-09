@@ -3,7 +3,7 @@ import { errorMessage } from '../core/errors.js';
 import type { JsonObject, JsonValue } from '../core/types.js';
 import { validateAgainst } from '../gateway/validation.js';
 import { resolvePath } from '../composite/refs.js';
-import type { HttpIntegrationClient } from './http-executor.js';
+import type { IntegrationClient } from '../integration-client.js';
 import type { OpenApiIntegrationDef, OperationDef } from './types.js';
 
 /**
@@ -82,7 +82,7 @@ export function looksLikeError(data: JsonValue | undefined): string | undefined 
 export async function verifyOperations(
   def: OpenApiIntegrationDef,
   cfg: IntegrationConfig,
-  client: HttpIntegrationClient,
+  client: IntegrationClient,
   maxProbes = 25,
 ): Promise<VerificationReport> {
   const byName = new Map(def.operations.map((o) => [o.name, o]));

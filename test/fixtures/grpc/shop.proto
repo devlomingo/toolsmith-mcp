@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package demo.shop.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// A small shop, for testing the gRPC importer.
+service ShopService {
+  // Look up one customer by id.
+  rpc GetUser(GetUserRequest) returns (User);
+  // A customer's orders, newest first.
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  // The line items of one order.
+  rpc GetOrderItems(GetOrderItemsRequest) returns (GetOrderItemsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // Every order event, streamed.
+  rpc WatchOrders(ListOrdersRequest) returns (stream Order);
+  rpc PlaceOrder(PlaceOrderRequest) returns (Order);
+  rpc DeleteOrder(DeleteOrderRequest) returns (DeleteOrderResponse);
+  rpc Upload(stream Chunk) returns (DeleteOrderResponse);
+}
+
+message GetUserRequest { int64 user_id = 1; }
+message User {
+  int64 id = 1;
+  string name = 2;
+  Tier tier = 3;
+  google.protobuf.Timestamp created_at = 4;
+  map<string, string> labels = 5;
+}
+enum Tier { TIER_UNSPECIFIED = 0; TIER_GOLD = 1; TIER_SILVER = 2; }
+message ListOrdersRequest { int64 user_id = 1; }
+message Order { int64 id = 1; int64 user_id = 2; string status = 3; }
+message ListOrdersResponse { repeated Order orders = 1; }
+message GetOrderItemsRequest { int64 order_id = 1; }
+message Item { string sku = 1; int32 quantity = 2; }
+message GetOrderItemsResponse { repeated Item items = 1; }
+message PlaceOrderRequest { int64 user_id = 1; repeated Item items = 2; }
+message DeleteOrderRequest { int64 order_id = 1; }
+message DeleteOrderResponse { bool deleted = 1; }
+message Chunk { bytes data = 1; }

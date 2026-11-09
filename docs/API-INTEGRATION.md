@@ -116,6 +116,49 @@ everything else, or reads a saved introspection JSON, then:
   document;
 - GraphQL `errors` come back as readable tool errors.
 
+## From a gRPC service
+
+```json
+{
+  "name": "orders",
+  "type": "grpc",
+  "spec": "protos/orders.proto",
+  "grpc": { "address": "orders.internal.example.com:443", "includeDirs": ["protos"] },
+  "auth": { "type": "bearer", "token": "${env:ORDERS_TOKEN}" }
+}
+```
+
+`spec` is one or more `.proto` files (comma-separated; imports resolve
+against `includeDirs` and each file's folder, like `protoc -I`), or
+`"reflection"` to read the service definitions from the server's
+reflection API (v1, with a v1alpha fallback). Then:
+
+- every **unary** and **server-streaming** method becomes a tool. A
+  streamed reply comes back as `{ "items": [...], "truncated": bool }`, at
+  most `grpc.maxStreamMessages` items (default 100). Client and
+  bidirectional streaming are skipped and listed as findings;
+- arguments and results use the **ProtoJSON** mapping: lowerCamelCase field
+  names, 64-bit integers as strings (numbers are accepted), enums by name,
+  `bytes` as base64, `Timestamp` as RFC 3339, `Duration` as `"1.5s"`, maps
+  as objects. The tool schemas say exactly this;
+- **access level**: a method marked `option idempotency_level =
+  NO_SIDE_EFFECTS` is a read. Otherwise the name decides: `Get…`, `List…`,
+  `Search…` and similar are reads, `Delete…`, `Remove…` and similar are
+  destructive, and everything else is a write (reported as a finding, so you
+  can check it before approving);
+- status codes map to the same tool errors as HTTP (`NOT_FOUND` → not
+  found, `UNAUTHENTICATED` → auth, `UNAVAILABLE` → network, …). Only reads
+  are retried, and only on `UNAVAILABLE`;
+- **TLS is on** by default; `"tls": false` is allowed, but never with
+  credentials to a host other than loopback. Auth is sent as metadata
+  (`bearer`, `basic`, or a header `apiKey`). The address goes through the
+  same egress rules as HTTP: it is resolved once, private addresses need
+  `allowPrivateNetwork`, and the channel connects to the checked address
+  while TLS still verifies the certificate for the host name;
+- live verification probes read methods with an empty request. Proto3 has
+  no required fields, so methods that need an id usually report
+  `http_error` there. That is a warning, not a failure.
+
 ## From free-text documentation (optional LLM stage)
 
 With `"llm": { "enabled": true }` and an integration of `"type": "docs"`,

@@ -336,7 +336,7 @@ toolsmith-mcp client-config</pre>
 <div class="card"><h3>Lifecycle &amp; rollback</h3><p>Versioned integrations and composites, human-only approval, disable, enable, rollback, audit log.</p></div>
 <div class="card"><h3>Usage tracking</h3><p>Calls, round-trips saved, and how often agents still do the workflow by hand. Unused tools are flagged.</p></div>
 <div class="card"><h3>Dashboard</h3><p>No build step. Approvals, traces, workflows, benchmarks. English and Arabic, with right-to-left layout.</p></div>
-<div class="card"><h3>More sources</h3><p>OpenAPI, Swagger, Postman collections, GraphQL introspection, plain endpoint lists, and (optionally, via an LLM) free-text docs.</p></div>
+<div class="card"><h3>More sources</h3><p>OpenAPI, Swagger, Postman collections, GraphQL introspection, gRPC (.proto or server reflection), plain endpoint lists, and (optionally, via an LLM) free-text docs.</p></div>
 <div class="card"><h3>Large catalogs</h3><p>Per-client allow-lists enforced on every call, a search listing mode, and a tool-search meta tool.</p></div>
 <div class="card"><h3>Transforms &amp; constants</h3><p>Composites can filter, sort and pick ("the latest order") with a fixed vocabulary, and bake in arguments that never change.</p></div>
 <div class="card"><h3>OAuth &amp; telemetry</h3><p>OAuth 2.0 client credentials for APIs; OpenTelemetry span export; opt-in in-client approval via MCP elicitation.</p></div>
@@ -363,7 +363,7 @@ toolsmith-mcp client-config</pre>
 
 <section id="roadmap"><div class="wrap grid g2">
 <div><div class="eyebrow">Roadmap</div><h2>What's next</h2><p class="sub">Not built yet; tracked in the <a href="${doc('docs/ROADMAP.md')}">roadmap</a>.</p></div>
-<ul class="roadmap"><li>PostgreSQL storage for multi-node deployments</li><li>gRPC sources</li><li>Optional calls inside loop bodies</li></ul>
+<ul class="roadmap"><li>PostgreSQL storage for multi-node deployments</li><li>Optional calls inside loop bodies</li></ul>
 </div></section>
 
 <section id="community"><div class="wrap">

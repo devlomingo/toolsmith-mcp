@@ -17,7 +17,7 @@ import {
   type ToolCallResult,
 } from '../core/types.js';
 import { toolName } from '../core/naming.js';
-import { HttpIntegrationClient } from '../openapi/http-executor.js';
+import { integrationClient } from '../integration-client.js';
 import { verifyOperations } from '../openapi/verify.js';
 import type { OpenApiIntegrationDef } from '../openapi/types.js';
 import type { Evaluation } from '../registry/registry.js';
@@ -203,7 +203,7 @@ export async function evaluateIntegration(
   }
 
   if (opts.live && missing.length === 0 && (!privateHost || cfg.allowPrivateNetwork)) {
-    const client = new HttpIntegrationClient(cfg, cfg.baseUrl ?? def.baseUrl, redactor);
+    const client = integrationClient(cfg, def, redactor);
     const report = await verifyOperations(def, cfg, client);
     metrics.verifiedOperations = report.verified;
     metrics.probedOperations = report.probed;

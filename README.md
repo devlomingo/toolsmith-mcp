@@ -32,7 +32,7 @@ leaves the gateway and dashboard running for you to explore.
 
 | | |
 |---|---|
-| **API → tools** | Import OpenAPI 3.x / Swagger 2.0 (file or URL, JSON or YAML), a Postman collection, a GraphQL endpoint (introspection), a plain `METHOD /path` list, or, with the optional LLM stage, free-text docs. Each operation becomes a typed MCP tool with input and output schemas, auth, timeouts, rate limits and retries for safe reads. Missing information is reported, never invented. |
+| **API → tools** | Import OpenAPI 3.x / Swagger 2.0 (file or URL, JSON or YAML), a Postman collection, a GraphQL endpoint (introspection), a gRPC service (`.proto` files or server reflection), a plain `METHOD /path` list, or, with the optional LLM stage, free-text docs. Each operation becomes a typed MCP tool with input and output schemas, auth, timeouts, rate limits and retries for safe reads. Missing information is reported, never invented. |
 | **Live verification** | Every read operation is called before review. Parameter values come from spec examples, or from another endpoint that returns them (`orderId ← listOrders[*].id`). Results are classified (`verified`, `wrong_parameter_value`, `schema_mismatch`, …). Writes are never called. Inspired by [ToolFactory](docs/PAPERS.md#toolfactory). |
 | **One endpoint for every MCP server** | Upstream MCP servers (stdio or HTTP, either protocol era) are re-exposed under a prefix, with the same tracing. |
 | **Workflow discovery** | Traces store keyed hashes of values, not payloads. Repeated sequences are linked by data flow and loops are detected. The AWO majority rule and commutative reads are applied ([AWO](docs/PAPERS.md#awo-optimizing-agentic-workflows-using-meta-tools)). |
@@ -214,5 +214,4 @@ Version 0.1.0:
 
 It is **not** yet hardened by production use. It runs on a single host
 with SQLite storage. The [roadmap](docs/ROADMAP.md) lists what isn't built
-yet: PostgreSQL storage and gRPC
-sources.
+yet, PostgreSQL storage first.

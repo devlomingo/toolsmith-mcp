@@ -46,6 +46,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
     "@apidevtools/swagger-parser": "^13.0.0",
+    "@grpc/grpc-js": "1.14.6",
     "@modelcontextprotocol/client": "^2.4.0",
     "@modelcontextprotocol/node": "^2.1.2",
     "@modelcontextprotocol/server": "^2.4.0",
@@ -53,10 +54,13 @@
     "ajv-formats": "^3.0.1",
     "jose": "^6.2.15",
     "js-yaml": "^5.5.0",
+    "protobufjs": "^8.8.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@grpc/proto-loader": "^0.8.1",
+    "@grpc/reflection": "^1.0.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^26.6.6",
     "eslint": "^10.14.0",

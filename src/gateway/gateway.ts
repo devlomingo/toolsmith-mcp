@@ -13,7 +13,8 @@ import {
   type ToolCallResult,
   type ToolDefinition,
 } from '../core/types.js';
-import { HttpIntegrationClient } from '../openapi/http-executor.js';
+import { createHash } from 'node:crypto';
+import { integrationClient, type IntegrationClient } from '../integration-client.js';
 import type { OpenApiIntegrationDef, OperationDef } from '../openapi/types.js';
 import { describeParamSources } from '../openapi/verify.js';
 import type { UsageObserver } from '../observer/observer.js';
@@ -60,7 +61,7 @@ export interface CatalogProblem {
  */
 export class Catalog {
   private entries = new Map<string, CatalogEntry>();
-  private clients = new Map<string, HttpIntegrationClient>();
+  private clients = new Map<string, IntegrationClient>();
   problems: CatalogProblem[] = [];
 
   constructor(
@@ -129,7 +130,7 @@ export class Catalog {
           continue;
         }
         try {
-          this.ensureClient(cfg, def.baseUrl);
+          this.ensureClient(cfg, def);
         } catch (err) {
           problems.push({ artifact: artifact.name, problem: errorMessage(err) });
           continue;
@@ -239,17 +240,23 @@ export class Catalog {
     this.problems = problems;
   }
 
-  private ensureClient(cfg: IntegrationConfig, baseUrl: string): HttpIntegrationClient {
-    const key = `${cfg.name}|${cfg.baseUrl ?? baseUrl}`;
+  private ensureClient(cfg: IntegrationConfig, def: OpenApiIntegrationDef): IntegrationClient {
+    // A gRPC client holds the message types, so a new version gets a new client.
+    const types = def.grpc
+      ? createHash('sha256').update(JSON.stringify(def.grpc)).digest('hex').slice(0, 16)
+      : '';
+    const key = `${cfg.name}|${cfg.baseUrl ?? def.baseUrl}|${types}`;
     let client = this.clients.get(key);
     if (!client) {
-      client = new HttpIntegrationClient(cfg, cfg.baseUrl ?? baseUrl, this.redactor);
+      for (const k of [...this.clients.keys()])
+        if (k.startsWith(`${cfg.name}|`)) this.clients.delete(k);
+      client = integrationClient(cfg, def, this.redactor);
       this.clients.set(key, client);
     }
     return client;
   }
 
-  client(integration: string): HttpIntegrationClient | undefined {
+  client(integration: string): IntegrationClient | undefined {
     for (const [key, c] of this.clients) if (key.startsWith(`${integration}|`)) return c;
     return undefined;
   }

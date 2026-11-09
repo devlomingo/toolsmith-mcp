@@ -33,6 +33,12 @@ uses [semantic versioning](https://semver.org/).
   through a value index instead of a scan of every earlier call. One
   12,000-call session now mines in 0.14 s and 132 MB; it took minutes
   before. 88k traces take 418 ms, against 403 ms before gaps were added.
+- **gRPC sources** (`type: "grpc"`): from `.proto` files or server
+  reflection. Unary and server-streaming methods become tools with
+  ProtoJSON schemas. The access level comes from `idempotency_level`, then
+  the method name. TLS is on by default; the address follows the same
+  egress rules as HTTP, auth goes in metadata, secrets are scrubbed from
+  replies, and only reads are retried.
 - `npm run verify:cycle`: the whole release cycle as one command (checks,
   tests, quick benchmarks, the demo lifecycle over HTTP, a packed install,
   the site).

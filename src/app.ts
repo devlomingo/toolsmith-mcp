@@ -28,6 +28,7 @@ import { endpointsToOpenApi, parseEndpointText } from './openapi/endpoints.js';
 import { fetchSpec, importOpenApi } from './openapi/import.js';
 import { LlmStage, extractedToOpenApi } from './llm/llm.js';
 import { HttpIntegrationClient } from './openapi/http-executor.js';
+import { grpcRootToDef, loadGrpcRoot } from './grpc/import.js';
 import { INTROSPECTION_QUERY, introspectionToDef, isIntrospection } from './graphql/graphql.js';
 import type { OpenApiIntegrationDef } from './openapi/types.js';
 import { minePatterns, type Pattern } from './patterns/miner.js';
@@ -425,17 +426,19 @@ export class Toolsmith {
       source = endpointsToOpenApi(parseEndpointText(text, cfg.baseUrl, name));
     }
     const def =
-      cfg.type === 'graphql'
-        ? await this.importGraphql(cfg)
-        : cfg.type === 'docs'
-          ? await this.importFromDocs(cfg, source as string)
-          : await importOpenApi(source, {
-              name,
-              baseUrl: cfg.baseUrl,
-              include: cfg.include,
-              exclude: cfg.exclude,
-              allowPrivateNetwork: cfg.allowPrivateNetwork,
-            });
+      cfg.type === 'grpc'
+        ? await this.importGrpc(cfg)
+        : cfg.type === 'graphql'
+          ? await this.importGraphql(cfg)
+          : cfg.type === 'docs'
+            ? await this.importFromDocs(cfg, source as string)
+            : await importOpenApi(source, {
+                name,
+                baseUrl: cfg.baseUrl,
+                include: cfg.include,
+                exclude: cfg.exclude,
+                allowPrivateNetwork: cfg.allowPrivateNetwork,
+              });
     def.specSource = cfg.spec;
     const artifact = this.registry.ensureArtifact('openapi', name);
     const { version, created } = this.registry.addVersion(
@@ -452,6 +455,17 @@ export class Toolsmith {
     });
     if (!created) return version;
     return this.runEvaluation(artifact.id, version.version, actor, { live: opts.live ?? true });
+  }
+
+  /** gRPC: descriptors from .proto files or server reflection, one tool per method. */
+  private async importGrpc(cfg: IntegrationConfig): Promise<OpenApiIntegrationDef> {
+    if (!cfg.grpc)
+      throw new ToolsmithError(
+        `Integration "${cfg.name}" is type grpc but has no "grpc": { "address": "host:port" }`,
+        'validation',
+      );
+    const { root, services } = await loadGrpcRoot(cfg, this.loaded.baseDir);
+    return grpcRootToDef(root, cfg, services);
   }
 
   /** Free-text documentation → endpoints via the optional LLM stage, then the normal import. */

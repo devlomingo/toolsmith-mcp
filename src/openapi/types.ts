@@ -46,6 +46,8 @@ export interface OperationDef {
   paramSources?: ParamSource[];
   /** GraphQL operations: the document to send and the root field to return. */
   graphql?: { document: string; field: string };
+  /** gRPC operations: method path and message types (fully qualified). */
+  grpc?: { path: string; requestType: string; responseType: string; serverStreaming: boolean };
 }
 
 export type FindingSeverity = 'info' | 'warning' | 'error';
@@ -68,4 +70,6 @@ export interface OpenApiIntegrationDef {
   baseUrl: string;
   operations: OperationDef[];
   findings: SpecFinding[];
+  /** gRPC integrations: the address and the protobuf.js root (JSON) the executor needs. */
+  grpc?: { address: string; root: Record<string, unknown> };
 }
