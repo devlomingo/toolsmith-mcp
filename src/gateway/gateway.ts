@@ -59,6 +59,9 @@ export interface CatalogProblem {
  * versions plus connected upstream servers. Only published versions appear;
  * write and destructive operations appear only if a human granted them.
  */
+/** How long a replaced integration client stays open for calls already in flight. */
+const CLIENT_GRACE_MS = 5 * 60_000;
+
 export class Catalog {
   private entries = new Map<string, CatalogEntry>();
   private clients = new Map<string, IntegrationClient>();
@@ -250,13 +253,20 @@ export class Catalog {
     if (!client) {
       for (const [k, old] of [...this.clients])
         if (k.startsWith(`${cfg.name}|`)) {
-          old.close?.();
+          // Calls still running on the old version finish first.
+          setTimeout(() => old.close?.(), CLIENT_GRACE_MS).unref();
           this.clients.delete(k);
         }
       client = integrationClient(cfg, def, this.redactor);
       this.clients.set(key, client);
     }
     return client;
+  }
+
+  /** Close every integration client (gRPC channels). */
+  closeClients(): void {
+    for (const c of this.clients.values()) c.close?.();
+    this.clients.clear();
   }
 
   client(integration: string): IntegrationClient | undefined {

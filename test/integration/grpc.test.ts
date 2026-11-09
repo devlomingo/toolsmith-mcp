@@ -59,7 +59,7 @@ describe('gRPC sources', () => {
         getOrderItems: 'read',
         watchOrders: 'read',
         watchSlow: 'read',
-        streamBlobs: 'read',
+        listBlobs: 'read',
         getNickname: 'read',
         placeOrder: 'write',
         deleteOrder: 'destructive',
@@ -143,7 +143,7 @@ describe('gRPC sources', () => {
           'placeOrder',
           'watchOrders',
           'watchSlow',
-          'streamBlobs',
+          'listBlobs',
           'getNickname',
         ].sort(),
       );
@@ -242,6 +242,10 @@ describe('gRPC sources', () => {
     expect(accessOf({ name: 'CheckAndMutateRow' }).access).toBe('write');
     expect(accessOf({ name: 'ReadModifyWriteRow' }).access).toBe('write');
     expect(accessOf({ name: 'ListOrders' }).access).toBe('read');
+    expect(accessOf({ name: 'BatchGetUsers' }).access).toBe('read');
+    expect(accessOf({ name: 'BatchCharge' }).access).toBe('write');
+    expect(accessOf({ name: 'BatchProcessPayments' }).access).toBe('write');
+    expect(accessOf({ name: 'StreamPayments' }).access).toBe('write');
     expect(accessOf({ name: 'Compute', options: nse }).access).toBe('read');
     expect(accessOf({ name: 'GetUser', options: { idempotency_level: 'IDEMPOTENT' } }).access).toBe(
       'write',
@@ -253,7 +257,7 @@ describe('gRPC sources', () => {
     try {
       await app.importIntegration('gshop', 'human:test', { live: false });
       app.approve('gshop', { allowWrite: false, allowDestructive: false }, 'human:test');
-      const big = await app.call('gshop__streamBlobs', { userId: '1' }, ctx);
+      const big = await app.call('gshop__listBlobs', { userId: '1' }, ctx);
       expect(big.ok, big.error).toBe(true);
       expect((big.data as { truncated: boolean }).truncated).toBe(true);
       expect(JSON.stringify(big.data).length).toBeLessThan(12 * 1024 * 1024);
@@ -262,6 +266,8 @@ describe('gRPC sources', () => {
       const d = slow.data as { items: unknown[]; truncated: boolean };
       expect(d.truncated).toBe(true);
       expect(d.items.length).toBeGreaterThan(3);
+      const silent = await app.call('gshop__watchSlow', { userId: '0' }, ctx);
+      expect(silent).toMatchObject({ ok: false, errorCode: 'timeout' });
       const nick = await app.call('gshop__getNickname', { userId: '1' }, ctx);
       expect(nick.ok, nick.error).toBe(true);
       expect(nick.data).toBe('shopper');
@@ -317,7 +323,17 @@ describe('gRPC sources', () => {
     } finally {
       await o.close();
     }
-    const e = makeApp({ exclude: ['watch*', 'streamBlobs'] });
+    for (const include of [['?'], ['get?ser']]) {
+      const f = makeApp({ include });
+      try {
+        await expect(f.importIntegration('gshop', 'human:test', { live: false })).rejects.toThrow(
+          /No usable gRPC methods/,
+        );
+      } finally {
+        await f.close();
+      }
+    }
+    const e = makeApp({ exclude: ['watch*', 'listBlobs'] });
     try {
       const v = await e.importIntegration('gshop', 'human:test', { live: false });
       const names = (
@@ -325,7 +341,7 @@ describe('gRPC sources', () => {
       ).operations.map((x) => x.name);
       expect(names).not.toContain('watchOrders');
       expect(names).not.toContain('watchSlow');
-      expect(names).not.toContain('streamBlobs');
+      expect(names).not.toContain('listBlobs');
       expect(names).toContain('getUser');
     } finally {
       await e.close();

@@ -166,6 +166,7 @@ export class Toolsmith {
     if (this.pollTimer) clearInterval(this.pollTimer);
     await this.otel?.close();
     await this.upstreams.closeAll();
+    this.catalog.closeClients();
     this.db.close();
   }
 

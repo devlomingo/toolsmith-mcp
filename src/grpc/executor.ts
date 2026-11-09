@@ -214,6 +214,15 @@ export class GrpcIntegrationClient {
             retries,
           };
         const e = err as grpc.ServiceError;
+        if (typeof e.code !== 'number')
+          return {
+            ok: false,
+            status: 0,
+            errorCode: 'network',
+            error: `gRPC call failed: ${this.redactor.redactString(e.message ?? String(err)).slice(0, 300)}`,
+            requests,
+            retries,
+          };
         const m = STATUS[e.code];
         // Only reads retry, and only when the service was unavailable.
         if (
@@ -296,7 +305,7 @@ export class GrpcIntegrationClient {
       call.on('error', (err: grpc.ServiceError) =>
         (truncated && err.code === grpc.status.CANCELLED) ||
         // Watch-style streams rarely end: at the deadline, return what came in.
-        err.code === grpc.status.DEADLINE_EXCEEDED
+        (err.code === grpc.status.DEADLINE_EXCEEDED && items.length > 0)
           ? resolve({ items, truncated: true })
           : reject(err),
       );

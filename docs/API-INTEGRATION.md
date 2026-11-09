@@ -139,7 +139,7 @@ reflection API (v1, with a v1alpha fallback). Then:
   `{ "items": [...], "truncated": bool }`, with at most
   `grpc.maxStreamMessages` items (default 100) and 5 MB in total. A stream
   still open at the timeout (a `Watch…` method) returns what arrived so far,
-  with `truncated: true`. Client and bidirectional streaming are skipped and
+  with `truncated: true`; one that sent nothing by then is a timeout error. Client and bidirectional streaming are skipped and
   listed as findings;
 - arguments and results use the **ProtoJSON** mapping: lowerCamelCase field
   names, 64-bit integers as strings (numbers are accepted), enums by name
@@ -151,7 +151,7 @@ reflection API (v1, with a v1alpha fallback). Then:
   word (`Delete`, `Remove`, `Purge`, `Cancel`, …) is destructive, even if the
   proto says `NO_SIDE_EFFECTS`. A read needs `option idempotency_level =
   NO_SIDE_EFFECTS`, or a read verb first (`Get`, `List`, `Search`, `Watch`,
-  …) and no mutating word anywhere (`CheckAndMutateRow`, `FindOrCreate` and
+  `BatchGet`, …; `Batch…` and `Stream…` alone are not enough) and no mutating word anywhere (`CheckAndMutateRow`, `FindOrCreate` and
   `GetAndDelete` are not reads). Everything else is a write. Reads are
   visible without a grant and are probed during import, so check the list
   before approving;

@@ -4,6 +4,7 @@ import { load as parseYaml } from 'js-yaml';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { ToolsmithError } from '../core/errors.js';
+import { globToRegExp } from '../core/glob.js';
 import { isPrivateAddress } from '../security/ssrf.js';
 import { isPostmanCollection, postmanToOpenApi } from './postman.js';
 import { camelCase } from '../core/naming.js';
@@ -359,7 +360,7 @@ function resolveBaseUrl(doc: Doc, override: string | undefined, source?: string)
 function matchesFilters(op: Doc, path: string, opts: ImportOptions): boolean {
   const keys = [String(op.operationId ?? ''), path];
   const hit = (pattern: string): boolean => {
-    const re = new RegExp(`^${pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
+    const re = globToRegExp(pattern);
     return keys.some((k) => re.test(k));
   };
   if (opts.include?.length && !opts.include.some(hit)) return false;

@@ -5,6 +5,7 @@ import protobuf from 'protobufjs';
 import type { IntegrationConfig } from '../config/config.js';
 import type { AccessLevel } from '../core/types.js';
 import { ToolsmithError } from '../core/errors.js';
+import { globToRegExp } from '../core/glob.js';
 import { cleanFindings, detectInjection, sanitizeOperation } from '../openapi/import.js';
 import { cleanText, wrapAsObjectSchema } from '../openapi/schema-utils.js';
 import type { OpenApiIntegrationDef, OperationDef, SpecFinding } from '../openapi/types.js';
@@ -68,8 +69,6 @@ const READ_VERBS = new Set([
   'query',
   'fetch',
   'watch',
-  'stream',
-  'batch',
 ]);
 const DESTRUCTIVE_VERBS = new Set([
   'delete',
@@ -144,7 +143,9 @@ export function accessOf(m: { name: string; options?: Record<string, unknown> })
   const mutating = w.slice(1).some((x) => MUTATING_WORDS.has(x));
   if (level === 'NO_SIDE_EFFECTS' && !mutating)
     return { access: 'read', from: 'idempotency_level' };
-  if (!level && READ_VERBS.has(w[0] ?? '') && !mutating)
+  // BatchGetUsers reads; BatchCharge and StreamPayments do not.
+  const verb = w[0] === 'batch' ? w[1] : w[0];
+  if (!level && READ_VERBS.has(verb ?? '') && !mutating)
     return { access: 'read', from: 'method name' };
   return { access: 'write', from: level ? 'idempotency_level' : 'default' };
 }
@@ -176,9 +177,7 @@ export function grpcRootToDef(
   const used = new Set<string>();
   const filter = (keys: string[]): boolean => {
     const hit = (pattern: string): boolean => {
-      const re = new RegExp(
-        `^${pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`,
-      );
+      const re = globToRegExp(pattern);
       return keys.some((k) => re.test(k));
     };
     if (cfg.include?.length && !cfg.include.some(hit)) return false;
@@ -261,11 +260,10 @@ export function grpcRootToDef(
     }
   }
   if (operations.length === 0)
-    findings.push({
-      severity: 'error',
-      code: 'no-operations',
-      message: 'No usable gRPC methods found',
-    });
+    throw new ToolsmithError(
+      'No usable gRPC methods (after the services, include and exclude filters)',
+      'validation',
+    );
   return {
     kind: 'openapi',
     name: cfg.name,

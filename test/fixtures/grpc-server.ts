@@ -99,11 +99,12 @@ export async function startGrpcShop(opts: { reflection?: boolean } = {}) {
       let i = 0;
       const t = setInterval(() => {
         if (call.cancelled) return clearInterval(t);
+        if (call.request.user_id === '0') return; // a stream that never sends
         call.write({ id: String(i++), user_id: call.request.user_id, status: 'new' });
       }, 100);
       call.on('cancelled', () => clearInterval(t));
     },
-    StreamBlobs(call: grpc.ServerWritableStream<unknown, unknown>) {
+    ListBlobs(call: grpc.ServerWritableStream<unknown, unknown>) {
       if (!authed(call)) return call.destroy(Object.assign(new Error('bad token'), unauth));
       const blob = Buffer.alloc(3 * 1024 * 1024, 7);
       for (let i = 0; i < 30 && !call.cancelled; i++) call.write({ data: blob });

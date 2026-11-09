@@ -23,7 +23,7 @@ service ShopService {
   // Never ends on its own; one event every 100 ms.
   rpc WatchSlow(ListOrdersRequest) returns (stream Order);
   // Large messages.
-  rpc StreamBlobs(ListOrdersRequest) returns (stream Chunk);
+  rpc ListBlobs(ListOrdersRequest) returns (stream Chunk);
   rpc GetNickname(GetUserRequest) returns (google.protobuf.StringValue);
 }
 
