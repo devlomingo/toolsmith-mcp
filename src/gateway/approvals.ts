@@ -57,8 +57,12 @@ export class CallApprovals {
             [tool, hash, sessionId],
           );
       if (!row) return false;
-      await tx.run("UPDATE call_approvals SET status = 'used' WHERE id = ?", [row.id]);
-      return true;
+      // Conditional, so two nodes reading the same approval cannot both spend it.
+      const used = await tx.run(
+        "UPDATE call_approvals SET status = 'used' WHERE id = ? AND status = 'approved'",
+        [row.id],
+      );
+      return used.changes === 1;
     });
   }
 

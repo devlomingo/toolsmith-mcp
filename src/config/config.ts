@@ -213,6 +213,17 @@ export const ConfigSchema = z.object({
     })
     .default({ host: '127.0.0.1', port: 7420, clients: [] }),
   dataDir: z.string().default('.toolsmith'),
+  /**
+   * PostgreSQL instead of the SQLite file in dataDir, so several gateway
+   * nodes can share one registry, trace store and approval queue.
+   */
+  database: z
+    .object({
+      /** postgres://… connection URL. `${env:...}` allowed (and recommended). */
+      url: z.string(),
+      poolSize: z.number().int().min(1).max(100).default(10),
+    })
+    .optional(),
   integrations: z.array(IntegrationSchema).default([]),
   upstreams: z.array(UpstreamSchema).default([]),
   traces: z

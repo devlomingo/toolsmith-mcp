@@ -126,7 +126,7 @@ export class Registry {
 
   private async bump(): Promise<void> {
     await this.db.run(
-      "INSERT INTO settings (key, value) VALUES ('catalog_rev', '1') ON CONFLICT(key) DO UPDATE SET value = CAST(value AS INTEGER) + 1",
+      "INSERT INTO settings (key, value) VALUES ('catalog_rev', '1') ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(settings.value AS INTEGER) + 1 AS TEXT)",
     );
     for (const fn of this.listeners) await fn();
   }

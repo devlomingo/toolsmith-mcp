@@ -38,6 +38,11 @@ export interface TraceQuery {
 export class TraceStore {
   constructor(private readonly db: SqlDb) {}
 
+  /** Insertion order, to break ties between traces with the same start time. */
+  private get order(): string {
+    return this.db.dialect === 'sqlite' ? 'rowid' : 'seq';
+  }
+
   async insert(t: TraceRecord): Promise<void> {
     await this.db.run(
       `INSERT INTO traces (id, session_id, parent_id, tool, artifact_id, source, access, started_at, duration_ms, ok,
@@ -79,7 +84,7 @@ export class TraceStore {
     if (q.until !== undefined) add('started_at < ?', q.until);
     if (q.ok !== undefined) add('ok = ?', q.ok ? 1 : 0);
     if (q.topLevelOnly) where.push('parent_id IS NULL');
-    const sql = `SELECT * FROM traces ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY started_at DESC, rowid DESC LIMIT ? OFFSET ?`;
+    const sql = `SELECT * FROM traces ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY started_at DESC, ${this.order} DESC LIMIT ? OFFSET ?`;
     params.push(q.limit ?? 200, q.offset ?? 0);
     return (await this.db.all(sql, params)).map(toTrace);
   }
@@ -87,7 +92,7 @@ export class TraceStore {
   /** All top-level traces in chronological order, for pattern mining. */
   async chronological(since?: number): Promise<TraceRecord[]> {
     const rows = await this.db.all(
-      `SELECT * FROM traces WHERE parent_id IS NULL ${since !== undefined ? 'AND started_at >= ?' : ''} ORDER BY session_id, started_at, rowid`,
+      `SELECT * FROM traces WHERE parent_id IS NULL ${since !== undefined ? 'AND started_at >= ?' : ''} ORDER BY session_id, started_at, ${this.order}`,
       since !== undefined ? [since] : [],
     );
     return rows.map(toTrace);

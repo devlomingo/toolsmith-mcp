@@ -36,6 +36,7 @@ import { Registry, type Permissions, type VersionRow } from './registry/registry
 import { Fingerprinter, Redactor } from './security/redact.js';
 import { AuditLog } from './store/audit.js';
 import { openDb, type SqlDb } from './store/db.js';
+import { openPostgres } from './store/postgres.js';
 import { UpstreamManager } from './upstream/upstream-manager.js';
 
 export const VERSION: string = (() => {
@@ -98,8 +99,10 @@ export class Toolsmith {
    * its catalog exists.
    */
   static async open(loaded: LoadedConfig, opts: ToolsmithOptions = {}): Promise<Toolsmith> {
-    const dbPath = opts.dbPath ?? resolve(loaded.baseDir, loaded.config.dataDir, 'toolsmith.db');
-    const db = openDb(dbPath);
+    const pgCfg = opts.dbPath ? undefined : loaded.config.database;
+    const db: SqlDb = pgCfg
+      ? await openPostgres(resolveEnvRefs(pgCfg.url), pgCfg.poolSize)
+      : openDb(opts.dbPath ?? resolve(loaded.baseDir, loaded.config.dataDir, 'toolsmith.db'));
     try {
       const app = new Toolsmith(loaded, db, await fingerprintKey(db));
       await app.refresh();
@@ -913,9 +916,14 @@ async function fingerprintKey(db: SqlDb): Promise<string> {
     "SELECT value FROM settings WHERE key = 'fingerprint_key'",
   );
   if (row) return row.value;
-  const key = randomBytes(32).toString('hex');
-  await db.run("INSERT INTO settings (key, value) VALUES ('fingerprint_key', ?)", [key]);
-  return key;
+  // Nodes starting together on one database must end up with the same key.
+  await db.run(
+    "INSERT INTO settings (key, value) VALUES ('fingerprint_key', ?) ON CONFLICT(key) DO NOTHING",
+    [randomBytes(32).toString('hex')],
+  );
+  return (await db.get<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'fingerprint_key'",
+  ))!.value;
 }
 
 function logRefreshError(err: unknown): void {
