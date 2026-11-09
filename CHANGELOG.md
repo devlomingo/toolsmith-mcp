@@ -4,6 +4,23 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 uses [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **The gateway as an OAuth 2.1 resource server** (`server.oauth`), as the
+  MCP authorization spec describes:
+  - JWT access tokens are verified against the issuer's JWKS, which is
+    discovered from its metadata and cached. Checks cover the signature,
+    issuer, audience/resource (RFC 8707), expiry and required scopes.
+  - RFC 9728 protected-resource metadata, with `resource_metadata` in
+    every `WWW-Authenticate` challenge.
+  - OAuth clients get their own identity (`oauth:<client id>`) and
+    per-client tool exposure. Static client tokens keep working.
+- `npm run verify:cycle`: the whole release cycle as one command (checks,
+  tests, quick benchmarks, the demo lifecycle over HTTP, a packed install,
+  the site).
+
 ## [0.1.0] - 2026-11-08
 
 First public release.

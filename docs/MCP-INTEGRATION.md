@@ -45,6 +45,18 @@ Run `toolsmith-mcp start` and point the client at the endpoint:
 }
 ```
 
+### OAuth clients
+
+If your organisation runs an authorization server, set `server.oauth`
+([configuration](CONFIGURATION.md#serveroauth)). MCP clients that support
+the MCP authorization spec then discover it from the gateway's 401
+response and sign the user in themselves. No static token is needed in
+their config:
+
+```json
+{ "mcpServers": { "toolsmith": { "type": "http", "url": "https://tools.example.com/mcp" } } }
+```
+
 ### Client identity and session grouping
 
 **Who is calling** is decided by the bearer token. `server.mcpToken` is the

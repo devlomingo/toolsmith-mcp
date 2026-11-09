@@ -207,6 +207,20 @@ export class Toolsmith {
 
   exposureFor(principal?: string): Exposure {
     const name = principal?.startsWith('http:') ? principal.slice(5) : undefined;
+    if (name?.startsWith('oauth:')) {
+      const oauth = this.config.server.oauth;
+      let clientId = '';
+      try {
+        clientId = decodeURIComponent(name.slice(6));
+      } catch {
+        /* never matches a configured client */
+      }
+      return (
+        oauth?.clients.find((c) => c.clientId === clientId)?.exposure ??
+        oauth?.exposure ??
+        this.config.exposure
+      );
+    }
     const client = name ? this.config.server.clients.find((c) => c.name === name) : undefined;
     return client?.exposure ?? this.config.exposure;
   }

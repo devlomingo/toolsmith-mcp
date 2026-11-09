@@ -11,6 +11,8 @@ import { ToolsmithError } from '../core/errors.js';
 import { resolveEnvRefs } from '../security/secrets.js';
 import { handleAdminApi } from './admin-api.js';
 import { createServerFactory } from './mcp.js';
+import { isLoopback } from './net.js';
+import { createOAuthGate, oauthClientName, type OAuthGate } from './oauth.js';
 
 export interface HttpServerOptions {
   host?: string;
@@ -35,9 +37,7 @@ function tokenMatches(header: string | undefined, expected: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-export function isLoopback(host: string): boolean {
-  return host === '127.0.0.1' || host === 'localhost' || host === '::1';
-}
+export { isLoopback } from './net.js';
 
 /**
  * One HTTP listener: /mcp (Streamable HTTP, both protocol eras), /api (admin),
@@ -63,11 +63,13 @@ export async function startHttpServer(
   // Every HTTP client needs a token, even on loopback: the token is the
   // client's identity, and per-call approvals are bound to it. Without one,
   // every local client would share an identity and could spend another's approval.
-  if (clientTokens.length === 0) {
+  const oauthCfg = app.config.server.oauth;
+  const oauth: OAuthGate | undefined = oauthCfg ? await createOAuthGate(oauthCfg) : undefined;
+  if (clientTokens.length === 0 && !oauth) {
     throw new ToolsmithError(
       `Refusing to serve MCP over HTTP on ${host} without a client token.`,
       'validation',
-      'Set server.mcpToken (or server.clients). `toolsmith-mcp init` generates one in .env.',
+      'Set server.mcpToken (or server.clients, or server.oauth). `toolsmith-mcp init` generates a token in .env.',
     );
   }
   if (!adminToken)
@@ -90,13 +92,22 @@ export async function startHttpServer(
       res.setHeader('x-content-type-options', 'nosniff');
 
       if (url.pathname === '/healthz') return json(res, 200, { ok: true });
+      if (oauth && oauth.metadataPaths.includes(url.pathname)) {
+        res.setHeader('access-control-allow-origin', '*');
+        return json(res, 200, oauth.metadata);
+      }
       if (url.pathname === '/mcp') {
         // Identify the client by its token. These headers are set only by
         // the gateway: anything a client sends under these names is dropped.
         delete req.headers['x-toolsmith-client'];
-        const client = clientTokens.find((c) =>
+        let client = clientTokens.find((c) =>
           tokenMatches(req.headers.authorization, c.token),
         )?.name;
+        if (!client && oauth) {
+          const auth = await oauth.authenticate(req.headers.authorization);
+          if (auth instanceof Response) return sendResponse(res, auth);
+          client = oauthClientName(auth.clientId);
+        }
         if (!client) {
           res.setHeader('www-authenticate', 'Bearer');
           return json(res, 401, { error: 'Missing or invalid bearer token for /mcp' });
@@ -180,4 +191,11 @@ export function json(res: ServerResponse, status: number, body: unknown): void {
     'cache-control': 'no-store',
   });
   res.end(text);
+}
+
+async function sendResponse(res: ServerResponse, r: Response): Promise<void> {
+  const headers: Record<string, string> = { 'cache-control': 'no-store' };
+  r.headers.forEach((v, k) => (headers[k] = v));
+  res.writeHead(r.status, headers);
+  res.end(await r.text());
 }

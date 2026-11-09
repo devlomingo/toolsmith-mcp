@@ -10,7 +10,7 @@ report a vulnerability, see [../SECURITY.md](../SECURITY.md).
 | API credentials | Environment variables (or `.env`), referenced in config as `${env:NAME}` | The agent, the traces, the logs, the dashboard, the database |
 | Data returned by APIs | Passed through to the agent, never stored | The trace store, other agents |
 | The right to call write/destructive operations | Grants recorded at human approval | Agents, the miner, the evaluator, any automated actor |
-| Gateway and admin access | `server.mcpToken`, `server.adminToken` | Other local processes, websites in the user's browser, the network |
+| Gateway and admin access | `server.mcpToken`, `server.adminToken`, or OAuth access tokens from `server.oauth.issuer` | Other local processes, websites in the user's browser, the network |
 
 Trust boundaries:
 
@@ -42,6 +42,7 @@ Trust boundaries:
 | Resource exhaustion | Token-bucket rate limit per integration, request timeout, 5 MB response cap, 10 MB spec cap, 1 MB admin body cap, 4 MiB MCP body cap (SDK), composite limits on steps, fan-out, concurrency and total time | unit tests (fan-out cap, concurrency) and scenario 5 |
 | An automated actor approving its own proposals | Approval requires a `human:*` actor; the registry refuses others. Evaluation failure blocks approval. Agents cannot approve anything through MCP. CLI commands that grant access (`approve`, `approve-call`, `publish`, `enable`, `rollback`) require an interactive terminal and a typed confirmation, which stops an agent approving by accident; a process that fakes a terminal can still get past it (see "What is not protected") | unit tests; `regressions.test.ts` (M4) |
 | An exposed gateway | The dashboard sign-in link (which contains the admin token) is printed only to an interactive terminal, never to logs. Binds to 127.0.0.1 by default. HTTP serving refuses to start without at least one MCP client token, even on loopback, because the token is the client's identity. Tokens are compared in constant time. The admin API uses a separate token | security tests |
+| Forged or misdirected OAuth tokens | With `server.oauth`, JWT access tokens are verified locally against the issuer's JWKS: signature (asymmetric algorithms only; `none` and HMAC refused), issuer, audience equal to this gateway's resource URL (so a token minted for another service is refused), expiry (required, 30 s clock tolerance) and required scopes. JWKS discovery must come from the configured issuer over https, with no redirects. The OAuth client id becomes an `oauth:`-prefixed principal, which cannot collide with a static client name | `oauth-resource.test.ts` |
 | XSS in the dashboard from third-party descriptions | All values are rendered as text nodes. Strict CSP (`default-src 'self'`). No inline scripts | `dashboard/app.js` (DOM builder) |
 | Token passthrough | The gateway never forwards the client's bearer token upstream. Upstream credentials are the gateway's own | `src/upstream/upstream-manager.ts` |
 | Vulnerable dependencies | Small runtime dependency set. CI runs `npm audit --omit=dev --audit-level=high` and CodeQL | `.github/workflows/` |

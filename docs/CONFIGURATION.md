@@ -58,6 +58,37 @@ from or wherever `--config <path>` points.
 | `mcpToken` | none | Bearer token that MCP clients must send. It identifies the client named `default`. Serving MCP over HTTP requires at least one client token, even on loopback. |
 | `adminToken` | none | Bearer token for the dashboard and admin API. Required to run `start`. |
 | `clients` | `[]` | Extra MCP clients, each `{ "name": "agent-a", "token": "${env:AGENT_A_TOKEN}" }`. The token identifies the client, and per-call approvals are bound to it. Give each agent its own. |
+| `oauth` | none | Accept OAuth 2.1 access tokens (JWTs) from your authorization server, as the MCP authorization spec describes. See below. Static tokens keep working alongside it. |
+
+#### `server.oauth`
+
+```json
+"oauth": {
+  "issuer": "https://auth.example.com",
+  "resource": "https://tools.example.com/mcp",
+  "requiredScopes": ["mcp:tools"],
+  "exposure": { "tools": ["shop__get*"] },
+  "clients": [{ "clientId": "reporting-agent", "exposure": { "tools": ["flow__*"] } }]
+}
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `issuer` | required | The authorization server's issuer (`iss`). Must be https; plain http is accepted only on loopback, for development. |
+| `resource` | required | This gateway's public `/mcp` URL. Tokens must name it as their audience (RFC 8707), so a token issued for another service is refused. |
+| `jwksUri` | discovered | Where the signing keys are. By default read from the issuer's `/.well-known/oauth-authorization-server` or `/.well-known/openid-configuration`, whose `issuer` must match. Keys are cached for 10 minutes. |
+| `audiences` | `[]` | Extra accepted audience values. |
+| `requiredScopes` | `[]` | Scopes every token must carry (`scope` or `scp` claim). A token without them gets `403 insufficient_scope`. |
+| `algorithms` | `RS256`, `ES256`, `EdDSA` | Accepted signature algorithms. Only asymmetric ones can be configured; `none` and HMAC are always refused. |
+| `exposure` | top-level `exposure` | Tool exposure for OAuth clients. |
+| `clients` | `[]` | Per-client exposure, keyed by the token's client id (`client_id`, else `azp`, else `sub`). |
+
+The gateway serves RFC 9728 protected-resource metadata at
+`/.well-known/oauth-protected-resource/mcp`, and every 401 carries a
+`WWW-Authenticate` header that points to it, so MCP clients can find your
+authorization server on their own. A verified client is identified as
+`oauth:<client id>`; per-call approvals and traces are bound to that
+identity. Access tokens are never forwarded to upstream APIs.
 
 ### `integrations[]`
 

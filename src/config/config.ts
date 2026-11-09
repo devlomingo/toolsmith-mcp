@@ -71,6 +71,43 @@ export const ExposureSchema = z.object({
 });
 export type Exposure = z.infer<typeof ExposureSchema>;
 
+export const OAuthResourceSchema = z.object({
+  /** The authorization server's issuer URL (the token's `iss`). */
+  issuer: z.string().url(),
+  /** This gateway's public MCP URL, e.g. https://tools.example.com/mcp. Tokens must be issued for it. */
+  resource: z.string().url(),
+  /** Defaults to the jwks_uri in the issuer's discovery metadata. */
+  jwksUri: z.string().url().optional(),
+  /** Extra audience values accepted besides `resource`. */
+  audiences: z.array(z.string()).default([]),
+  /** Scopes every token must carry. */
+  requiredScopes: z.array(z.string()).default([]),
+  /** Accepted signing algorithms (asymmetric only). */
+  algorithms: z
+    .array(
+      z.enum([
+        'RS256',
+        'RS384',
+        'RS512',
+        'PS256',
+        'PS384',
+        'PS512',
+        'ES256',
+        'ES384',
+        'ES512',
+        'EdDSA',
+      ]),
+    )
+    .default(['RS256', 'ES256', 'EdDSA']),
+  /** Default exposure for OAuth clients (falls back to the top-level `exposure`). */
+  exposure: z.lazy(() => ExposureSchema).optional(),
+  /** Per-client exposure, keyed by the token's client id. */
+  clients: z
+    .array(z.object({ clientId: z.string().min(1), exposure: z.lazy(() => ExposureSchema) }))
+    .default([]),
+});
+export type OAuthResourceConfig = z.infer<typeof OAuthResourceSchema>;
+
 export const UpstreamSchema = z.union([
   z.object({
     name: namespace,
@@ -127,6 +164,12 @@ export const ConfigSchema = z.object({
           }),
         )
         .default([]),
+      /**
+       * Accept OAuth 2.1 access tokens (JWTs) from this authorization
+       * server, as the MCP authorization spec describes. Works alongside
+       * static client tokens.
+       */
+      oauth: z.lazy(() => OAuthResourceSchema).optional(),
     })
     .default({ host: '127.0.0.1', port: 7420, clients: [] }),
   dataDir: z.string().default('.toolsmith'),

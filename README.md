@@ -208,5 +208,5 @@ Version 0.1.0:
 
 It is **not** yet hardened by production use. It runs on a single host
 with SQLite storage. The [roadmap](docs/ROADMAP.md) lists what isn't built
-yet: PostgreSQL storage, the gateway as an OAuth resource server, and gRPC
+yet: PostgreSQL storage and gRPC
 sources.
