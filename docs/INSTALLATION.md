@@ -45,6 +45,19 @@ npm ci && npm run build
 node dist/cli/index.js demo
 ```
 
+## Several gateway nodes (PostgreSQL)
+
+One host with the built-in SQLite file is the default. To run several
+gateway nodes behind a load balancer, point them all at one PostgreSQL
+database (tested with PostgreSQL 17):
+
+```json
+"database": { "url": "${env:DATABASE_URL}" }
+```
+
+The schema is created on first start. What is shared and what stays per
+node is listed under [`database`](CONFIGURATION.md#database-several-gateway-nodes).
+
 ## First run
 
 ```sh

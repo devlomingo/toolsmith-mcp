@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-labelledby="t">
+  <title id="t">toolsmith-mcp: many tool calls become one</title>
+  <rect x="2" y="2" width="92" height="92" rx="22" fill="#2a78d6"/>
+  <g stroke="#ffffff" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.9">
+    <path d="M26 28 C46 28 46 48 64 48"/>
+    <path d="M26 48 L64 48"/>
+    <path d="M26 68 C46 68 46 48 64 48"/>
+  </g>
+  <circle cx="26" cy="28" r="6" fill="#ffffff"/>
+  <circle cx="26" cy="48" r="6" fill="#ffffff"/>
+  <circle cx="26" cy="68" r="6" fill="#ffffff"/>
+  <circle cx="68" cy="48" r="11" fill="#eb6834" stroke="#ffffff" stroke-width="4"/>
+</svg>

@@ -26,7 +26,8 @@ client's MCP server list (`mcpServers` or the client's equivalent):
 
 - Each stdio process is one session for tracing.
 - Several stdio processes can share the same config and database (SQLite
-  WAL). A tool approved in the dashboard or CLI appears in running
+  WAL, or PostgreSQL with `database.url`, which also lets several HTTP
+  gateway nodes share one state). A tool approved in the dashboard or CLI appears in running
   sessions within about 2 seconds, through `notifications/tools/list_changed`.
 
 ## Streamable HTTP

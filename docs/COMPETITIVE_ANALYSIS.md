@@ -44,7 +44,7 @@ Column key:
 | mcp-openapi-proxy | MIT | no | yes | raw | no | no | no | no | no | yes |
 | PostHog / AgentCat | SaaS | no | no | yes | ? | no | no | yes | no | n/a |
 | Trace2MCP | ? | no | no | no | no | 1 trace | partial | no | no | ? |
-| **toolsmith-mcp (plan)** | OSS | yes | yes | yes | yes | DAG | yes | yes | yes | target |
+| **toolsmith-mcp 0.2.0** | MIT | yes | yes | yes | yes | DAG | yes | yes | yes | yes |
 
 "?" means not stated in the sources read. Support for each cell is in
 the sections below.

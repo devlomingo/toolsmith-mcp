@@ -16,11 +16,11 @@ flowchart LR
     S["MCP server<br/>serveStdio / createMcpHandler"]
     C[Catalog<br/>published tools only]
     D["Dispatcher<br/>validate → policy → observe → execute"]
-    X1[HTTP executor<br/>egress guard, rate limit, retries]
+    X1[HTTP and gRPC executors<br/>egress guard, rate limit, retries]
     X2[Upstream MCP client]
     X3[Composite executor<br/>DAG, parallel stages]
     O[Usage observer<br/>redaction + fingerprints]
-    DB[(SQLite<br/>registry, traces, approvals, audit)]
+    DB[(SQLite or PostgreSQL<br/>registry, traces, approvals, audit)]
     M[Pattern miner]
     G[Composite generator]
     E[Evaluator<br/>static, security, live verification, equivalence]
@@ -28,7 +28,7 @@ flowchart LR
     R[Registry<br/>lifecycle state machine]
     UI[Dashboard + admin API]
   end
-  API[(REST APIs)]
+  API[(REST, GraphQL and gRPC APIs)]
   UP[(Upstream MCP servers)]
   A1 & A2 --> S --> D
   C --> D

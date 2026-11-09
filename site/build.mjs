@@ -95,7 +95,7 @@ const loadNote = (() => {
 const envLine = `${esc(env.cpu)}, ${env.cores} cores · Node ${esc(env.node)} · MCP SDK ${esc(env.mcpSdk.server)} · commit ${esc(env.commit)}`;
 
 const archSvg = `<svg viewBox="0 0 960 430" role="img" aria-labelledby="arch-t arch-d" class="arch">
-<title id="arch-t">Architecture</title><desc id="arch-d">Agents connect to the toolsmith gateway over MCP. Every call passes the dispatcher (validate, policy, observe, execute) and reaches the composite executor, upstream MCP servers, or REST APIs. The observer records traces in SQLite; the pattern miner proposes composites to the registry; the evaluator tests them and a human approves before the catalog exposes them.</desc>
+<title id="arch-t">Architecture</title><desc id="arch-d">Agents connect to the toolsmith gateway over MCP. Every call passes the dispatcher (validate, policy, observe, execute) and reaches the composite executor, upstream MCP servers, or REST APIs. The observer records traces in SQLite or PostgreSQL; the pattern miner proposes composites to the registry; the evaluator tests them and a human approves before the catalog exposes them.</desc>
 <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
 <g class="lane"><rect x="10" y="40" width="170" height="350" rx="14"/><text x="95" y="68" text-anchor="middle" class="lane-t">Any MCP client</text></g>
 <g class="node"><rect x="28" y="96" width="134" height="58" rx="10"/><text x="95" y="122" text-anchor="middle">Agent</text><text x="95" y="140" text-anchor="middle" class="sm">stdio</text></g>
@@ -110,7 +110,7 @@ const archSvg = `<svg viewBox="0 0 960 430" role="img" aria-labelledby="arch-t a
 <g class="node"><rect x="240" y="250" width="140" height="58" rx="10"/><text x="310" y="276" text-anchor="middle">Observer</text><text x="310" y="294" text-anchor="middle" class="sm">redact · hash</text></g>
 <g class="node"><rect x="395" y="250" width="140" height="58" rx="10"/><text x="465" y="276" text-anchor="middle">Miner</text><text x="465" y="294" text-anchor="middle" class="sm">data flow</text></g>
 <g class="node"><rect x="550" y="250" width="160" height="58" rx="10"/><text x="630" y="276" text-anchor="middle">Evaluator</text><text x="630" y="294" text-anchor="middle" class="sm">verify · compare</text></g>
-<g class="node"><rect x="240" y="335" width="140" height="58" rx="10"/><text x="310" y="361" text-anchor="middle">SQLite</text><text x="310" y="379" text-anchor="middle" class="sm">traces</text></g>
+<g class="node"><rect x="240" y="335" width="140" height="58" rx="10"/><text x="310" y="361" text-anchor="middle">SQLite / Postgres</text><text x="310" y="379" text-anchor="middle" class="sm">traces</text></g>
 <g class="node hot"><rect x="395" y="335" width="315" height="58" rx="10"/><text x="552" y="361" text-anchor="middle">Registry · human approval</text><text x="552" y="379" text-anchor="middle" class="sm">versions · grants · rollback</text></g>
 <g class="lane"><rect x="770" y="40" width="180" height="350" rx="14"/><text x="860" y="68" text-anchor="middle" class="lane-t">Outside</text></g>
 <g class="node"><rect x="790" y="160" width="140" height="58" rx="10"/><text x="860" y="186" text-anchor="middle">REST APIs</text><text x="860" y="204" text-anchor="middle" class="sm">from OpenAPI</text></g>
@@ -339,7 +339,9 @@ toolsmith-mcp client-config</pre>
 <div class="card"><h3>More sources</h3><p>OpenAPI, Swagger, Postman collections, GraphQL introspection, gRPC (.proto or server reflection), plain endpoint lists, and (optionally, via an LLM) free-text docs.</p></div>
 <div class="card"><h3>Large catalogs</h3><p>Per-client allow-lists enforced on every call, a search listing mode, and a tool-search meta tool.</p></div>
 <div class="card"><h3>Transforms &amp; constants</h3><p>Composites can filter, sort and pick ("the latest order") with a fixed vocabulary, and bake in arguments that never change.</p></div>
-<div class="card"><h3>OAuth &amp; telemetry</h3><p>OAuth 2.0 client credentials for APIs; OpenTelemetry span export; opt-in in-client approval via MCP elicitation.</p></div>
+<div class="card"><h3>OAuth 2.1 sign-in</h3><p>MCP clients sign in through your own authorization server: JWT validation, audience checks, protected-resource metadata. New in 0.2.0.</p></div>
+<div class="card"><h3>Teams &amp; scale</h3><p>Per-client allow-lists and rate limits, and PostgreSQL so several gateway nodes share one state. New in 0.2.0.</p></div>
+<div class="card"><h3>Telemetry &amp; API auth</h3><p>OpenTelemetry span export; OAuth 2.0 client credentials toward APIs; opt-in in-client approval via MCP elicitation.</p></div>
 </div>
 <img class="shot" style="margin-top:36px" src="assets/dashboard-composite.png" alt="Dashboard showing an evaluated composite tool with passed equivalence checks and its plan" loading="lazy" width="1280" height="1100">
 </div></section>
