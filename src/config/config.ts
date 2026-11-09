@@ -106,6 +106,10 @@ export const OAuthResourceSchema = z.object({
       ]),
     )
     .default(['RS256', 'ES256', 'EdDSA']),
+  /** Refuse tokens whose header is not `typ: at+jwt` (RFC 9068). Off: many issuers send `JWT`. */
+  requireAtJwt: z.boolean().default(false),
+  /** Refuse tokens valid for longer than this from now. */
+  maxLifetimeSeconds: z.number().int().positive().default(86_400),
   /** Default exposure for OAuth clients (falls back to the top-level `exposure`). */
   exposure: z.lazy(() => ExposureSchema).optional(),
   /** Default per-client rate limit for OAuth clients (falls back to server.rateLimit). */

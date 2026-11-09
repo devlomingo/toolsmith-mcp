@@ -12,7 +12,7 @@ import { resolveEnvRefs } from '../security/secrets.js';
 import { handleAdminApi } from './admin-api.js';
 import { createServerFactory } from './mcp.js';
 import { isLoopback } from './net.js';
-import { createOAuthGate, oauthClientName, type OAuthGate } from './oauth.js';
+import { createOAuthGate, oauthPrincipalName, type OAuthGate } from './oauth.js';
 
 export interface HttpServerOptions {
   host?: string;
@@ -31,7 +31,7 @@ const TYPES: Record<string, string> = {
 };
 
 function tokenMatches(header: string | undefined, expected: string): boolean {
-  if (!header?.startsWith('Bearer ')) return false;
+  if (!header || !/^bearer /i.test(header)) return false;
   const a = Buffer.from(header.slice(7));
   const b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
@@ -106,7 +106,10 @@ export async function startHttpServer(
         if (!client && oauth) {
           const auth = await oauth.authenticate(req.headers.authorization);
           if (auth instanceof Response) return sendResponse(res, auth);
-          client = oauthClientName(auth.clientId);
+          client = oauthPrincipalName(
+            auth.clientId,
+            typeof auth.extra?.subject === 'string' ? auth.extra.subject : undefined,
+          );
         }
         if (!client) {
           res.setHeader('www-authenticate', 'Bearer');

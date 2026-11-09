@@ -15,8 +15,12 @@ uses [semantic versioning](https://semver.org/).
     issuer, audience/resource (RFC 8707), expiry and required scopes.
   - RFC 9728 protected-resource metadata, with `resource_metadata` in
     every `WWW-Authenticate` challenge.
-  - OAuth clients get their own identity (`oauth:<client id>`) and
-    per-client tool exposure. Static client tokens keep working.
+  - The identity covers the client app and the user, hashed from the
+    complete claims. Approvals, prompts and rate limits are never shared
+    between users, or between look-alike client ids. Exposure can be set
+    per client. Static client tokens keep working.
+  - Optional `typ: at+jwt` enforcement and a maximum token lifetime. A
+    JWKS outage answers 500, not 401.
 - **Per-client rate limits** (`server.rateLimit`, with overrides per
   static or OAuth client). A composite counts as one call.
 - **Workflows with gaps.** Inside a data-flow component, the miner also

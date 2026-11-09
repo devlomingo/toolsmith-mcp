@@ -8,6 +8,7 @@ import {
   type OAuthTokenVerifier,
 } from '@modelcontextprotocol/server';
 import { createRemoteJWKSet, customFetch, errors, jwtVerify, type JWTPayload } from 'jose';
+import { createHash } from 'node:crypto';
 import { ToolsmithError } from '../core/errors.js';
 import type { OAuthResourceConfig } from '../config/config.js';
 import { isLoopback } from './net.js';
@@ -79,14 +80,30 @@ function scopesOf(p: JWTPayload): string[] {
   return [];
 }
 
-/** client_id (RFC 9068), then azp, then sub: whoever the token was issued to. */
+/** The client app the token was issued to: client_id (RFC 9068), else azp. Never sub. */
 function clientIdOf(p: JWTPayload): string | undefined {
-  for (const k of ['client_id', 'azp', 'sub'] as const) {
+  for (const k of ['client_id', 'azp'] as const) {
     const v = p[k];
     if (typeof v === 'string' && v.length > 0) return v;
   }
   return undefined;
 }
+
+// Errors that say the token is bad; anything else (JWKS unreachable, slow,
+// or malformed) is the server's problem, and a 401 would only make clients
+// re-authenticate in a loop.
+const TOKEN_ERRORS = new Set([
+  'ERR_JWS_INVALID',
+  'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',
+  'ERR_JWT_INVALID',
+  'ERR_JWT_EXPIRED',
+  'ERR_JWT_CLAIM_VALIDATION_FAILED',
+  'ERR_JWKS_NO_MATCHING_KEY',
+  'ERR_JWKS_MULTIPLE_MATCHING_KEYS',
+  'ERR_JOSE_ALG_NOT_ALLOWED',
+  'ERR_JOSE_NOT_SUPPORTED',
+  'ERR_JWK_INVALID',
+]);
 
 export async function createOAuthGate(cfg: OAuthResourceConfig): Promise<OAuthGate> {
   const issuer = requireSecureUrl(cfg.issuer, 'server.oauth.issuer').toString().replace(/\/$/, '');
@@ -111,12 +128,21 @@ export async function createOAuthGate(cfg: OAuthResourceConfig): Promise<OAuthGa
           algorithms: cfg.algorithms,
           clockTolerance: 30,
           requiredClaims: ['exp'],
+          ...(cfg.requireAtJwt ? { typ: 'at+jwt' } : {}),
         });
+        const now = Math.floor(Date.now() / 1000);
+        if (typeof payload.iat === 'number' && payload.iat > now + 30)
+          throw new OAuthError(OAuthErrorCode.InvalidToken, 'Token issued in the future');
+        if (payload.exp! - now > cfg.maxLifetimeSeconds)
+          throw new OAuthError(OAuthErrorCode.InvalidToken, 'Token lifetime is too long');
         const clientId = clientIdOf(payload);
-        if (!clientId) throw new OAuthError(OAuthErrorCode.InvalidToken, 'Token names no client');
+        const subject = typeof payload.sub === 'string' && payload.sub ? payload.sub : undefined;
+        if (!clientId && !subject)
+          throw new OAuthError(OAuthErrorCode.InvalidToken, 'Token names no client or subject');
         return {
           token,
-          clientId,
+          clientId: clientId ?? '',
+          extra: { subject },
           scopes: scopesOf(payload),
           expiresAt: payload.exp,
           // jwtVerify checked the audience; report the resource it was issued for.
@@ -124,7 +150,7 @@ export async function createOAuthGate(cfg: OAuthResourceConfig): Promise<OAuthGa
         };
       } catch (err) {
         if (err instanceof OAuthError) throw err;
-        if (err instanceof errors.JOSEError)
+        if (err instanceof errors.JOSEError && TOKEN_ERRORS.has(err.code))
           throw new OAuthError(OAuthErrorCode.InvalidToken, 'Invalid or expired access token');
         // JWKS unreachable and similar: not the client's fault.
         throw new OAuthError(OAuthErrorCode.ServerError, 'Could not verify the access token');
@@ -160,8 +186,23 @@ export async function createOAuthGate(cfg: OAuthResourceConfig): Promise<OAuthGa
   };
 }
 
-/** Header-safe client name for an OAuth principal. */
-export function oauthClientName(clientId: string): string {
-  // Cut by code point and make well-formed first, so encoding never throws.
-  return `oauth:${encodeURIComponent([...clientId.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD')].slice(0, 100).join(''))}`;
+const idHash = (v: string): string =>
+  createHash('sha256').update(v, 'utf8').digest('hex').slice(0, 24);
+
+/**
+ * The principal for a verified token: client app plus user. Both parts are
+ * hashes of the complete claim values, so two ids that share a prefix never
+ * merge, and a user's sub can never pose as a client id. A short readable
+ * label from the client id is kept for logs; it plays no part in matching.
+ */
+export function oauthPrincipalName(clientId: string, subject: string | undefined): string {
+  const label = clientId.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 32) || 'client';
+  return `oauth:${label}.${clientId ? idHash(clientId) : '-'}/${subject ? idHash(subject) : '-'}`;
 }
+
+/** The client hash inside an OAuth principal name, or undefined. */
+export function oauthClientHash(name: string): string | undefined {
+  return /^oauth:[A-Za-z0-9._-]*\.([0-9a-f]{24})\/(?:[0-9a-f]{24}|-)$/.exec(name)?.[1];
+}
+
+export { idHash as oauthIdHash };

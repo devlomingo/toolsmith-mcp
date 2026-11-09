@@ -37,13 +37,13 @@ afterAll(() => new Promise<void>((r) => issuerServer.close(() => r())));
 
 async function token(
   claims: Record<string, unknown> = {},
-  opts: { key?: CryptoKey; exp?: string | number; iss?: string; aud?: string } = {},
+  opts: { key?: CryptoKey; exp?: string | number; iss?: string; aud?: string; iat?: number } = {},
 ): Promise<string> {
   return new SignJWT({ client_id: 'agent-a', scope: 'mcp:tools', ...claims })
     .setProtectedHeader({ alg: 'ES256', kid: 'k1', typ: 'at+jwt' })
     .setIssuer(opts.iss ?? issuer)
     .setAudience(opts.aud ?? RESOURCE)
-    .setIssuedAt()
+    .setIssuedAt(opts.iat)
     .setExpirationTime(opts.exp ?? '5m')
     .sign(opts.key ?? key);
 }
@@ -64,11 +64,12 @@ async function connect(url: string, bearer: string) {
 async function withGateway(
   oauth: Record<string, unknown>,
   fn: (url: string, h: Harness) => Promise<void>,
+  perms = { allowWrite: false, allowDestructive: false },
 ): Promise<void> {
   const h = await makeHarness({
     config: { server: { oauth: { issuer, resource: RESOURCE, ...oauth } } },
   });
-  await approveShop(h.app);
+  await approveShop(h.app, perms);
   const gw = await startHttpServer(h.app, {
     host: '127.0.0.1',
     port: 0,
@@ -120,7 +121,7 @@ describe('gateway as an OAuth 2.1 resource server', () => {
       expect(r.isError).toBeFalsy();
       await c.close();
       const sessions = h.app.traces.chronological().map((t) => t.sessionId);
-      expect(sessions.some((s) => s.startsWith('http:oauth:agent-a/'))).toBe(true);
+      expect(sessions.some((s) => /^http:oauth:agent-a\.[0-9a-f]{24}\/-\//.test(s))).toBe(true);
     });
   });
 
@@ -186,5 +187,104 @@ describe('gateway as an OAuth 2.1 resource server', () => {
       for (let i = 0; i < 5; i++) expect((await post(url, await token())).status).toBe(200);
     });
     expect(jwksHits - before).toBe(1);
+  });
+
+  it('round 1: long ids keep their exposure; shared prefixes and sub never merge identities', async () => {
+    const long = `https://client.example.com/${'a'.repeat(120)}`;
+    await withGateway(
+      {
+        clients: [
+          { clientId: `${long}/restricted.json`, exposure: { tools: ['shop__getProducts'] } },
+        ],
+      },
+      async (url, h) => {
+        const restricted = await connect(
+          url,
+          await token({ client_id: `${long}/restricted.json` }),
+        );
+        expect((await restricted.listTools()).tools.map((t) => t.name)).toEqual(
+          expect.arrayContaining(['shop__getProducts']),
+        );
+        expect((await restricted.listTools()).tools.map((t) => t.name)).not.toContain(
+          'shop__getUser',
+        );
+        await restricted.close();
+        // Same 100+ character prefix, different client: a different principal.
+        const { oauthPrincipalName } = await import('../../src/server/oauth.js');
+        expect(oauthPrincipalName(`${long}/a`, undefined)).not.toBe(
+          oauthPrincipalName(`${long}/b`, undefined),
+        );
+        // Same client, different users: different principals, so approvals do not transfer.
+        expect(oauthPrincipalName('app', 'alice')).not.toBe(oauthPrincipalName('app', 'bob'));
+        // A token with only sub equal to a configured client id gets the default, not that client's exposure.
+        const subOnly = await connect(
+          url,
+          await token({ client_id: undefined, sub: `${long}/restricted.json` }),
+        );
+        expect((await subOnly.listTools()).tools.map((t) => t.name)).toContain('shop__getUser');
+        await subOnly.close();
+        // Approval granted to one principal cannot be spent by another.
+        const req = h.app.approvals.request(
+          'shop__deleteProduct',
+          { id: 1 },
+          `http:${oauthPrincipalName('app', 'alice')}`,
+        );
+        h.app.approvals.decide(req.id, true, 'human:test');
+        const bob = await connect(url, await token({ client_id: 'app', sub: 'bob' }));
+        const r = await bob.callTool({ name: 'shop__deleteProduct', arguments: { id: 1 } });
+        expect(r.isError).toBe(true);
+        expect(JSON.stringify(r.content)).toMatch(/approv/i);
+        await bob.close();
+      },
+      { allowWrite: true, allowDestructive: true },
+    );
+  });
+
+  it('round 1: future iat, overlong lifetime and (when required) a non at+jwt typ are refused', async () => {
+    await withGateway({ requireAtJwt: true, maxLifetimeSeconds: 3600 }, async (url) => {
+      const now = Math.floor(Date.now() / 1000);
+      expect((await post(url, await token({}, { iat: now + 3600 }))).status).toBe(401);
+      expect((await post(url, await token({}, { exp: now + 7200 }))).status).toBe(401);
+      const jwtTyp = await new SignJWT({ client_id: 'agent-a' })
+        .setProtectedHeader({ alg: 'ES256', kid: 'k1', typ: 'JWT' })
+        .setIssuer(issuer)
+        .setAudience(RESOURCE)
+        .setExpirationTime('5m')
+        .sign(key);
+      expect((await post(url, jwtTyp)).status).toBe(401);
+      expect((await post(url, await token())).status).toBe(200);
+    });
+  });
+
+  it('round 1: a JWKS outage is a 500, not a 401; lowercase bearer works for static tokens', async () => {
+    const h = await makeHarness({
+      config: {
+        server: {
+          oauth: { issuer, resource: RESOURCE, jwksUri: 'http://127.0.0.1:9/jwks' },
+        },
+      },
+    });
+    const gw = await startHttpServer(h.app, {
+      host: '127.0.0.1',
+      port: 0,
+      mcpToken: 'static-tok',
+      adminToken: 'adm',
+    });
+    try {
+      expect((await post(gw.url, await token())).status).toBe(500);
+      const r = await fetch(`${gw.url}/mcp`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json, text/event-stream',
+          authorization: 'bearer static-tok',
+        },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }),
+      });
+      expect(r.status).toBe(200);
+    } finally {
+      await gw.close();
+      await h.close();
+    }
   });
 });

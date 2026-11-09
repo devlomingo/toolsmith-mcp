@@ -99,10 +99,14 @@ describe('per-client rate limits', () => {
       while (h!.app.takeClientCall(p) === 0 && n < 100) n++;
       return n;
     };
-    expect(spend('http:oauth:big')).toBe(4);
-    expect(spend('http:oauth:other')).toBe(2);
+    const { oauthPrincipalName } = await import('../../src/server/oauth.js');
+    const big = `http:${oauthPrincipalName('big', 'u1')}`;
+    expect(spend(big)).toBe(4);
+    expect(spend(`http:${oauthPrincipalName('other', 'u1')}`)).toBe(2);
     expect(spend('http:someone')).toBe(5);
-    expect(h.app.takeClientCall('http:oauth:big')).toBeGreaterThan(0);
+    expect(h.app.takeClientCall(big)).toBeGreaterThan(0);
+    // Limits are per user too: another user of the same client has its own bucket.
+    expect(spend(`http:${oauthPrincipalName('big', 'u2')}`)).toBe(4);
   });
 
   it('off by default', async () => {

@@ -80,17 +80,34 @@ from or wherever `--config <path>` points.
 | `jwksUri` | discovered | Where the signing keys are. By default read from the issuer's `/.well-known/oauth-authorization-server` or `/.well-known/openid-configuration`, whose `issuer` must match. Keys are cached for 10 minutes. |
 | `audiences` | `[]` | Extra accepted audience values. |
 | `requiredScopes` | `[]` | Scopes every token must carry (`scope` or `scp` claim). A token without them gets `403 insufficient_scope`. |
+| `requireAtJwt` | `false` | Refuse tokens whose header is not `typ: at+jwt` (RFC 9068). Turn on if your issuer sends it, so an ID token can never pass as an access token. |
+| `maxLifetimeSeconds` | `86400` | Refuse tokens that stay valid longer than this from now, and tokens issued more than 30 s in the future. |
 | `algorithms` | `RS256`, `ES256`, `EdDSA` | Accepted signature algorithms. Only asymmetric ones can be configured; `none` and HMAC are always refused. |
 | `exposure` | top-level `exposure` | Tool exposure for OAuth clients. |
 | `rateLimit` | `server.rateLimit` | Per-client call limit for OAuth clients. |
-| `clients` | `[]` | Per-client `exposure` and `rateLimit`, keyed by the token's client id (`client_id`, else `azp`, else `sub`). |
+| `clients` | `[]` | Per-client `exposure` and `rateLimit`, keyed by the token's client id: the full `client_id` claim, else `azp`. The `sub` claim never selects a client. |
 
 The gateway serves RFC 9728 protected-resource metadata at
 `/.well-known/oauth-protected-resource/mcp`, and every 401 carries a
 `WWW-Authenticate` header that points to it, so MCP clients can find your
-authorization server on their own. A verified client is identified as
-`oauth:<client id>`; per-call approvals and traces are bound to that
-identity. Access tokens are never forwarded to upstream APIs.
+authorization server on their own. Access tokens are never forwarded to
+upstream APIs.
+
+**Identity.** A verified token becomes the principal
+`oauth:<label>.<client hash>/<user hash>`, where the hashes cover the
+complete `client_id` (or `azp`) and `sub` values and the label is a short
+readable piece of the client id for logs. Per-call approvals, in-client
+prompts, rate limits and traces bind to that principal, so they are never
+shared between two users of the same client app, or between two client ids
+that look alike.
+
+**Edge cases.** `resource` is used exactly as URL-normalised: a value
+without a path (`https://tools.example.com`) becomes
+`https://tools.example.com/`, and tokens must carry that audience. After
+your issuer rotates its signing key, tokens signed with the new key can be
+refused for up to 30 s, the JWKS refetch cooldown that stops forged key ids
+from flooding the issuer. If the JWKS cannot be fetched, clients get a
+500, not a 401, so they do not re-authenticate in a loop.
 
 ### `integrations[]`
 

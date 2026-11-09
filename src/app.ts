@@ -8,6 +8,7 @@ import type {
   LoadedConfig,
 } from './config/config.js';
 import { TokenBucket } from './security/rate-limit.js';
+import { oauthClientHash, oauthIdHash } from './server/oauth.js';
 import { resolvePath } from './config/config.js';
 import { patternToComposite } from './composite/generator.js';
 import type { CompositeDef } from './composite/plan.js';
@@ -220,13 +221,10 @@ export class Toolsmith {
     const name = principal?.startsWith('http:') ? principal.slice(5) : undefined;
     if (name?.startsWith('oauth:')) {
       const oauth = this.config.server.oauth;
-      let clientId = '';
-      try {
-        clientId = decodeURIComponent(name.slice(6));
-      } catch {
-        /* never matches a configured client */
-      }
-      const c = oauth?.clients.find((x) => x.clientId === clientId);
+      // Match on the hash of the full client id; a token without a
+      // client_id/azp gets the OAuth default, never a named client's settings.
+      const hash = oauthClientHash(name);
+      const c = hash ? oauth?.clients.find((x) => oauthIdHash(x.clientId) === hash) : undefined;
       return {
         exposure: c?.exposure ?? oauth?.exposure,
         rateLimit: c?.rateLimit ?? oauth?.rateLimit,
