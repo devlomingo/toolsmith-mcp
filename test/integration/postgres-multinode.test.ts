@@ -116,4 +116,44 @@ describe.skipIf(!enabled)('PostgreSQL: several gateway nodes, one database', () 
     );
     expect(rows.map((r) => r.version)).toEqual(Array.from({ length: 15 }, (_, i) => i + 1));
   });
+
+  it('disabling on one node reaches the others, and the revision commits with the change', async () => {
+    const { apps } = await cluster(2);
+    const [a, b] = apps as [Toolsmith, Toolsmith];
+    await a.importIntegration('shop', 'human:test');
+    await a.approve('shop', { allowWrite: false, allowDestructive: false }, 'human:test');
+    await b.refresh();
+    expect(b.catalog.has('shop__getUser')).toBe(true);
+    const before = await a.registry.revision();
+    await a.disable('shop', 'human:test');
+    expect(await b.registry.revision()).toBeGreaterThan(before);
+    await b.refresh();
+    expect(b.catalog.has('shop__getUser')).toBe(false);
+  });
+
+  it('a dropped connection inside a transaction is an error, not a crash', async () => {
+    const { apps } = await cluster(1);
+    const db = apps[0]!.db;
+    const { default: pg } = await import('pg');
+    const admin = new pg.Client({ connectionString: process.env.TOOLSMITH_TEST_DATABASE_URL });
+    await admin.connect();
+    try {
+      const attempt = db.transaction(async (tx) => {
+        const { pid } = (await tx.get<{ pid: number }>('SELECT pg_backend_pid() AS pid'))!;
+        await admin.query('SELECT pg_terminate_backend($1)', [pid]);
+        await tx.get('SELECT pg_sleep(0.2)');
+      });
+      await expect(attempt).rejects.toThrow();
+      // The pool recovers: the next statement gets a fresh connection.
+      expect(await db.get<{ x: number }>('SELECT 1 AS x')).toEqual({ x: 1 });
+    } finally {
+      await admin.end();
+    }
+  });
+
+  it('a transaction body that uses the top-level handle fails fast', async () => {
+    const { apps } = await cluster(1);
+    const db = apps[0]!.db;
+    await expect(db.transaction(async () => db.get('SELECT 1'))).rejects.toThrow(/tx/);
+  });
 });

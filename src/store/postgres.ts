@@ -1,5 +1,5 @@
 import pg from 'pg';
-import type { SqlDb } from './db.js';
+import { assertNotInTransaction, runInTransaction, type SqlDb } from './db.js';
 
 /**
  * PostgreSQL storage, for several gateway nodes sharing one database. The
@@ -100,27 +100,66 @@ const MIGRATIONS: string[] = [
   `,
 ];
 
-/** `?` → `$1, $2, …`, leaving quoted strings and identifiers alone. */
+/**
+ * `?` → `$1, $2, …`. Skips string literals ('…', with '' and, in E'…',
+ * backslash escapes), quoted identifiers, dollar-quoted strings and
+ * comments. A literal `?` operator (jsonb) is written `??`.
+ */
 export function toPgPlaceholders(sql: string): string {
   let out = '';
   let n = 0;
-  let quote: string | undefined;
-  for (const ch of sql) {
-    if (quote) {
-      if (ch === quote) quote = undefined;
-      out += ch;
+  for (let i = 0; i < sql.length;) {
+    const ch = sql[i]!;
+    const rest = sql.slice(i);
+    if (rest.startsWith('--')) {
+      const end = sql.indexOf('\n', i);
+      const stop = end < 0 ? sql.length : end;
+      out += sql.slice(i, stop);
+      i = stop;
+    } else if (rest.startsWith('/*')) {
+      const end = sql.indexOf('*/', i + 2);
+      const stop = end < 0 ? sql.length : end + 2;
+      out += sql.slice(i, stop);
+      i = stop;
     } else if (ch === "'" || ch === '"') {
-      quote = ch;
+      const escapes =
+        ch === "'" &&
+        /[eE]$/.test(sql.slice(0, i)) &&
+        !/\w[eE]$/.test(sql.slice(Math.max(0, i - 2), i));
+      let j = i + 1;
+      while (j < sql.length) {
+        if (escapes && sql[j] === '\\') j += 2;
+        else if (sql[j] === ch && sql[j + 1] === ch) j += 2;
+        else if (sql[j] === ch) break;
+        else j++;
+      }
+      out += sql.slice(i, j + 1);
+      i = j + 1;
+    } else if (ch === '$' && /^\$[A-Za-z_]*\$/.test(rest)) {
+      const tag = /^\$[A-Za-z_]*\$/.exec(rest)![0];
+      const end = sql.indexOf(tag, i + tag.length);
+      const stop = end < 0 ? sql.length : end + tag.length;
+      out += sql.slice(i, stop);
+      i = stop;
+    } else if (ch === '?' && sql[i + 1] === '?') {
+      out += '?';
+      i += 2;
+    } else if (ch === '?') {
+      out += `$${++n}`;
+      i++;
+    } else {
       out += ch;
-    } else if (ch === '?') out += `$${++n}`;
-    else out += ch;
+      i++;
+    }
   }
   return out;
 }
 
-// Serialization failure, deadlock, and a unique violation from two nodes
-// creating the same row: retrying re-reads and finds the winner's row.
-const RETRYABLE = new Set(['40001', '40P01', '23505']);
+// Serialization failure and deadlock: retry. A unique violation can come
+// from two nodes creating the same row (the retry re-reads and finds the
+// winner's), but also from a real bug, so it gets one retry only.
+const RETRYABLE = new Set(['40001', '40P01']);
+const UNIQUE_VIOLATION = '23505';
 const MAX_ATTEMPTS = 8;
 
 type Queryable = Pick<pg.Pool | pg.PoolClient, 'query'>;
@@ -133,7 +172,11 @@ class PgHandle implements SqlDb {
   readonly dialect = 'postgres' as const;
   constructor(protected readonly c: Queryable) {}
 
+  /** Overridden by the top-level handle to refuse use from inside a transaction. */
+  protected check(): void {}
+
   async all<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+    this.check();
     return (await q(this.c, sql, params)).rows as T[];
   }
 
@@ -141,10 +184,12 @@ class PgHandle implements SqlDb {
     sql: string,
     params: unknown[] = [],
   ): Promise<T | undefined> {
+    this.check();
     return (await q(this.c, sql, params)).rows[0] as T | undefined;
   }
 
   async run(sql: string, params: unknown[] = []): Promise<{ changes: number }> {
+    this.check();
     return { changes: (await q(this.c, sql, params)).rowCount ?? 0 };
   }
 
@@ -163,21 +208,41 @@ export class PostgresDb extends PgHandle {
     super(pool);
   }
 
+  protected override check(): void {
+    assertNotInTransaction(this);
+  }
+
   override async transaction<T>(fn: (tx: SqlDb) => Promise<T>): Promise<T> {
+    assertNotInTransaction(this);
     for (let attempt = 1; ; attempt++) {
       const client = await this.pool.connect();
+      // A checked-out client is outside the pool's error handling: without a
+      // listener, a dropped connection would crash the process.
+      let broken: Error | undefined;
+      const onError = (err: Error): void => {
+        broken = err;
+      };
+      client.on('error', onError);
       try {
         await client.query('BEGIN ISOLATION LEVEL SERIALIZABLE');
-        const out = await fn(new PgHandle(client));
+        const out = await runInTransaction(this, () => fn(new PgHandle(client)));
         await client.query('COMMIT');
         return out;
       } catch (err) {
-        await client.query('ROLLBACK').catch(() => undefined);
+        await client.query('ROLLBACK').catch((e: Error) => {
+          broken ??= e;
+        });
         const code = (err as { code?: string }).code;
-        if (!code || !RETRYABLE.has(code) || attempt >= MAX_ATTEMPTS) throw err;
+        const retry =
+          !broken &&
+          code !== undefined &&
+          (RETRYABLE.has(code) ? attempt < MAX_ATTEMPTS : code === UNIQUE_VIOLATION && attempt < 2);
+        if (!retry) throw err;
         await new Promise((r) => setTimeout(r, Math.random() * 10 * attempt));
       } finally {
-        client.release();
+        client.off('error', onError);
+        // A broken connection is destroyed, not handed back to the pool.
+        client.release(broken);
       }
     }
   }

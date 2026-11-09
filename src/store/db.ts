@@ -1,6 +1,26 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { Mutex } from '../core/mutex.js';
+
+/**
+ * Which database's transaction the current async context is inside. A
+ * transaction body that calls the top-level handle instead of `tx` would
+ * wait for its own lock (SQLite) or a second pooled connection (PostgreSQL),
+ * so that is refused with an error instead of hanging.
+ */
+const inTransaction = new AsyncLocalStorage<object>();
+
+export function assertNotInTransaction(db: object): void {
+  if (inTransaction.getStore() === db)
+    throw new Error(
+      'A transaction body used the top-level database handle; use the `tx` handle it was given',
+    );
+}
+
+export function runInTransaction<T>(db: object, fn: () => Promise<T>): Promise<T> {
+  return inTransaction.run(db, fn);
+}
 import { silenceSqliteWarning } from './silence.js';
 
 silenceSqliteWarning();
@@ -167,12 +187,13 @@ export class SqliteDb implements SqlDb {
   }
 
   async transaction<T>(fn: (tx: SqlDb) => Promise<T>): Promise<T> {
+    assertNotInTransaction(this);
     await this.lock.acquire();
     const tx = new SqliteTx(this.db);
     try {
       this.db.exec('BEGIN IMMEDIATE');
       try {
-        const out = await fn(tx);
+        const out = await runInTransaction(this, () => fn(tx));
         this.db.exec('COMMIT');
         return out;
       } catch (err) {
@@ -190,6 +211,7 @@ export class SqliteDb implements SqlDb {
   }
 
   private locked<T>(fn: () => T): Promise<T> {
+    assertNotInTransaction(this);
     return this.lock.run(fn);
   }
 }

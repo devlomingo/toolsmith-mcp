@@ -74,3 +74,28 @@ describe('SqliteDb', () => {
     await db.close();
   });
 });
+
+describe('validation round 1', () => {
+  it('a transaction body that uses the top-level handle fails fast instead of hanging', async () => {
+    const { openDb } = await import('../../src/store/db.js');
+    const db = openDb(':memory:');
+    await expect(db.transaction(async () => db.get('SELECT 1'))).rejects.toThrow(/tx/);
+    await expect(db.transaction(async () => db.transaction(async () => 1))).rejects.toThrow(/tx/);
+    expect(await db.get<{ x: number }>('SELECT 1 AS x')).toEqual({ x: 1 }); // not wedged
+    await db.close();
+  });
+
+  it('the placeholder rewriter skips strings, comments and dollar quotes', async () => {
+    const { toPgPlaceholders } = await import('../../src/store/postgres.js');
+    expect(toPgPlaceholders('SELECT ? , ?')).toBe('SELECT $1 , $2');
+    expect(toPgPlaceholders('SELECT \'a?b\', "c?" , ?')).toBe('SELECT \'a?b\', "c?" , $1');
+    expect(toPgPlaceholders("SELECT 'it''s?', ?")).toBe("SELECT 'it''s?', $1");
+    expect(toPgPlaceholders("SELECT E'\\'?', ?")).toBe("SELECT E'\\'?', $1");
+    expect(toPgPlaceholders('SELECT ? -- what?\n, ?')).toBe('SELECT $1 -- what?\n, $2');
+    expect(toPgPlaceholders('SELECT /* ? */ ?')).toBe('SELECT /* ? */ $1');
+    expect(toPgPlaceholders('SELECT $$a?b$$, $t$?$t$, ?')).toBe('SELECT $$a?b$$, $t$?$t$, $1');
+    expect(toPgPlaceholders("SELECT data ?? 'k' FROM x WHERE id = ?")).toBe(
+      "SELECT data ? 'k' FROM x WHERE id = $1",
+    );
+  });
+});

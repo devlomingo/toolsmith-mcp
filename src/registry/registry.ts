@@ -124,10 +124,18 @@ export class Registry {
     return row ? Number(row.value) : 0;
   }
 
-  private async bump(): Promise<void> {
+  /**
+   * Advance the revision other nodes poll. Runs inside the same transaction
+   * as the change, so a change can never commit without it (a crash between
+   * the two would leave other nodes serving a disabled tool).
+   */
+  private async bumpInTx(): Promise<void> {
     await this.db.run(
       "INSERT INTO settings (key, value) VALUES ('catalog_rev', '1') ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(settings.value AS INTEGER) + 1 AS TEXT)",
     );
+  }
+
+  private async notify(): Promise<void> {
     for (const fn of this.listeners) await fn();
   }
 
@@ -390,9 +398,10 @@ export class Registry {
         version,
         artifactId,
       ]);
+      await r.bumpInTx();
       return v;
     });
-    await this.bump();
+    await this.notify();
     return out;
   }
 
@@ -409,9 +418,10 @@ export class Registry {
         reason,
       );
       await r.db.run('UPDATE artifacts SET published_version = NULL WHERE id = ?', [artifactId]);
+      await r.bumpInTx();
       return v;
     });
-    await this.bump();
+    await this.notify();
     return out;
   }
 

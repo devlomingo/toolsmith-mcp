@@ -154,8 +154,9 @@ review step. Destructive calls are still checked:
 | `poolSize` | `10` | Connections per gateway node. |
 
 With PostgreSQL, every node shares the registry, traces, approvals and audit
-log: a tool published through one node's dashboard is served by all of them
-within about 1.5 s, traffic through every node feeds workflow discovery, and
+log: a tool published or **disabled** through one node's dashboard reaches
+all of them within about 1.5 s (each node polls a revision counter that
+commits together with the change, so it is never missed), traffic through every node feeds workflow discovery, and
 a per-call approval is spent exactly once, whichever nodes the retries land
 on. The schema is created on first start (nodes starting together take
 turns). Some state stays in each node's memory:
@@ -165,7 +166,12 @@ turns). Some state stays in each node's memory:
 - **In-client approval prompts.** An answer that reaches a different node
   than the one that asked falls back to the dashboard approval flow. Use
   sticky sessions if you rely on in-client approvals.
+- The cap on open composite proposals, enforced by each node for itself.
 - The OAuth key cache and gRPC channels, which need no coordination.
+
+If a disabled tool must stop everywhere at once, also stop the nodes' traffic
+to it upstream (revoke its credentials), since a node may serve it for up to
+the poll interval.
 
 ### `traces`
 
