@@ -23,6 +23,7 @@
   <a href="https://github.com/devlomingo/toolsmith-mcp/actions/workflows/ci.yml"><img src="https://github.com/devlomingo/toolsmith-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/MCP-2025--11--25%20%7C%202026--07--28-2a78d6" alt="MCP versions">
   <img src="https://img.shields.io/badge/license-MIT-1baf7a" alt="MIT license">
+  <a href="https://m8ven.ai/mcp/devlomingo/toolsmith-mcp"><img src="https://m8ven.ai/badge/mcp/devlomingo/toolsmith-mcp" alt="M8ven trust score"></a>
 </p>
 
 ---
