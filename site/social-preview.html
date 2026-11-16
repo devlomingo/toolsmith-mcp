@@ -1,0 +1,264 @@
+<!doctype html>
+<!-- Source of docs/images/social-preview.png (1280×640). Re-render with:
+     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+       --hide-scrollbars --window-size=1280,640 --screenshot=docs/images/social-preview.png \
+       site/social-preview.html -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>toolsmith-mcp social preview</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #07080b;
+        --ink: #f5f7fb;
+        --ink2: #a9b0bd;
+        --mute: #6f7684;
+        --line: rgba(255, 255, 255, 0.1);
+        --blue: #4c8dff;
+        --orange: #ff7a2f;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1280px;
+        height: 640px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: 'Geist', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(520px 420px at 88% 18%, rgba(255, 122, 47, 0.22), transparent 70%),
+          radial-gradient(560px 460px at 8% 100%, rgba(76, 141, 255, 0.2), transparent 70%);
+      }
+      .grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(var(--line) 1px, transparent 1px),
+          linear-gradient(90deg, var(--line) 1px, transparent 1px);
+        background-size: 48px 48px;
+        opacity: 0.35;
+        mask-image: radial-gradient(ellipse at 60% 50%, #000 30%, transparent 80%);
+      }
+      .wrap {
+        position: relative;
+        display: grid;
+        grid-template-columns: 600px 1fr;
+        gap: 24px;
+        align-items: center;
+        height: 100%;
+        padding: 0 72px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font:
+          600 26px 'Geist Mono',
+          monospace;
+        color: var(--ink);
+        margin-bottom: 34px;
+      }
+      .brand img {
+        width: 52px;
+        height: 52px;
+      }
+      h1 {
+        margin: 0 0 22px;
+        font-size: 76px;
+        line-height: 1.02;
+        font-weight: 750;
+        letter-spacing: -0.035em;
+      }
+      .grad {
+        background: linear-gradient(92deg, #ffd2a8 0%, var(--orange) 45%, #ff5f6d 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      p {
+        margin: 0 0 34px;
+        font-size: 24px;
+        line-height: 1.4;
+        color: var(--ink2);
+      }
+      .chips {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        font:
+          500 17px 'Geist Mono',
+          monospace;
+        padding: 9px 16px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--ink);
+      }
+      .chip b {
+        color: var(--orange);
+        font-weight: 600;
+      }
+      svg text {
+        font-family: 'Geist Mono', monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg"></div>
+    <div class="grid"></div>
+    <div class="wrap">
+      <div>
+        <div class="brand"><img src="../docs/images/logo.svg" alt="" />toolsmith-mcp</div>
+        <h1>8 tool calls.<br /><span class="grad">Now just 1.</span></h1>
+        <p>
+          An MCP gateway that turns your APIs into tools and the workflows agents repeat into one
+          verified tool.
+        </p>
+        <div class="chips">
+          <span class="chip"><b>~4×</b> faster</span>
+          <span class="chip"><b>1.9×</b> throughput</span>
+          <span class="chip">human-approved</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 520 480" width="520" height="480" aria-hidden="true">
+        <defs>
+          <linearGradient id="g" x1="0" x2="1">
+            <stop offset="0" stop-color="#4c8dff" />
+            <stop offset="1" stop-color="#ff7a2f" />
+          </linearGradient>
+        </defs>
+        <g fill="none" stroke="url(#g)" stroke-width="2" opacity=".75">
+          <path d="M190 52 C300 52 300 240 382 240" />
+          <path d="M190 106 C300 106 300 240 382 240" />
+          <path d="M190 160 C300 160 300 240 382 240" />
+          <path d="M190 214 C300 214 300 240 382 240" />
+          <path d="M190 268 C300 268 300 240 382 240" />
+          <path d="M190 322 C300 322 300 240 382 240" />
+          <path d="M190 376 C300 376 300 240 382 240" />
+          <path d="M190 430 C300 430 300 240 382 240" />
+        </g>
+        <g font-size="15" fill="#a9b0bd">
+          <g>
+            <rect
+              x="10"
+              y="34"
+              width="180"
+              height="36"
+              rx="10"
+              fill="rgba(255,255,255,.05)"
+              stroke="rgba(255,255,255,.14)"
+            />
+            <text x="26" y="57">getUser</text>
+          </g>
+          <g>
+            <rect
+              x="10"
+              y="88"
+              width="180"
+              height="36"
+              rx="10"
+              fill="rgba(255,255,255,.05)"
+              stroke="rgba(255,255,255,.14)"
+            />
+            <text x="26" y="111">getOrders</text>
+          </g>
+          <g>
+            <rect
+              x="10"
+              y="142"
+              width="180"
+              height="36"
+              rx="10"
+              fill="rgba(255,255,255,.05)"
+              stroke="rgba(255,255,255,.14)"
+            />
+            <text x="26" y="165">getOrderItems #1</text>
+          </g>
+          <g>
+            <rect
+              x="10"
+              y="196"
+              width="180"
+              height="36"
+              rx="10"
+              fill="rgba(255,255,255,.05)"
+              stroke="rgba(255,255,255,.14)"
+            />
+            <text x="26" y="219">getOrderItems #2</text>
+          </g>
+          <g>
+            <rect
+              x="10"
+              y="250"
+              width="180"
+              height="36"
+              rx="10"
+              fill="rgba(255,255,255,.05)"
+              stroke="rgba(255,255,255,.14)"
+            />
+            <text x="26" y="273">getOrderItems #3</text>
+          </g>
+          <g>
+            <rect
+              x="10"
+              y="304"
+              width="180"
+              height="36"
+              rx="10"
+              fill="rgba(255,255,255,.05)"
+              stroke="rgba(255,255,255,.14)"
+            />
+            <text x="26" y="327">getPayments #1</text>
+          </g>
+          <g>
+            <rect
+              x="10"
+              y="358"
+              width="180"
+              height="36"
+              rx="10"
+              fill="rgba(255,255,255,.05)"
+              stroke="rgba(255,255,255,.14)"
+            />
+            <text x="26" y="381">getPayments #2</text>
+          </g>
+          <g>
+            <rect
+              x="10"
+              y="412"
+              width="180"
+              height="36"
+              rx="10"
+              fill="rgba(255,255,255,.05)"
+              stroke="rgba(255,255,255,.14)"
+            />
+            <text x="26" y="435">getPayments #3</text>
+          </g>
+        </g>
+        <circle cx="420" cy="240" r="52" fill="rgba(255,122,47,.16)" />
+        <circle cx="420" cy="240" r="38" fill="#ff7a2f" stroke="#fff" stroke-width="4" />
+        <text x="420" y="250" text-anchor="middle" font-size="28" font-weight="600" fill="#fff">
+          1
+        </text>
+        <text x="420" y="320" text-anchor="middle" font-size="15" fill="#f5f7fb">
+          customerOverview
+        </text>
+      </svg>
+    </div>
+  </body>
+</html>

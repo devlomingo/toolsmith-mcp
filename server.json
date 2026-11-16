@@ -1,0 +1,32 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.devlomingo/toolsmith-mcp",
+  "title": "Toolsmith",
+  "description": "MCP gateway: APIs become tools, and repeated multi-call workflows become one approved tool.",
+  "repository": {
+    "url": "https://github.com/devlomingo/toolsmith-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://devlomingo.github.io/toolsmith-mcp/",
+  "version": "0.2.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "toolsmith-mcp",
+      "version": "0.2.1",
+      "transport": { "type": "stdio" },
+      "packageArguments": [
+        { "type": "positional", "value": "start" },
+        { "type": "named", "name": "--stdio" },
+        {
+          "type": "named",
+          "name": "--config",
+          "description": "Absolute path to toolsmith.config.json (create one with `npx toolsmith-mcp init`)",
+          "isRequired": true,
+          "format": "filepath",
+          "valueHint": "config_path"
+        }
+      ]
+    }
+  ]
+}

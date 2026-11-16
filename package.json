@@ -1,6 +1,6 @@
 {
   "name": "toolsmith-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Give any AI agent the tools it needs: an MCP gateway that turns OpenAPI specs into tools, mines repeated workflows, and proposes optimized composite tools behind human approval.",
   "type": "module",
   "license": "MIT",
@@ -88,5 +88,6 @@
     "tools",
     "workflow-mining"
   ],
-  "author": "devlomingo"
+  "author": "devlomingo",
+  "mcpName": "io.github.devlomingo/toolsmith-mcp"
 }

@@ -272,7 +272,7 @@ equivalence-checked evaluation, and a human-approval lifecycle.
 
 ## Status
 
-**Version 0.2.0**
+**Version 0.2.1**
 - **Tested:** unit, integration, end-to-end over MCP and security suites,
   on SQLite and on PostgreSQL (including multi-node tests).
 - **Validated:** fifteen rounds by an independent agent
