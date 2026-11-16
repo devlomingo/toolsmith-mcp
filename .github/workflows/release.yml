@@ -34,4 +34,11 @@ jobs:
       - name: Publish the GitHub release with the tarball attached
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" ./toolsmith-mcp-*.tgz --title "toolsmith-mcp $GITHUB_REF_NAME" --notes-file notes.md
+        # A release made by hand before this job ran gets the tarball and notes instead of failing.
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" ./toolsmith-mcp-*.tgz --clobber
+            gh release edit "$GITHUB_REF_NAME" --title "toolsmith-mcp $GITHUB_REF_NAME" --notes-file notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" ./toolsmith-mcp-*.tgz --title "toolsmith-mcp $GITHUB_REF_NAME" --notes-file notes.md
+          fi
