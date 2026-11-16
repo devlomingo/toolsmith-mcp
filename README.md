@@ -13,6 +13,7 @@
 <p align="center">
   <a href="https://devlomingo.github.io/toolsmith-mcp/"><strong>Website</strong></a> ·
   <a href="docs/INSTALLATION.md">Install</a> ·
+  <a href="https://github.com/devlomingo/toolsmith-mcp/wiki">Wiki</a> ·
   <a href="docs/CONFIGURATION.md">Configure</a> ·
   <a href="benchmarks/reports/REPORT.md">Benchmarks</a> ·
   <a href="CHANGELOG.md">Changelog</a>
